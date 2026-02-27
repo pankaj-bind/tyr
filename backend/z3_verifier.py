@@ -21,7 +21,7 @@ from typing import Any
 
 import z3
 
-from ast_to_z3 import ASTToZ3Translator, SymbolicExecError
+from ast_to_z3 import ASTToZ3Translator, SymbolicExecError, SymbolicList, MAX_BMC_LENGTH
 
 logger = logging.getLogger("tyr.z3")
 
@@ -103,10 +103,25 @@ def verify_equivalence(
             f"optimized has {opt_params}. Cannot verify equivalence."
         )
 
-    # Create Z3 symbolic variables for each parameter
+    # Create Z3 symbolic variables for each parameter.
+    # Use AST heuristics to detect list-typed parameters and create
+    # SymbolicList (BMC) representations for them.
+    param_types = _infer_param_types(original_code, orig_params)
     param_symbols: dict[str, Any] = {}
+    bmc_constraints: list[Any] = []  # length bounds for SymbolicList params
+
     for name in orig_params:
-        param_symbols[name] = z3.Int(name)  # default: integer
+        if param_types.get(name) == "list":
+            # Create a SymbolicList with bounded length
+            arr = z3.Array(f"{name}_arr", z3.IntSort(), z3.IntSort())
+            length = z3.Int(f"{name}_len")
+            param_symbols[name] = SymbolicList(array=arr, length=length)
+            bmc_constraints.append(length >= 0)
+            bmc_constraints.append(length <= MAX_BMC_LENGTH)
+            logger.info("  param '%s' → SymbolicList (BMC, max len %d)", name, MAX_BMC_LENGTH)
+        else:
+            param_symbols[name] = z3.Int(name)  # default: integer
+            logger.info("  param '%s' → z3.Int", name)
 
     logger.info(
         "Symbolic params: %s", {k: str(v) for k, v in param_symbols.items()}
@@ -154,14 +169,24 @@ def verify_equivalence(
     solver = z3.Solver()
     solver.set("timeout", Z3_TIMEOUT_MS)
 
-    # Use QF_NIA (quantifier-free nonlinear integer arithmetic) logic
-    # which works better for polynomial / loop-derived expressions.
-    solver.set("logic", "QF_NIA")
+    # Use appropriate solver logic depending on whether arrays are involved.
+    # QF_NIA = quantifier-free nonlinear integer arithmetic (no arrays).
+    # QF_ANIA = quantifier-free arrays + nonlinear integer arithmetic.
+    has_arrays = any(isinstance(v, SymbolicList) for v in param_symbols.values())
+    if has_arrays:
+        # Let Z3 auto-detect logic (QF_ANIA is not always available)
+        logger.info("BMC mode: using auto solver logic (arrays present).")
+    else:
+        solver.set("logic", "QF_NIA")
 
     # Add any path constraints accumulated during symbolic execution
     for c in env_orig.constraints:
         solver.add(c)
     for c in env_opt.constraints:
+        solver.add(c)
+
+    # Add BMC length bounds for SymbolicList parameters
+    for c in bmc_constraints:
         solver.add(c)
 
     try:

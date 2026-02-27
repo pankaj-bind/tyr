@@ -8,13 +8,16 @@ Supports:
   - Comparisons (<, <=, >, >=, ==, !=)
   - If/else expressions and statements → Z3 If()
   - For-loops over range() → bounded unrolling
+  - For-loops over SymbolicList → bounded BMC unrolling
   - While-loops → bounded unrolling
   - Variable assignments (SSA-style environment tracking)
   - Return statements
   - Function calls: len(), sum(), min(), max(), abs(), sorted()
+  - SymbolicList: len(), subscript read/write, append(), iteration, .count()
   - List literals and subscript access → Z3 Arrays
   - Augmented assignments (+=, -=, *=, etc.)
   - Tuple unpacking (limited)
+  - Bounded Model Checking (BMC) for dynamic lists
 """
 
 from __future__ import annotations
@@ -30,6 +33,32 @@ logger = logging.getLogger("tyr.z3.ast")
 
 # Maximum iterations for loop unrolling to keep solving tractable
 MAX_LOOP_UNROLL: int = 30
+
+# ---------------------------------------------------------------------------
+# Bounded Model Checking — maximum list length
+# ---------------------------------------------------------------------------
+MAX_BMC_LENGTH: int = 5
+
+
+# ---------------------------------------------------------------------------
+# SymbolicList — bounded representation of a Python list in Z3
+# ---------------------------------------------------------------------------
+@dataclass
+class SymbolicList:
+    """
+    Represents a Python list as a Z3 Array (values) + Z3 Int (length).
+
+    - array: Z3 Array(IntSort → IntSort), maps index → element value
+    - length: Z3 ArithRef, tracks the current dynamic length
+
+    Bounded by MAX_BMC_LENGTH: length is always in [0, MAX_BMC_LENGTH].
+    """
+    array: z3.ArrayRef
+    length: z3.ArithRef
+
+    def copy(self) -> SymbolicList:
+        """Shallow copy — Z3 objects are immutable, so this is safe."""
+        return SymbolicList(array=self.array, length=self.length)
 
 # ---------------------------------------------------------------------------
 # Symbolic Environment — tracks variable bindings during execution
@@ -200,13 +229,22 @@ class ASTToZ3Translator:
                         if isinstance(elt, ast.Name):
                             env.set(elt.id, self.fresh_var(elt.id))
             elif isinstance(target, ast.Subscript):
-                # arr[i] = val → Z3 Store
+                # arr[i] = val → Z3 Store (supports SymbolicList and raw arrays)
                 arr = self._eval_expr(target.value, env)
                 idx = self._eval_expr(target.slice, env)
-                if z3.is_array(arr):
+                if isinstance(arr, SymbolicList):
+                    new_arr = z3.Store(arr.array, idx, value)
+                    updated = SymbolicList(array=new_arr, length=arr.length)
+                    if isinstance(target.value, ast.Name):
+                        env.set(target.value.id, updated)
+                elif z3.is_array(arr):
                     new_arr = z3.Store(arr, idx, value)
                     if isinstance(target.value, ast.Name):
                         env.set(target.value.id, new_arr)
+                else:
+                    raise SymbolicExecError(
+                        f"Subscript assignment on unsupported type: {type(arr).__name__}"
+                    )
             else:
                 raise SymbolicExecError(
                     f"Unsupported assignment target: {type(target).__name__}"
@@ -223,7 +261,12 @@ class ASTToZ3Translator:
         elif isinstance(node.target, ast.Subscript):
             arr = self._eval_expr(node.target.value, env)
             idx = self._eval_expr(node.target.slice, env)
-            if z3.is_array(arr):
+            if isinstance(arr, SymbolicList):
+                new_arr = z3.Store(arr.array, idx, result)
+                updated = SymbolicList(array=new_arr, length=arr.length)
+                if isinstance(node.target.value, ast.Name):
+                    env.set(node.target.value.id, updated)
+            elif z3.is_array(arr):
                 new_arr = z3.Store(arr, idx, result)
                 if isinstance(node.target.value, ast.Name):
                     env.set(node.target.value.id, new_arr)
@@ -249,30 +292,29 @@ class ASTToZ3Translator:
         if node.orelse:
             self._exec_body(node.orelse, else_env)
 
-        # Merge variable bindings using Z3 If
+        # Merge variable bindings using Z3 If (with SymbolicList support)
         all_vars = set(then_env.bindings.keys()) | set(else_env.bindings.keys())
         for var in all_vars:
             then_val = then_env.bindings.get(var)
             else_val = else_env.bindings.get(var)
             if then_val is not None and else_val is not None:
-                try:
-                    merged = z3.If(cond, then_val, else_val)
+                merged = self._if_merge(cond, then_val, else_val)
+                if merged is not None:
                     env.set(var, merged)
-                except (z3.Z3Exception, TypeError):
-                    # Different types; take the then-branch value
+                else:
                     env.set(var, then_val)
             elif then_val is not None:
                 if var in env.bindings:
-                    try:
-                        env.set(var, z3.If(cond, then_val, env.bindings[var]))
-                    except (z3.Z3Exception, TypeError):
+                    merged = self._if_merge(cond, then_val, env.bindings[var])
+                    if merged is not None:
+                        env.set(var, merged)
+                    else:
                         env.set(var, then_val)
             elif else_val is not None:
                 if var in env.bindings:
-                    try:
-                        env.set(var, z3.If(cond, env.bindings[var], else_val))
-                    except (z3.Z3Exception, TypeError):
-                        pass
+                    merged = self._if_merge(cond, env.bindings[var], else_val)
+                    if merged is not None:
+                        env.set(var, merged)
 
         # Merge return values
         if then_env.has_returned and else_env.has_returned:
@@ -293,6 +335,33 @@ class ASTToZ3Translator:
             # Code after the if-block runs when cond is True.
             env.partial_returns.append((z3.Not(cond), else_env.return_value))
             # Do NOT set has_returned.
+
+    # ------------------------------------------------------------------
+    # If-merge helper: merges two values under a Z3 condition.
+    # Handles SymbolicList element-wise merging.
+    # ------------------------------------------------------------------
+
+    def _if_merge(self, cond: Any, true_val: Any, false_val: Any) -> Any | None:
+        """
+        Return z3.If(cond, true_val, false_val), handling SymbolicList
+        by merging array and length separately. Returns None on failure.
+        """
+        if isinstance(true_val, SymbolicList) and isinstance(false_val, SymbolicList):
+            merged_len = z3.If(cond, true_val.length, false_val.length)
+            merged_arr = false_val.array
+            for k in range(MAX_BMC_LENGTH):
+                k_idx = z3.IntVal(k)
+                merged_arr = z3.Store(
+                    merged_arr, k_idx,
+                    z3.If(cond,
+                          z3.Select(true_val.array, k_idx),
+                          z3.Select(false_val.array, k_idx))
+                )
+            return SymbolicList(array=merged_arr, length=merged_len)
+        try:
+            return z3.If(cond, true_val, false_val)
+        except (z3.Z3Exception, TypeError):
+            return None
 
     # ------------------------------------------------------------------
     # For loop — bounded unrolling over range()
@@ -331,8 +400,15 @@ class ASTToZ3Translator:
             self._exec_symbolic_for(loop_var, sym_start, sym_stop, sym_step, node.body, env)
             return
 
+        # ── BMC: For-loop over a SymbolicList ──
+        iter_val = self._eval_expr(node.iter, env)
+        if isinstance(iter_val, SymbolicList):
+            self._exec_for_over_symbolic_list(loop_var, iter_val, node.body, env)
+            return
+
         raise SymbolicExecError(
-            "For-loop iteration must be a range() call for bounded unrolling."
+            f"For-loop iteration must be range() or a SymbolicList for bounded unrolling. "
+            f"Got: {type(iter_val).__name__}"
         )
 
     def _exec_symbolic_for(
@@ -380,24 +456,101 @@ class ASTToZ3Translator:
                 break
 
             # Merge modified variables: var = If(guard, body_val, old_val)
-            for var_name in body_env.bindings:
-                if var_name == loop_var:
-                    continue
-                body_val = body_env.bindings[var_name]
-                old_val = env.bindings.get(var_name)
-                if old_val is not None:
-                    try:
-                        env.set(var_name, z3.If(guard, body_val, old_val))
-                    except (z3.Z3Exception, TypeError):
-                        env.set(var_name, body_val)
-                else:
-                    env.set(var_name, body_val)
+            self._merge_env_guarded(env, body_env, guard, skip_vars={loop_var})
 
             # Advance loop variable
             try:
                 current_i = current_i + step
             except (z3.Z3Exception, TypeError):
                 break
+
+    # ------------------------------------------------------------------
+    # BMC: For-loop over a SymbolicList
+    # ------------------------------------------------------------------
+
+    def _exec_for_over_symbolic_list(
+        self,
+        loop_var: str,
+        lst: SymbolicList,
+        body: list[ast.stmt],
+        env: SymbolicEnv,
+    ) -> None:
+        """
+        Bounded unrolling of `for <loop_var> in <SymbolicList>`.
+
+        Unrolls exactly MAX_BMC_LENGTH iterations. Iteration i executes
+        only when i < lst.length (guarded by Z3 If on every variable merge).
+
+        The loop variable is set to Select(lst.array, i) on each iteration.
+        """
+        for i in range(MAX_BMC_LENGTH):
+            idx = z3.IntVal(i)
+            guard = idx < lst.length  # True iff this iteration is live
+
+            body_env = env.copy()
+            body_env.set(loop_var, z3.Select(lst.array, idx))
+            self._exec_body(body, body_env)
+
+            if body_env.has_returned:
+                if env.return_value is not None:
+                    try:
+                        env.return_value = z3.If(guard, body_env.return_value, env.return_value)
+                    except (z3.Z3Exception, TypeError):
+                        env.return_value = body_env.return_value
+                else:
+                    env.return_value = body_env.return_value
+                break
+
+            self._merge_env_guarded(env, body_env, guard, skip_vars={loop_var})
+
+    # ------------------------------------------------------------------
+    # Env merging helper (shared by symbolic for & BMC list for)
+    # ------------------------------------------------------------------
+
+    def _merge_env_guarded(
+        self,
+        env: SymbolicEnv,
+        body_env: SymbolicEnv,
+        guard: Any,
+        skip_vars: set[str] | None = None,
+    ) -> None:
+        """
+        Merge body_env back into env for all modified bindings,
+        guarded by `guard`: var = If(guard, body_val, old_val).
+
+        Handles SymbolicList merging via element-wise If on array and length.
+        """
+        skip = skip_vars or set()
+        for var_name in body_env.bindings:
+            if var_name in skip:
+                continue
+            body_val = body_env.bindings[var_name]
+            old_val = env.bindings.get(var_name)
+
+            if old_val is None:
+                env.set(var_name, body_val)
+                continue
+
+            # Both are SymbolicList → merge array and length separately
+            if isinstance(body_val, SymbolicList) and isinstance(old_val, SymbolicList):
+                merged_len = z3.If(guard, body_val.length, old_val.length)
+                # Merge arrays element-wise for indices [0, MAX_BMC_LENGTH)
+                merged_arr = old_val.array
+                for k in range(MAX_BMC_LENGTH):
+                    k_idx = z3.IntVal(k)
+                    merged_arr = z3.Store(
+                        merged_arr, k_idx,
+                        z3.If(guard,
+                              z3.Select(body_val.array, k_idx),
+                              z3.Select(old_val.array, k_idx))
+                    )
+                env.set(var_name, SymbolicList(array=merged_arr, length=merged_len))
+                continue
+
+            try:
+                env.set(var_name, z3.If(guard, body_val, old_val))
+            except (z3.Z3Exception, TypeError):
+                env.set(var_name, body_val)
 
     def _try_extract_range(
         self, node: ast.expr, env: SymbolicEnv
@@ -528,9 +681,10 @@ class ASTToZ3Translator:
         elif isinstance(node, ast.Subscript):
             return self._eval_subscript(node, env)
         elif isinstance(node, ast.List) or isinstance(node, ast.Tuple):
-            return [self._eval_expr(elt, env) for elt in node.elts]
+            return self._eval_list_literal(node, env)
         elif isinstance(node, ast.Attribute):
-            # Limited support: e.g., x.append — mostly skip
+            # Attribute access on SymbolicList — return a marker for method dispatch
+            # (actual dispatch happens in _eval_call for method calls)
             raise SymbolicExecError(
                 f"Attribute access not fully supported: "
                 f"{ast.dump(node)}"
@@ -540,6 +694,36 @@ class ASTToZ3Translator:
                 f"Unsupported expression type: {type(node).__name__} "
                 f"(line {getattr(node, 'lineno', '?')})"
             )
+
+    # ------------------------------------------------------------------
+    # List literal → SymbolicList
+    # ------------------------------------------------------------------
+
+    def _eval_list_literal(self, node: ast.List | ast.Tuple, env: SymbolicEnv) -> SymbolicList:
+        """
+        Convert a list literal like `[]`, `[1, 2, 3]` into a SymbolicList.
+
+        This bridges the gap between Python list literals and our BMC
+        representation. All subsequent operations (len, subscript, append,
+        iteration) work uniformly on SymbolicList.
+        """
+        elements = [self._eval_expr(elt, env) for elt in node.elts]
+        n = len(elements)
+
+        if n > MAX_BMC_LENGTH:
+            raise SymbolicExecError(
+                f"List literal has {n} elements, exceeds MAX_BMC_LENGTH={MAX_BMC_LENGTH}"
+            )
+
+        # Build the array with concrete stores
+        arr_name = f"__litarr_{self._fresh_counter}"
+        self._fresh_counter += 1
+        arr = z3.Array(arr_name, z3.IntSort(), z3.IntSort())
+        for i, elem in enumerate(elements):
+            arr = z3.Store(arr, z3.IntVal(i), elem)
+
+        length = z3.IntVal(n)
+        return SymbolicList(array=arr, length=length)
 
     # ------------------------------------------------------------------
     # Constants
@@ -655,8 +839,13 @@ class ASTToZ3Translator:
             return parts[0]
         return z3.And(*parts)
 
-    @staticmethod
-    def _apply_cmpop(op: ast.cmpop, left: Any, right: Any) -> Any:
+    def _apply_cmpop(self, op: ast.cmpop, left: Any, right: Any) -> Any:
+        # ── Handle `x in list` and `x not in list` ──
+        if isinstance(op, ast.In):
+            return self._symbolic_in(left, right)
+        if isinstance(op, ast.NotIn):
+            return z3.Not(self._symbolic_in(left, right))
+
         if isinstance(op, ast.Lt):
             return left < right
         elif isinstance(op, ast.LtE):
@@ -670,6 +859,31 @@ class ASTToZ3Translator:
         elif isinstance(op, ast.NotEq):
             return left != right
         raise SymbolicExecError(f"Unsupported comparison: {type(op).__name__}")
+
+    def _symbolic_in(self, needle: Any, haystack: Any) -> Any:
+        """
+        Symbolically evaluate `needle in haystack`.
+        Supports SymbolicList, Python list of Z3 values, and raw Z3 arrays.
+        """
+        if isinstance(haystack, SymbolicList):
+            # OR of (needle == arr[i]) for i in [0, MAX_BMC_LENGTH) guarded by i < length
+            clauses = []
+            for k in range(MAX_BMC_LENGTH):
+                k_idx = z3.IntVal(k)
+                in_bounds = k_idx < haystack.length
+                matches = z3.Select(haystack.array, k_idx) == needle
+                clauses.append(z3.And(in_bounds, matches))
+            return z3.Or(*clauses) if clauses else z3.BoolVal(False)
+
+        if isinstance(haystack, list):
+            if len(haystack) == 0:
+                return z3.BoolVal(False)
+            clauses = [needle == elem for elem in haystack]
+            return z3.Or(*clauses)
+
+        raise SymbolicExecError(
+            f"'in' operator not supported for type: {type(haystack).__name__}"
+        )
 
     # ------------------------------------------------------------------
     # Ternary / If-expression
@@ -686,6 +900,10 @@ class ASTToZ3Translator:
     # ------------------------------------------------------------------
 
     def _eval_call(self, node: ast.Call, env: SymbolicEnv) -> Any:
+        # ── Method calls on objects (e.g., list.append, list.count) ──
+        if isinstance(node.func, ast.Attribute):
+            return self._eval_method_call(node, env)
+
         if isinstance(node.func, ast.Name):
             fname = node.func.id
             args = [self._eval_expr(a, env) for a in node.args]
@@ -697,15 +915,15 @@ class ASTToZ3Translator:
                 return z3.If(x >= 0, x, -x)
 
             if fname == "min":
-                if len(args) == 1 and isinstance(args[0], list):
-                    return self._symbolic_min(args[0])
+                if len(args) == 1 and isinstance(args[0], (list, SymbolicList)):
+                    return self._symbolic_min_of(args[0])
                 if len(args) >= 2:
                     return self._symbolic_min(args)
                 raise SymbolicExecError("min() requires at least 2 arguments or a list")
 
             if fname == "max":
-                if len(args) == 1 and isinstance(args[0], list):
-                    return self._symbolic_max(args[0])
+                if len(args) == 1 and isinstance(args[0], (list, SymbolicList)):
+                    return self._symbolic_max_of(args[0])
                 if len(args) >= 2:
                     return self._symbolic_max(args)
                 raise SymbolicExecError("max() requires at least 2 arguments or a list")
@@ -714,15 +932,24 @@ class ASTToZ3Translator:
                 if len(args) != 1:
                     raise SymbolicExecError("len() requires exactly 1 argument")
                 arg = args[0]
+                if isinstance(arg, SymbolicList):
+                    return arg.length
                 if isinstance(arg, list):
                     return z3.IntVal(len(arg))
-                # If it's a Z3 array, we may have stored length
-                raise SymbolicExecError("len() on non-list/symbolic arrays not supported")
+                raise SymbolicExecError(f"len() on unsupported type: {type(arg).__name__}")
 
             if fname == "sum":
                 if len(args) != 1:
                     raise SymbolicExecError("sum() requires exactly 1 argument")
                 arg = args[0]
+                if isinstance(arg, SymbolicList):
+                    # Bounded sum over SymbolicList
+                    result = z3.IntVal(0)
+                    for k in range(MAX_BMC_LENGTH):
+                        elem = z3.Select(arg.array, z3.IntVal(k))
+                        in_bounds = z3.IntVal(k) < arg.length
+                        result = z3.If(in_bounds, result + elem, result)
+                    return result
                 if isinstance(arg, list):
                     if len(arg) == 0:
                         return z3.IntVal(0)
@@ -746,8 +973,6 @@ class ASTToZ3Translator:
 
             if fname == "sorted":
                 # Cannot truly sort symbolically — return input unchanged
-                # (sorted is semantics-altering only by ordering; if both
-                #  functions call sorted on the same input, equivalence holds)
                 if len(args) == 1:
                     return args[0]
 
@@ -760,15 +985,124 @@ class ASTToZ3Translator:
                     x = args[0]
                     return z3.If(x != z3.IntVal(0), z3.BoolVal(True), z3.BoolVal(False))
 
+            if fname == "set":
+                # set() on a SymbolicList — can't represent sets symbolically.
+                # Return the SymbolicList unchanged for equivalence checking.
+                if len(args) == 0:
+                    # Empty set → empty SymbolicList
+                    arr_name = f"__emptyset_{self._fresh_counter}"
+                    self._fresh_counter += 1
+                    arr = z3.Array(arr_name, z3.IntSort(), z3.IntSort())
+                    return SymbolicList(array=arr, length=z3.IntVal(0))
+                if len(args) == 1 and isinstance(args[0], SymbolicList):
+                    return args[0]  # best-effort: treat as list
+
+            if fname == "dict":
+                # dict() → empty SymbolicList as best-effort placeholder
+                if len(args) == 0:
+                    arr_name = f"__emptydict_{self._fresh_counter}"
+                    self._fresh_counter += 1
+                    arr = z3.Array(arr_name, z3.IntSort(), z3.IntSort())
+                    return SymbolicList(array=arr, length=z3.IntVal(0))
+
+            if fname == "list":
+                if len(args) == 0:
+                    arr_name = f"__emptylist_{self._fresh_counter}"
+                    self._fresh_counter += 1
+                    arr = z3.Array(arr_name, z3.IntSort(), z3.IntSort())
+                    return SymbolicList(array=arr, length=z3.IntVal(0))
+                if len(args) == 1 and isinstance(args[0], SymbolicList):
+                    return args[0].copy()
+
             raise SymbolicExecError(f"Unsupported function call: {fname}()")
 
-        elif isinstance(node.func, ast.Attribute):
-            # Method calls like list.append, dict.get, etc.
+        raise SymbolicExecError(f"Unsupported callable: {ast.dump(node.func)}")
+
+    # ------------------------------------------------------------------
+    # Method calls — .append(), .count(), etc.
+    # ------------------------------------------------------------------
+
+    def _eval_method_call(self, node: ast.Call, env: SymbolicEnv) -> Any:
+        """
+        Handle method calls like obj.append(val), obj.count(val),
+        nums.count(x), etc.
+        """
+        attr = node.func  # ast.Attribute
+        assert isinstance(attr, ast.Attribute)
+        method_name = attr.attr
+        obj = self._eval_expr(attr.value, env)
+        args = [self._eval_expr(a, env) for a in node.args]
+
+        if isinstance(obj, SymbolicList):
+            if method_name == "append":
+                if len(args) != 1:
+                    raise SymbolicExecError(".append() requires exactly 1 argument")
+                val = args[0]
+                # Guard: only append if length < MAX_BMC_LENGTH
+                new_arr = z3.Store(obj.array, obj.length, val)
+                can_grow = obj.length < z3.IntVal(MAX_BMC_LENGTH)
+                new_len = z3.If(can_grow, obj.length + 1, obj.length)
+                new_arr_guarded = z3.If(can_grow, new_arr, obj.array)
+                updated = SymbolicList(array=new_arr_guarded, length=new_len)
+                # Update the binding in env
+                if isinstance(attr.value, ast.Name):
+                    env.set(attr.value.id, updated)
+                return z3.IntVal(0)  # append returns None; use 0 placeholder
+
+            if method_name == "count":
+                if len(args) != 1:
+                    raise SymbolicExecError(".count() requires exactly 1 argument")
+                target_val = args[0]
+                # Bounded count: sum of (1 if arr[i]==val else 0) for i in [0,length)
+                count_expr = z3.IntVal(0)
+                for k in range(MAX_BMC_LENGTH):
+                    k_idx = z3.IntVal(k)
+                    in_bounds = k_idx < obj.length
+                    matches = z3.Select(obj.array, k_idx) == target_val
+                    count_expr = count_expr + z3.If(
+                        z3.And(in_bounds, matches), z3.IntVal(1), z3.IntVal(0)
+                    )
+                return count_expr
+
+            if method_name == "pop":
+                # pop() removes and returns last element
+                if len(args) == 0:
+                    # Pop from end
+                    new_len = z3.If(obj.length > 0, obj.length - 1, z3.IntVal(0))
+                    popped_val = z3.Select(obj.array, obj.length - 1)
+                    updated = SymbolicList(array=obj.array, length=new_len)
+                    if isinstance(attr.value, ast.Name):
+                        env.set(attr.value.id, updated)
+                    return popped_val
+                raise SymbolicExecError(".pop(index) not supported, only .pop()")
+
+            if method_name == "extend":
+                if len(args) != 1 or not isinstance(args[0], SymbolicList):
+                    raise SymbolicExecError(".extend() requires a SymbolicList argument")
+                other = args[0]
+                # Copy elements from other into obj
+                new_arr = obj.array
+                new_len = obj.length
+                for k in range(MAX_BMC_LENGTH):
+                    src_idx = z3.IntVal(k)
+                    in_bounds = src_idx < other.length
+                    can_grow = new_len < z3.IntVal(MAX_BMC_LENGTH)
+                    should_copy = z3.And(in_bounds, can_grow)
+                    val = z3.Select(other.array, src_idx)
+                    new_arr = z3.If(should_copy, z3.Store(new_arr, new_len, val), new_arr)
+                    new_len = z3.If(should_copy, new_len + 1, new_len)
+                updated = SymbolicList(array=new_arr, length=new_len)
+                if isinstance(attr.value, ast.Name):
+                    env.set(attr.value.id, updated)
+                return z3.IntVal(0)
+
             raise SymbolicExecError(
-                f"Method calls not fully supported: {ast.dump(node.func)}"
+                f"Unsupported method on SymbolicList: .{method_name}()"
             )
 
-        raise SymbolicExecError(f"Unsupported callable: {ast.dump(node.func)}")
+        raise SymbolicExecError(
+            f"Method call .{method_name}() on unsupported type: {type(obj).__name__}"
+        )
 
     @staticmethod
     def _symbolic_min(values: list) -> Any:
@@ -777,6 +1111,21 @@ class ASTToZ3Translator:
             result = z3.If(v < result, v, result)
         return result
 
+    def _symbolic_min_of(self, arg: Any) -> Any:
+        """min() of a list or SymbolicList."""
+        if isinstance(arg, list):
+            return self._symbolic_min(arg)
+        if isinstance(arg, SymbolicList):
+            # Bounded min: reduce over [0, MAX_BMC_LENGTH)
+            result = z3.Select(arg.array, z3.IntVal(0))
+            for k in range(1, MAX_BMC_LENGTH):
+                k_idx = z3.IntVal(k)
+                in_bounds = k_idx < arg.length
+                elem = z3.Select(arg.array, k_idx)
+                result = z3.If(z3.And(in_bounds, elem < result), elem, result)
+            return result
+        raise SymbolicExecError(f"min() on unsupported type: {type(arg).__name__}")
+
     @staticmethod
     def _symbolic_max(values: list) -> Any:
         result = values[0]
@@ -784,13 +1133,30 @@ class ASTToZ3Translator:
             result = z3.If(v > result, v, result)
         return result
 
+    def _symbolic_max_of(self, arg: Any) -> Any:
+        """max() of a list or SymbolicList."""
+        if isinstance(arg, list):
+            return self._symbolic_max(arg)
+        if isinstance(arg, SymbolicList):
+            result = z3.Select(arg.array, z3.IntVal(0))
+            for k in range(1, MAX_BMC_LENGTH):
+                k_idx = z3.IntVal(k)
+                in_bounds = k_idx < arg.length
+                elem = z3.Select(arg.array, k_idx)
+                result = z3.If(z3.And(in_bounds, elem > result), elem, result)
+            return result
+        raise SymbolicExecError(f"max() on unsupported type: {type(arg).__name__}")
+
     # ------------------------------------------------------------------
-    # Subscript (indexing)
+    # Subscript (indexing) — supports SymbolicList, raw lists, raw arrays
     # ------------------------------------------------------------------
 
     def _eval_subscript(self, node: ast.Subscript, env: SymbolicEnv) -> Any:
         obj = self._eval_expr(node.value, env)
         idx = self._eval_expr(node.slice, env)
+
+        if isinstance(obj, SymbolicList):
+            return z3.Select(obj.array, idx)
 
         if isinstance(obj, list):
             # Concrete index into Python list of Z3 values
@@ -808,4 +1174,4 @@ class ASTToZ3Translator:
         if z3.is_array(obj):
             return z3.Select(obj, idx)
 
-        raise SymbolicExecError(f"Subscript on unsupported type: {type(obj)}")
+        raise SymbolicExecError(f"Subscript on unsupported type: {type(obj).__name__}")
