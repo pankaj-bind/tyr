@@ -18,6 +18,8 @@ Supports:
   - Augmented assignments (+=, -=, *=, etc.)
   - Tuple unpacking (limited)
   - Bounded Model Checking (BMC) for dynamic lists
+  - SymbolicDict: subscript read/write, key in dict, .get(), .items(), .keys(), .values()
+  - SymbolicSet: add(), remove(), element in set
 """
 
 from __future__ import annotations
@@ -59,6 +61,55 @@ class SymbolicList:
     def copy(self) -> SymbolicList:
         """Shallow copy — Z3 objects are immutable, so this is safe."""
         return SymbolicList(array=self.array, length=self.length)
+
+
+# ---------------------------------------------------------------------------
+# SymbolicSet — bounded representation of a Python set in Z3
+# ---------------------------------------------------------------------------
+@dataclass
+class SymbolicSet:
+    """
+    Represents a Python set as a Z3 Array mapping element (Int) → presence (Bool).
+
+    Uses Z3 Array(IntSort → BoolSort).  `presence[x] == True` means x is in
+    the set.  This is an *exact* model for integer sets — no BMC length bound
+    needed because membership is checked via Select, not iteration.
+    """
+    presence: z3.ArrayRef
+
+    def copy(self) -> SymbolicSet:
+        return SymbolicSet(presence=self.presence)
+
+
+# ---------------------------------------------------------------------------
+# SymbolicDict — bounded representation of a Python dict in Z3
+# ---------------------------------------------------------------------------
+@dataclass
+class SymbolicDict:
+    """
+    Represents a Python dict as two parallel Z3 Arrays:
+
+    - presence: Array(IntSort → BoolSort) — tracks which keys exist
+    - values:   Array(IntSort → IntSort)  — maps key → stored value
+
+    `presence[k] == True` means key k is in the dict, and `values[k]`
+    gives the associated value.
+
+    Additionally, `tracked_keys` records which concrete/symbolic key
+    expressions have ever been stored so that bounded iteration over
+    `.items()` / `.keys()` / `.values()` is possible.
+    """
+    presence: z3.ArrayRef
+    values: z3.ArrayRef
+    tracked_keys: list[Any] = field(default_factory=list)
+
+    def copy(self) -> SymbolicDict:
+        return SymbolicDict(
+            presence=self.presence,
+            values=self.values,
+            tracked_keys=list(self.tracked_keys),
+        )
+
 
 # ---------------------------------------------------------------------------
 # Symbolic Environment — tracks variable bindings during execution
@@ -229,10 +280,20 @@ class ASTToZ3Translator:
                         if isinstance(elt, ast.Name):
                             env.set(elt.id, self.fresh_var(elt.id))
             elif isinstance(target, ast.Subscript):
-                # arr[i] = val → Z3 Store (supports SymbolicList and raw arrays)
+                # arr[i] = val → Z3 Store (supports SymbolicList, SymbolicDict, raw arrays)
                 arr = self._eval_expr(target.value, env)
                 idx = self._eval_expr(target.slice, env)
-                if isinstance(arr, SymbolicList):
+                if isinstance(arr, SymbolicDict):
+                    # dict[key] = val → update presence + values
+                    new_presence = z3.Store(arr.presence, idx, z3.BoolVal(True))
+                    new_values = z3.Store(arr.values, idx, value)
+                    tracked = list(arr.tracked_keys)
+                    tracked.append(idx)
+                    updated = SymbolicDict(presence=new_presence, values=new_values,
+                                           tracked_keys=tracked)
+                    if isinstance(target.value, ast.Name):
+                        env.set(target.value.id, updated)
+                elif isinstance(arr, SymbolicList):
                     new_arr = z3.Store(arr.array, idx, value)
                     updated = SymbolicList(array=new_arr, length=arr.length)
                     if isinstance(target.value, ast.Name):
@@ -261,7 +322,18 @@ class ASTToZ3Translator:
         elif isinstance(node.target, ast.Subscript):
             arr = self._eval_expr(node.target.value, env)
             idx = self._eval_expr(node.target.slice, env)
-            if isinstance(arr, SymbolicList):
+            if isinstance(arr, SymbolicDict):
+                # dict[key] += val → read, add, write back
+                new_values = z3.Store(arr.values, idx, result)
+                new_presence = z3.Store(arr.presence, idx, z3.BoolVal(True))
+                tracked = list(arr.tracked_keys)
+                if not any(self._z3_eq(idx, tk) for tk in tracked):
+                    tracked.append(idx)
+                updated = SymbolicDict(presence=new_presence, values=new_values,
+                                       tracked_keys=tracked)
+                if isinstance(node.target.value, ast.Name):
+                    env.set(node.target.value.id, updated)
+            elif isinstance(arr, SymbolicList):
                 new_arr = z3.Store(arr.array, idx, result)
                 updated = SymbolicList(array=new_arr, length=arr.length)
                 if isinstance(node.target.value, ast.Name):
@@ -343,8 +415,9 @@ class ASTToZ3Translator:
 
     def _if_merge(self, cond: Any, true_val: Any, false_val: Any) -> Any | None:
         """
-        Return z3.If(cond, true_val, false_val), handling SymbolicList
-        by merging array and length separately. Returns None on failure.
+        Return z3.If(cond, true_val, false_val), handling SymbolicList,
+        SymbolicDict, and SymbolicSet by merging their internal arrays.
+        Returns None on failure.
         """
         if isinstance(true_val, SymbolicList) and isinstance(false_val, SymbolicList):
             merged_len = z3.If(cond, true_val.length, false_val.length)
@@ -358,10 +431,52 @@ class ASTToZ3Translator:
                           z3.Select(false_val.array, k_idx))
                 )
             return SymbolicList(array=merged_arr, length=merged_len)
+
+        if isinstance(true_val, SymbolicDict) and isinstance(false_val, SymbolicDict):
+            # Merge presence and values arrays using z3.If on each tracked key
+            all_keys = list(set(id(k) for k in true_val.tracked_keys) and
+                           true_val.tracked_keys)
+            for k in false_val.tracked_keys:
+                if not any(self._z3_eq(k, tk) for tk in all_keys):
+                    all_keys.append(k)
+            merged_presence = false_val.presence
+            merged_values = false_val.values
+            for key in all_keys:
+                merged_presence = z3.Store(
+                    merged_presence, key,
+                    z3.If(cond,
+                          z3.Select(true_val.presence, key),
+                          z3.Select(false_val.presence, key))
+                )
+                merged_values = z3.Store(
+                    merged_values, key,
+                    z3.If(cond,
+                          z3.Select(true_val.values, key),
+                          z3.Select(false_val.values, key))
+                )
+            return SymbolicDict(presence=merged_presence, values=merged_values,
+                                tracked_keys=all_keys)
+
+        if isinstance(true_val, SymbolicSet) and isinstance(false_val, SymbolicSet):
+            # SymbolicSet uses a presence array (Int → Bool).
+            # For a point-free merge without tracked keys, use z3.Lambda
+            # or accept a best-effort: the merged array selects per-key.
+            # Since we don't iterate sets, a functional merge suffices:
+            merged = z3.If(cond, true_val.presence, false_val.presence)
+            return SymbolicSet(presence=merged)
+
         try:
             return z3.If(cond, true_val, false_val)
         except (z3.Z3Exception, TypeError):
             return None
+
+    @staticmethod
+    def _z3_eq(a: Any, b: Any) -> bool:
+        """Best-effort structural equality check for Z3 expressions."""
+        try:
+            return a is b or str(a) == str(b)
+        except Exception:
+            return False
 
     # ------------------------------------------------------------------
     # For loop — bounded unrolling over range()
@@ -369,13 +484,17 @@ class ASTToZ3Translator:
     # ------------------------------------------------------------------
 
     def _exec_for(self, node: ast.For, env: SymbolicEnv) -> None:
-        if not isinstance(node.target, ast.Name):
-            raise SymbolicExecError("For-loop target must be a simple variable.")
+        # For range() and SymbolicList, target must be a simple Name.
+        # For Python-list iteration (dict.keys/items/values), tuple targets
+        # are allowed and handled in _exec_for_over_python_list.
+        loop_var: str | None = None
+        if isinstance(node.target, ast.Name):
+            loop_var = node.target.id
 
-        loop_var = node.target.id
-
-        # Try concrete range first (fast path)
-        iter_range = self._try_extract_range(node.iter, env)
+        # Try concrete range first (fast path) — requires simple Name target
+        iter_range = None
+        if loop_var is not None:
+            iter_range = self._try_extract_range(node.iter, env)
 
         if iter_range is not None:
             start, stop, step = iter_range
@@ -394,20 +513,28 @@ class ASTToZ3Translator:
             return
 
         # Symbolic range — unroll with Z3 If-guards
-        symbolic_range = self._try_extract_symbolic_range(node.iter, env)
-        if symbolic_range is not None:
-            sym_start, sym_stop, sym_step = symbolic_range
-            self._exec_symbolic_for(loop_var, sym_start, sym_stop, sym_step, node.body, env)
-            return
+        if loop_var is not None:
+            symbolic_range = self._try_extract_symbolic_range(node.iter, env)
+            if symbolic_range is not None:
+                sym_start, sym_stop, sym_step = symbolic_range
+                self._exec_symbolic_for(loop_var, sym_start, sym_stop, sym_step, node.body, env)
+                return
 
         # ── BMC: For-loop over a SymbolicList ──
         iter_val = self._eval_expr(node.iter, env)
         if isinstance(iter_val, SymbolicList):
+            if loop_var is None:
+                raise SymbolicExecError("For-loop over SymbolicList requires a simple variable target.")
             self._exec_for_over_symbolic_list(loop_var, iter_val, node.body, env)
             return
 
+        # ── For-loop over tracked dict keys/values/items (Python list) ──
+        if isinstance(iter_val, (list, tuple)):
+            self._exec_for_over_python_list(node, iter_val, env)
+            return
+
         raise SymbolicExecError(
-            f"For-loop iteration must be range() or a SymbolicList for bounded unrolling. "
+            f"For-loop iteration must be range(), a SymbolicList, or a tracked collection. "
             f"Got: {type(iter_val).__name__}"
         )
 
@@ -504,6 +631,47 @@ class ASTToZ3Translator:
             self._merge_env_guarded(env, body_env, guard, skip_vars={loop_var})
 
     # ------------------------------------------------------------------
+    # For-loop over a concrete Python list (e.g., dict.keys() result)
+    # ------------------------------------------------------------------
+
+    def _exec_for_over_python_list(
+        self,
+        node: ast.For,
+        items: list | tuple,
+        env: SymbolicEnv,
+    ) -> None:
+        """
+        Execute `for target in items` where items is a concrete Python
+        list of Z3 expressions (e.g., from dict.keys(), dict.items()).
+
+        Handles tuple unpacking for `for k, v in dict.items()`.
+        """
+        for item in items:
+            if isinstance(node.target, ast.Name):
+                env.set(node.target.id, item)
+            elif isinstance(node.target, ast.Tuple):
+                # Tuple unpacking: for k, v in dict.items()
+                if isinstance(item, (list, tuple)):
+                    for j, elt in enumerate(node.target.elts):
+                        if isinstance(elt, ast.Name):
+                            if j < len(item):
+                                env.set(elt.id, item[j])
+                            else:
+                                env.set(elt.id, z3.IntVal(0))
+                else:
+                    # Single value — assign to first target
+                    if node.target.elts and isinstance(node.target.elts[0], ast.Name):
+                        env.set(node.target.elts[0].id, item)
+            else:
+                raise SymbolicExecError(
+                    f"Unsupported for-loop target type: {type(node.target).__name__}"
+                )
+
+            self._exec_body(node.body, env)
+            if env.has_returned:
+                break
+
+    # ------------------------------------------------------------------
     # Env merging helper (shared by symbolic for & BMC list for)
     # ------------------------------------------------------------------
 
@@ -546,6 +714,20 @@ class ASTToZ3Translator:
                     )
                 env.set(var_name, SymbolicList(array=merged_arr, length=merged_len))
                 continue
+
+            # Both are SymbolicDict → merge presence + values arrays
+            if isinstance(body_val, SymbolicDict) and isinstance(old_val, SymbolicDict):
+                merged = self._if_merge(guard, body_val, old_val)
+                if merged is not None:
+                    env.set(var_name, merged)
+                    continue
+
+            # Both are SymbolicSet → merge presence arrays
+            if isinstance(body_val, SymbolicSet) and isinstance(old_val, SymbolicSet):
+                merged = self._if_merge(guard, body_val, old_val)
+                if merged is not None:
+                    env.set(var_name, merged)
+                    continue
 
             try:
                 env.set(var_name, z3.If(guard, body_val, old_val))
@@ -682,6 +864,10 @@ class ASTToZ3Translator:
             return self._eval_subscript(node, env)
         elif isinstance(node, ast.List) or isinstance(node, ast.Tuple):
             return self._eval_list_literal(node, env)
+        elif isinstance(node, ast.Dict):
+            return self._eval_dict_literal(node, env)
+        elif isinstance(node, ast.Set):
+            return self._eval_set_literal(node, env)
         elif isinstance(node, ast.Attribute):
             # Attribute access on SymbolicList — return a marker for method dispatch
             # (actual dispatch happens in _eval_call for method calls)
@@ -724,6 +910,50 @@ class ASTToZ3Translator:
 
         length = z3.IntVal(n)
         return SymbolicList(array=arr, length=length)
+
+    # ------------------------------------------------------------------
+    # Dict literal → SymbolicDict
+    # ------------------------------------------------------------------
+
+    def _eval_dict_literal(self, node: ast.Dict, env: SymbolicEnv) -> SymbolicDict:
+        """
+        Convert a dict literal like `{}`, `{1: 2, 3: 4}` into a SymbolicDict.
+
+        Empty `{}` → presence all-False, values all-zero.
+        Non-empty dict → Store each key-value pair.
+        """
+        tag = f"__dictlit_{self._fresh_counter}"
+        self._fresh_counter += 1
+
+        presence = z3.K(z3.IntSort(), z3.BoolVal(False))
+        values = z3.K(z3.IntSort(), z3.IntVal(0))
+        tracked: list[Any] = []
+
+        for key_node, val_node in zip(node.keys, node.values):
+            if key_node is None:
+                # ** unpacking — not supported
+                raise SymbolicExecError("Dict unpacking (**) not supported")
+            key = self._eval_expr(key_node, env)
+            val = self._eval_expr(val_node, env)
+            presence = z3.Store(presence, key, z3.BoolVal(True))
+            values = z3.Store(values, key, val)
+            tracked.append(key)
+
+        return SymbolicDict(presence=presence, values=values, tracked_keys=tracked)
+
+    # ------------------------------------------------------------------
+    # Set literal → SymbolicSet
+    # ------------------------------------------------------------------
+
+    def _eval_set_literal(self, node: ast.Set, env: SymbolicEnv) -> SymbolicSet:
+        """
+        Convert a set literal like `{1, 2, 3}` into a SymbolicSet.
+        """
+        presence = z3.K(z3.IntSort(), z3.BoolVal(False))
+        for elt_node in node.elts:
+            elt = self._eval_expr(elt_node, env)
+            presence = z3.Store(presence, elt, z3.BoolVal(True))
+        return SymbolicSet(presence=presence)
 
     # ------------------------------------------------------------------
     # Constants
@@ -865,6 +1095,14 @@ class ASTToZ3Translator:
         Symbolically evaluate `needle in haystack`.
         Supports SymbolicList, Python list of Z3 values, and raw Z3 arrays.
         """
+        if isinstance(haystack, SymbolicDict):
+            # key in dict → Select(presence, key)
+            return z3.Select(haystack.presence, needle)
+
+        if isinstance(haystack, SymbolicSet):
+            # element in set → Select(presence, element)
+            return z3.Select(haystack.presence, needle)
+
         if isinstance(haystack, SymbolicList):
             # OR of (needle == arr[i]) for i in [0, MAX_BMC_LENGTH) guarded by i < length
             clauses = []
@@ -986,24 +1224,31 @@ class ASTToZ3Translator:
                     return z3.If(x != z3.IntVal(0), z3.BoolVal(True), z3.BoolVal(False))
 
             if fname == "set":
-                # set() on a SymbolicList — can't represent sets symbolically.
-                # Return the SymbolicList unchanged for equivalence checking.
                 if len(args) == 0:
-                    # Empty set → empty SymbolicList
-                    arr_name = f"__emptyset_{self._fresh_counter}"
-                    self._fresh_counter += 1
-                    arr = z3.Array(arr_name, z3.IntSort(), z3.IntSort())
-                    return SymbolicList(array=arr, length=z3.IntVal(0))
+                    # Empty set → SymbolicSet with all-False presence
+                    return SymbolicSet(presence=z3.K(z3.IntSort(), z3.BoolVal(False)))
                 if len(args) == 1 and isinstance(args[0], SymbolicList):
-                    return args[0]  # best-effort: treat as list
+                    # set(list) → populate presence from list elements
+                    presence = z3.K(z3.IntSort(), z3.BoolVal(False))
+                    for k in range(MAX_BMC_LENGTH):
+                        k_idx = z3.IntVal(k)
+                        in_bounds = k_idx < args[0].length
+                        elem = z3.Select(args[0].array, k_idx)
+                        presence = z3.If(in_bounds,
+                                         z3.Store(presence, elem, z3.BoolVal(True)),
+                                         presence)
+                    return SymbolicSet(presence=presence)
+                if len(args) == 1 and isinstance(args[0], SymbolicSet):
+                    return args[0].copy()
 
             if fname == "dict":
-                # dict() → empty SymbolicList as best-effort placeholder
                 if len(args) == 0:
-                    arr_name = f"__emptydict_{self._fresh_counter}"
-                    self._fresh_counter += 1
-                    arr = z3.Array(arr_name, z3.IntSort(), z3.IntSort())
-                    return SymbolicList(array=arr, length=z3.IntVal(0))
+                    # Empty dict → SymbolicDict
+                    return SymbolicDict(
+                        presence=z3.K(z3.IntSort(), z3.BoolVal(False)),
+                        values=z3.K(z3.IntSort(), z3.IntVal(0)),
+                        tracked_keys=[],
+                    )
 
             if fname == "list":
                 if len(args) == 0:
@@ -1033,6 +1278,122 @@ class ASTToZ3Translator:
         obj = self._eval_expr(attr.value, env)
         args = [self._eval_expr(a, env) for a in node.args]
 
+        # ── SymbolicDict methods ──
+        if isinstance(obj, SymbolicDict):
+            if method_name == "get":
+                # dict.get(key) or dict.get(key, default)
+                if len(args) < 1:
+                    raise SymbolicExecError(".get() requires at least 1 argument")
+                key = args[0]
+                default = args[1] if len(args) >= 2 else z3.IntVal(0)
+                present = z3.Select(obj.presence, key)
+                return z3.If(present, z3.Select(obj.values, key), default)
+
+            if method_name == "keys":
+                # Return tracked_keys as a Python list (for iteration)
+                return obj.tracked_keys
+
+            if method_name == "values":
+                # Return tracked values as expressions guarded by presence
+                return [z3.Select(obj.values, k) for k in obj.tracked_keys]
+
+            if method_name == "items":
+                # Return list of (key, value) tuples for tracked keys
+                return [(k, z3.Select(obj.values, k)) for k in obj.tracked_keys]
+
+            if method_name == "pop":
+                # dict.pop(key) or dict.pop(key, default)
+                if len(args) < 1:
+                    raise SymbolicExecError(".pop() requires at least 1 argument")
+                key = args[0]
+                default = args[1] if len(args) >= 2 else z3.IntVal(0)
+                present = z3.Select(obj.presence, key)
+                result = z3.If(present, z3.Select(obj.values, key), default)
+                # Remove the key
+                new_presence = z3.Store(obj.presence, key, z3.BoolVal(False))
+                updated = SymbolicDict(presence=new_presence, values=obj.values,
+                                       tracked_keys=obj.tracked_keys)
+                if isinstance(attr.value, ast.Name):
+                    env.set(attr.value.id, updated)
+                return result
+
+            if method_name == "update":
+                # dict.update(other_dict)
+                if len(args) != 1 or not isinstance(args[0], SymbolicDict):
+                    raise SymbolicExecError(".update() requires a SymbolicDict argument")
+                other = args[0]
+                new_presence = obj.presence
+                new_values = obj.values
+                tracked = list(obj.tracked_keys)
+                for key in other.tracked_keys:
+                    p = z3.Select(other.presence, key)
+                    new_presence = z3.If(p,
+                                         z3.Store(new_presence, key, z3.BoolVal(True)),
+                                         new_presence)
+                    new_values = z3.If(p,
+                                       z3.Store(new_values, key, z3.Select(other.values, key)),
+                                       new_values)
+                    if not any(self._z3_eq(key, tk) for tk in tracked):
+                        tracked.append(key)
+                updated = SymbolicDict(presence=new_presence, values=new_values,
+                                       tracked_keys=tracked)
+                if isinstance(attr.value, ast.Name):
+                    env.set(attr.value.id, updated)
+                return z3.IntVal(0)
+
+            if method_name == "setdefault":
+                # dict.setdefault(key, default)
+                if len(args) < 1:
+                    raise SymbolicExecError(".setdefault() requires at least 1 argument")
+                key = args[0]
+                default = args[1] if len(args) >= 2 else z3.IntVal(0)
+                present = z3.Select(obj.presence, key)
+                result = z3.If(present, z3.Select(obj.values, key), default)
+                # Only store if not present
+                new_presence = z3.If(present, obj.presence,
+                                     z3.Store(obj.presence, key, z3.BoolVal(True)))
+                new_values = z3.If(present, obj.values,
+                                   z3.Store(obj.values, key, default))
+                tracked = list(obj.tracked_keys)
+                if not any(self._z3_eq(key, tk) for tk in tracked):
+                    tracked.append(key)
+                updated = SymbolicDict(presence=new_presence, values=new_values,
+                                       tracked_keys=tracked)
+                if isinstance(attr.value, ast.Name):
+                    env.set(attr.value.id, updated)
+                return result
+
+            raise SymbolicExecError(
+                f"Unsupported method on SymbolicDict: .{method_name}()"
+            )
+
+        # ── SymbolicSet methods ──
+        if isinstance(obj, SymbolicSet):
+            if method_name == "add":
+                if len(args) != 1:
+                    raise SymbolicExecError(".add() requires exactly 1 argument")
+                val = args[0]
+                new_presence = z3.Store(obj.presence, val, z3.BoolVal(True))
+                updated = SymbolicSet(presence=new_presence)
+                if isinstance(attr.value, ast.Name):
+                    env.set(attr.value.id, updated)
+                return z3.IntVal(0)
+
+            if method_name == "remove" or method_name == "discard":
+                if len(args) != 1:
+                    raise SymbolicExecError(f".{method_name}() requires exactly 1 argument")
+                val = args[0]
+                new_presence = z3.Store(obj.presence, val, z3.BoolVal(False))
+                updated = SymbolicSet(presence=new_presence)
+                if isinstance(attr.value, ast.Name):
+                    env.set(attr.value.id, updated)
+                return z3.IntVal(0)
+
+            raise SymbolicExecError(
+                f"Unsupported method on SymbolicSet: .{method_name}()"
+            )
+
+        # ── SymbolicList methods ──
         if isinstance(obj, SymbolicList):
             if method_name == "append":
                 if len(args) != 1:
@@ -1154,6 +1515,9 @@ class ASTToZ3Translator:
     def _eval_subscript(self, node: ast.Subscript, env: SymbolicEnv) -> Any:
         obj = self._eval_expr(node.value, env)
         idx = self._eval_expr(node.slice, env)
+
+        if isinstance(obj, SymbolicDict):
+            return z3.Select(obj.values, idx)
 
         if isinstance(obj, SymbolicList):
             return z3.Select(obj.array, idx)

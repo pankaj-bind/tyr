@@ -21,7 +21,8 @@ from typing import Any
 
 import z3
 
-from ast_to_z3 import ASTToZ3Translator, SymbolicExecError, SymbolicList, MAX_BMC_LENGTH
+from ast_to_z3 import (ASTToZ3Translator, SymbolicExecError, SymbolicList,
+                       SymbolicDict, SymbolicSet, MAX_BMC_LENGTH)
 
 logger = logging.getLogger("tyr.z3")
 
