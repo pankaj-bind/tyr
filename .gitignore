@@ -1,0 +1,28 @@
+# =============================================
+# Tyr — Root .gitignore
+# =============================================
+
+# ----- Research Paper folder (ignore all) ----
+Research Paper/
+
+# ----- Python backend -----------------------
+backend/__pycache__/
+backend/*.pyc
+backend/*.pyo
+backend/.env
+backend/test_verifier.py
+
+# ----- VS Code Extension --------------------
+VS Code Extension/out/
+VS Code Extension/node_modules/
+VS Code Extension/.env
+VS Code Extension/*.vsix
+
+# ----- IDE / OS ------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+Thumbs.db
+.DS_Store

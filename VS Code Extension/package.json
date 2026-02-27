@@ -1,0 +1,55 @@
+{
+  "name": "tyr",
+  "displayName": "Tyr — LLM Hallucination Bounding Engine",
+  "description": "Optimizes code via LLM and formally verifies semantic equivalence using Z3 SMT solving.",
+  "version": "0.1.0",
+  "publisher": "tyr-research",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "tyr.optimizeAndVerify",
+        "title": "Tyr: Optimize & Verify"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "tyr.optimizeAndVerify",
+          "when": "editorHasSelection",
+          "group": "1_modification@99"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Tyr",
+      "properties": {
+        "tyr.backendUrl": {
+          "type": "string",
+          "default": "http://localhost:8000",
+          "description": "Base URL of the Tyr FastAPI backend."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {}
+}
