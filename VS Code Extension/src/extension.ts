@@ -1,5 +1,5 @@
 /**
- * Tyr — VS Code Extension Entry Point (v0.2.0)
+ * Tyr — VS Code Extension Entry Point (v0.3.0)
  *
  * Advanced features:
  *   - Rich WebView results panel with syntax highlighting
@@ -36,7 +36,7 @@ interface CorrectionRound {
 interface VerifyResponse {
   original_code: string;
   optimized_code: string;
-  status: "UNSAT" | "SAT" | "ERROR";
+  status: "UNSAT" | "SAT" | "WARNING" | "ERROR";
   message: string;
   counterexample: Record<string, unknown> | null;
   correction_rounds: CorrectionRound[];
@@ -45,6 +45,7 @@ interface VerifyResponse {
   optimized_complexity: ComplexityInfo | null;
   complexity_improved: boolean | null;
   elapsed_ms: number;
+  verification_bounds: { max_list_length: number; max_symbolic_range: number; max_loop_unroll: number } | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -85,7 +86,7 @@ function createStatusBar(): vscode.StatusBarItem {
 }
 
 function setStatusBarState(
-  state: "idle" | "working" | "pass" | "fail" | "error"
+  state: "idle" | "working" | "pass" | "warning" | "fail" | "error"
 ): void {
   switch (state) {
     case "idle":
@@ -101,6 +102,13 @@ function setStatusBarState(
       statusBarItem.text = "$(check) Tyr: UNSAT ✓";
       statusBarItem.backgroundColor = undefined;
       statusBarItem.tooltip = "Tyr — Last result: Verified Equivalent";
+      break;
+    case "warning":
+      statusBarItem.text = "$(alert) Tyr: WARNING ⚠";
+      statusBarItem.backgroundColor = new vscode.ThemeColor(
+        "statusBarItem.warningBackground"
+      );
+      statusBarItem.tooltip = "Tyr — Last result: Empirically tested only (Z3 timed out)";
       break;
     case "fail":
       statusBarItem.text = "$(x) Tyr: SAT ✗";
@@ -270,6 +278,8 @@ export function activate(context: vscode.ExtensionContext): void {
       // Update status bar
       if (result.status === "UNSAT") {
         setStatusBarState("pass");
+      } else if (result.status === "WARNING") {
+        setStatusBarState("warning");
       } else if (result.status === "SAT") {
         setStatusBarState("fail");
       } else {
@@ -304,7 +314,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(disposable);
-  console.log('Extension "Tyr" v0.2.0 is now active.');
+  console.log('Extension "Tyr" v0.3.0 is now active.');
 }
 
 export function deactivate(): void {
@@ -448,12 +458,19 @@ function getWebviewHtml(r: VerifyResponse): string {
   const statusBadge =
     r.status === "UNSAT"
       ? '<span class="badge badge-pass">UNSAT — Verified Equivalent ✓</span>'
+      : r.status === "WARNING"
+      ? '<span class="badge badge-warning">WARNING — Empirically Tested Only ⚠</span>'
       : r.status === "SAT"
       ? '<span class="badge badge-fail">SAT — Semantics Differ ✗</span>'
       : '<span class="badge badge-error">ERROR — Verification Incomplete</span>';
 
   const origCx = r.original_complexity;
   const optCx = r.optimized_complexity;
+
+  // Verification bounds disclosure
+  const boundsHtml = r.verification_bounds
+    ? `<div class="bounds-info">Proof bounds: lists ≤ ${r.verification_bounds.max_list_length} elements, ranges ≤ ${r.verification_bounds.max_symbolic_range}, loops ≤ ${r.verification_bounds.max_loop_unroll} iterations</div>`
+    : '';
 
   // Complexity improvement indicator
   const cxImproved = r.complexity_improved;
@@ -538,7 +555,7 @@ function getWebviewHtml(r: VerifyResponse): string {
   }
 
   const applyBtn =
-    r.status === "UNSAT"
+    r.status === "UNSAT" || r.status === "WARNING"
       ? '<button class="btn btn-apply" onclick="apply()">Apply Optimized Code</button>'
       : "";
 
@@ -612,6 +629,12 @@ function getWebviewHtml(r: VerifyResponse): string {
     background: rgba(244, 71, 71, 0.15);
     color: var(--red);
     border: 1px solid rgba(244, 71, 71, 0.3);
+  }
+
+  .badge-warning {
+    background: rgba(220, 220, 170, 0.15);
+    color: var(--yellow);
+    border: 1px solid rgba(220, 220, 170, 0.3);
   }
 
   .badge-error {
@@ -845,10 +868,27 @@ function getWebviewHtml(r: VerifyResponse): string {
     color: var(--red);
   }
 
+  .message-warning {
+    background: rgba(220, 220, 170, 0.1);
+    border-left: 3px solid var(--yellow);
+    color: var(--yellow);
+  }
+
   .message-error {
     background: rgba(206, 145, 120, 0.1);
     border-left: 3px solid var(--orange);
     color: var(--orange);
+  }
+
+  .bounds-info {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 8px;
+    font-style: italic;
+    padding: 6px 12px;
+    background: var(--surface2);
+    border-radius: 4px;
+    border: 1px dashed var(--border);
   }
 
   @media (max-width: 600px) {
@@ -875,12 +915,15 @@ function getWebviewHtml(r: VerifyResponse): string {
   <div class="message-box ${
     r.status === "UNSAT"
       ? "message-pass"
+      : r.status === "WARNING"
+      ? "message-warning"
       : r.status === "SAT"
       ? "message-fail"
       : "message-error"
   }">
     ${escapeHtml(r.message)}
   </div>
+  ${boundsHtml}
   <div class="actions">
     ${applyBtn}
     <button class="btn btn-diff" onclick="openDiff()">Open Diff View</button>

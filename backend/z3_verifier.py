@@ -15,20 +15,27 @@ Pipeline:
 from __future__ import annotations
 
 import ast
+import ctypes
 import logging
+import threading
 import textwrap
 from typing import Any
 
 import z3
 
 from ast_to_z3 import (ASTToZ3Translator, SymbolicExecError, SymbolicList,
-                       SymbolicDict, SymbolicSet, MAX_BMC_LENGTH)
+                       SymbolicDict, SymbolicSet, MAX_BMC_LENGTH,
+                       MAX_LOOP_UNROLL, MAX_SYMBOLIC_RANGE)
 
 logger = logging.getLogger("tyr.z3")
 
 # Solver timeout (milliseconds) — kept short so we fall back to
 # concrete testing quickly for complex symbolic expressions.
-Z3_TIMEOUT_MS: int = 10_000
+Z3_TIMEOUT_MS: int = 30_000
+
+# Per-input timeout for concrete test execution (seconds).
+# Prevents infinite-loop DoS from malicious or buggy user code.
+CONCRETE_EXEC_TIMEOUT_S: int = 5
 
 
 # ---------------------------------------------------------------------------
@@ -174,11 +181,23 @@ def verify_equivalence(
     # QF_NIA = quantifier-free nonlinear integer arithmetic (no arrays).
     # QF_ANIA = quantifier-free arrays + nonlinear integer arithmetic.
     has_arrays = any(isinstance(v, SymbolicList) for v in param_symbols.values())
+
+    # If both return SymbolicList, compare element-wise within BMC bound
+    if isinstance(ret_orig, SymbolicList) and isinstance(ret_opt, SymbolicList):
+        has_arrays = True
+
+    # If both return SymbolicSet, compare presence arrays
+    if isinstance(ret_orig, SymbolicSet) and isinstance(ret_opt, SymbolicSet):
+        has_arrays = True
+
+    # If both return SymbolicDict, compare presence + values arrays
+    if isinstance(ret_orig, SymbolicDict) and isinstance(ret_opt, SymbolicDict):
+        has_arrays = True
+
     if has_arrays:
         # Let Z3 auto-detect logic (QF_ANIA is not always available)
         logger.info("BMC mode: using auto solver logic (arrays present).")
-    else:
-        solver.set("logic", "QF_NIA")
+    # Let Z3 auto-select logic — QF_NIA can be slower on nested If-expressions
 
     # Add any path constraints accumulated during symbolic execution
     for c in env_orig.constraints:
@@ -191,8 +210,47 @@ def verify_equivalence(
         solver.add(c)
 
     try:
-        difference = z3.simplify(ret_orig != ret_opt)
-        solver.add(difference)
+        if isinstance(ret_orig, SymbolicList) and isinstance(ret_opt, SymbolicList):
+            # Compare lengths and elements within BMC bound
+            diff_clauses = [ret_orig.length != ret_opt.length]
+            for k in range(MAX_BMC_LENGTH):
+                k_idx = z3.IntVal(k)
+                in_bounds = z3.And(k_idx < ret_orig.length, k_idx < ret_opt.length)
+                diff_clauses.append(
+                    z3.And(in_bounds,
+                           z3.Select(ret_orig.array, k_idx) != z3.Select(ret_opt.array, k_idx))
+                )
+            solver.add(z3.Or(*diff_clauses))
+        elif isinstance(ret_orig, SymbolicSet) and isinstance(ret_opt, SymbolicSet):
+            # Sets are equal iff their presence arrays agree on every key.
+            # Ask Z3 whether there exists ANY key where they differ.
+            diff_key = z3.Int("__set_diff_key")
+            solver.add(
+                z3.Select(ret_orig.presence, diff_key)
+                != z3.Select(ret_opt.presence, diff_key)
+            )
+        elif isinstance(ret_orig, SymbolicDict) and isinstance(ret_opt, SymbolicDict):
+            # Dicts are equal iff for every key, presence and value agree.
+            diff_key = z3.Int("__dict_diff_key")
+            solver.add(z3.Or(
+                z3.Select(ret_orig.presence, diff_key)
+                != z3.Select(ret_opt.presence, diff_key),
+                z3.And(
+                    z3.Select(ret_orig.presence, diff_key),
+                    z3.Select(ret_opt.presence, diff_key),
+                    z3.Select(ret_orig.values, diff_key)
+                    != z3.Select(ret_opt.values, diff_key),
+                ),
+            ))
+        else:
+            # Coerce Bool↔Int if one function returns Bool and the other Int
+            ro, rp = ret_orig, ret_opt
+            if isinstance(ro, z3.BoolRef) and isinstance(rp, z3.ArithRef):
+                ro = z3.If(ro, z3.IntVal(1), z3.IntVal(0))
+            elif isinstance(rp, z3.BoolRef) and isinstance(ro, z3.ArithRef):
+                rp = z3.If(rp, z3.IntVal(1), z3.IntVal(0))
+            difference = z3.simplify(ro != rp)
+            solver.add(difference)
     except (z3.Z3Exception, TypeError) as exc:
         return _error(
             f"Could not construct equivalence assertion (type mismatch?): {exc}"
@@ -208,10 +266,19 @@ def verify_equivalence(
         return {
             "status": "UNSAT",
             "message": (
-                "Tyr: Verification Passed (UNSAT). "
-                "The optimized code is provably equivalent to the original."
+                f"Tyr: Verification Passed (UNSAT). "
+                f"The optimized code is provably equivalent to the original "
+                f"within the verification bounds "
+                f"(lists ≤ {MAX_BMC_LENGTH} elements, "
+                f"ranges ≤ {MAX_SYMBOLIC_RANGE}, "
+                f"while-loops ≤ {MAX_LOOP_UNROLL} iterations)."
             ),
             "counterexample": None,
+            "verification_bounds": {
+                "max_bmc_length": MAX_BMC_LENGTH,
+                "max_symbolic_range": MAX_SYMBOLIC_RANGE,
+                "max_loop_unroll": MAX_LOOP_UNROLL,
+            },
         }
 
     if result == z3.sat:
@@ -233,7 +300,7 @@ def verify_equivalence(
 
     # z3.unknown — fallback to concrete testing
     reason = solver.reason_unknown()
-    logger.warning("Z3 verdict: UNKNOWN (%s) — falling back to concrete testing.", reason)
+    logger.warning("Z3 verdict: UNKNOWN (%s) — falling back to concrete testing (result will be WARNING, not UNSAT).", reason)
     return _concrete_test_fallback(original_code, optimized_code, orig_params)
 
 
@@ -264,6 +331,88 @@ def _error(message: str) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Code Safety Validation — AST whitelist before exec()
+# ---------------------------------------------------------------------------
+
+_DANGEROUS_BUILTINS = frozenset({
+    "exec", "eval", "compile", "__import__", "open",
+    "exit", "quit", "breakpoint", "globals", "locals",
+    "getattr", "setattr", "delattr",
+    "vars", "dir", "type", "super",
+    "memoryview", "bytearray", "classmethod", "staticmethod",
+    "property", "input",
+})
+
+_DANGEROUS_MODULES = frozenset({
+    "os", "sys", "subprocess", "shutil", "pathlib",
+    "socket", "http", "ctypes", "signal", "importlib",
+    "io", "pickle", "shelve", "tempfile", "multiprocessing",
+    "threading", "asyncio", "webbrowser", "code", "codeop",
+    "compileall", "py_compile",
+})
+
+# Dunder attributes that enable sandbox escape via the MRO chain
+_DANGEROUS_ATTRS = frozenset({
+    "__class__", "__subclasses__", "__bases__", "__mro__",
+    "__builtins__", "__globals__", "__code__", "__func__",
+    "__self__", "__module__", "__dict__", "__init_subclass__",
+    "__set_name__", "__reduce__", "__reduce_ex__",
+    "__getattr__", "__setattr__", "__delattr__",
+    "__import__",
+})
+
+
+def _validate_code_safety(code: str) -> bool:
+    """
+    Reject code containing imports, exec/eval, OS access, or dunder attribute
+    chains that could escape the sandbox.  This is a defence-in-depth measure:
+    the Z3 translation never calls ``exec()`` on user code, but the concrete
+    testing fallback does, so we must whitelist aggressively.
+    """
+    try:
+        tree = ast.parse(textwrap.dedent(code))
+    except SyntaxError:
+        return False
+
+    for node in ast.walk(tree):
+        # Block all imports
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            return False
+
+        # Block dangerous built-in calls
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+            if node.func.id in _DANGEROUS_BUILTINS:
+                return False
+
+        # Block dangerous module access (e.g., os.system)
+        if isinstance(node, ast.Attribute):
+            # Direct module attribute: os.system, sys.exit, etc.
+            if isinstance(node.value, ast.Name):
+                if node.value.id in _DANGEROUS_MODULES:
+                    return False
+            # Dunder attribute access anywhere: obj.__class__, etc.
+            if node.attr in _DANGEROUS_ATTRS:
+                return False
+            # Any attribute starting with __ (broad dunder catch-all)
+            if node.attr.startswith("__") and node.attr.endswith("__"):
+                return False
+
+        # Block string constants that look like dunder smuggling
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            if node.value in _DANGEROUS_ATTRS:
+                return False
+
+        # Block subscript-based access to __builtins__ etc.
+        # e.g., globals()["__builtins__"] or x["__class__"]
+        if isinstance(node, ast.Subscript):
+            if isinstance(node.slice, ast.Constant) and isinstance(node.slice.value, str):
+                if node.slice.value in _DANGEROUS_ATTRS:
+                    return False
+
+    return True
+
+
+# ---------------------------------------------------------------------------
 # Concrete Testing Fallback
 # When Z3 returns UNKNOWN (e.g., solver timeout on complex symbolic
 # expressions from loop unrolling), we fall back to executing both
@@ -277,6 +426,68 @@ _TEST_VALUES: list[int] = [
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
     15, 20, 25, 30, 50, 100, 127, 128, 255, 256, 500, 1000,
 ]
+
+
+def _raise_in_thread(thread_id: int) -> None:
+    """Raise ``SystemExit`` asynchronously in a running CPython thread.
+
+    Uses ``PyThreadState_SetAsyncExc`` which is CPython-specific but
+    works reliably on both Windows and Linux for pure-Python code.
+    The exception is raised between bytecode instructions, so it
+    cleanly terminates infinite loops in user-generated algorithms
+    without leaking zombie threads (unlike ``ThreadPoolExecutor``
+    where the worker thread continues running after a timeout).
+    """
+    ctypes.pythonapi.PyThreadState_SetAsyncExc(
+        ctypes.c_ulong(thread_id),
+        ctypes.py_object(SystemExit),
+    )
+
+
+def _run_func_in_process(
+    func: Any,
+    args: tuple,
+    timeout: int,
+) -> tuple[bool, Any]:
+    """
+    Run *func(*args)* in a separate daemon thread with a hard timeout.
+
+    If the function does not complete within *timeout* seconds, the
+    worker thread is **forcibly terminated** via
+    ``PyThreadState_SetAsyncExc(SystemExit)`` — no leaked threads,
+    no zombie CPU consumption if user code contains an infinite loop.
+
+    Returns ``(True, result)`` on success, ``(False, None)`` on
+    timeout/error.
+    """
+    result_holder: list[Any] = [None, None]  # [tag, value]
+    thread_id_holder: list[int | None] = [None]
+
+    def _worker() -> None:
+        thread_id_holder[0] = threading.current_thread().ident
+        try:
+            result_holder[0] = "OK"
+            result_holder[1] = func(*args)
+        except SystemExit:
+            result_holder[0] = "KILLED"
+        except Exception:
+            result_holder[0] = "EXCEPTION"
+
+    t = threading.Thread(target=_worker, daemon=True)
+    t.start()
+    t.join(timeout=timeout)
+
+    if t.is_alive():
+        # Thread still running — kill it via async exception
+        tid = thread_id_holder[0]
+        if tid is not None:
+            _raise_in_thread(tid)
+        t.join(timeout=1)  # give it a moment to react
+        return (False, None)
+
+    if result_holder[0] == "OK":
+        return (True, result_holder[1])
+    return (False, None)
 
 
 def _concrete_test_fallback(
@@ -298,12 +509,19 @@ def _concrete_test_fallback(
         len(param_names),
     )
 
-    # Compile both code blocks
+    # Compile both code blocks — with safety validation
+    for label, code_str in [("original", original_code), ("optimized", optimized_code)]:
+        if not _validate_code_safety(code_str):
+            return _error(
+                f"Concrete fallback: {label} code contains disallowed "
+                f"constructs (imports, exec, OS access). Refusing to execute."
+            )
+
     try:
         orig_ns: dict[str, Any] = {}
-        exec(compile(textwrap.dedent(original_code), "<original>", "exec"), orig_ns)
+        exec(compile(textwrap.dedent(original_code), "<original>", "exec"), orig_ns)  # noqa: S102
         opt_ns: dict[str, Any] = {}
-        exec(compile(textwrap.dedent(optimized_code), "<optimized>", "exec"), opt_ns)
+        exec(compile(textwrap.dedent(optimized_code), "<optimized>", "exec"), opt_ns)  # noqa: S102
     except Exception as exc:
         return _error(f"Concrete fallback: compilation error — {exc}")
 
@@ -326,14 +544,12 @@ def _concrete_test_fallback(
     first_counterexample: dict[str, Any] | None = None
 
     for inputs in test_inputs:
-        try:
-            result_orig = orig_func(*inputs)
-        except Exception:
-            continue  # skip inputs that cause exceptions in original
-        try:
-            result_opt = opt_func(*inputs)
-        except Exception:
-            result_opt = "__EXCEPTION__"
+        ok_orig, result_orig = _run_func_in_process(orig_func, inputs, CONCRETE_EXEC_TIMEOUT_S)
+        if not ok_orig:
+            continue  # skip inputs that time out or crash in original
+        ok_opt, result_opt = _run_func_in_process(opt_func, inputs, CONCRETE_EXEC_TIMEOUT_S)
+        if not ok_opt:
+            result_opt = "__TIMEOUT__"
 
         # Normalize outputs for comparison:
         # - Convert sets to sorted lists (order doesn't matter for equivalence)
@@ -362,15 +578,15 @@ def _concrete_test_fallback(
         }
 
     logger.info(
-        "Concrete fallback: UNSAT — no divergences in %d tests.", len(test_inputs),
+        "Concrete fallback: WARNING — no divergences in %d tests (not a formal proof).", len(test_inputs),
     )
     return {
-        "status": "UNSAT",
+        "status": "WARNING",
         "message": (
-            f"Tyr: Verification Passed (UNSAT). "
-            f"Z3 symbolic solving timed out, but concrete testing across "
-            f"{len(test_inputs)} inputs found no divergence. "
-            f"The codes are equivalent with high confidence."
+            f"Tyr: WARNING — Z3 symbolic solving timed out. "
+            f"Concrete testing across {len(test_inputs)} inputs found no divergence, "
+            f"but this is empirical testing only, NOT a formal proof of equivalence. "
+            f"Edge-case bugs may still exist."
         ),
         "counterexample": None,
     }

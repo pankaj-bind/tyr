@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import ast
 import logging
+import os
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -34,12 +35,30 @@ import z3
 logger = logging.getLogger("tyr.z3.ast")
 
 # Maximum iterations for loop unrolling to keep solving tractable
-MAX_LOOP_UNROLL: int = 30
+MAX_LOOP_UNROLL: int = int(os.getenv("TYR_MAX_LOOP_UNROLL", "30"))
 
 # ---------------------------------------------------------------------------
-# Bounded Model Checking — maximum list length
+# Bounded Model Checking — maximum list length (for SymbolicList arrays)
 # ---------------------------------------------------------------------------
-MAX_BMC_LENGTH: int = 5
+MAX_BMC_LENGTH: int = int(os.getenv("TYR_MAX_BMC_LENGTH", "5"))
+
+# ---------------------------------------------------------------------------
+# Maximum symbolic range bound — used for `for i in range(n)` when n is
+# symbolic.  Separate from MAX_BMC_LENGTH because integer-only functions
+# (no lists) should be verified over a wider input domain.
+# ---------------------------------------------------------------------------
+MAX_SYMBOLIC_RANGE: int = int(os.getenv("TYR_MAX_SYMBOLIC_RANGE", "10"))
+
+# ---------------------------------------------------------------------------
+# Maximum number of partial returns before we abort to prevent O(2^d) blowup
+# ---------------------------------------------------------------------------
+MAX_PARTIAL_RETURNS: int = 32
+
+# ---------------------------------------------------------------------------
+# None sentinel — Python None is mapped to this unique integer so that
+# `return None` !== `return 0` (avoids false UNSAT).
+# ---------------------------------------------------------------------------
+_NONE_SENTINEL: int = -(2**62)
 
 
 # ---------------------------------------------------------------------------
@@ -112,6 +131,49 @@ class SymbolicDict:
 
 
 # ---------------------------------------------------------------------------
+# _EnumerateResult — returned by enumerate() to carry source length for
+# guarded iteration in for-loops.
+# ---------------------------------------------------------------------------
+@dataclass
+class _EnumerateResult:
+    """Intermediate result of enumerate(SymbolicList).
+
+    ``pairs`` is a list of ``(index_z3, element_z3)`` tuples covering
+    indices ``[0, MAX_BMC_LENGTH)``.  ``source_length`` is the Z3
+    expression for the original list length so that the for-loop can
+    guard each iteration with ``index < source_length``.
+    """
+    pairs: list[tuple[Any, Any]]
+    source_length: Any
+
+
+# ---------------------------------------------------------------------------
+# _LambdaClosure — captures a lambda expression for map/filter/sorted key=
+# ---------------------------------------------------------------------------
+
+class _LambdaClosure:
+    """Callable symbolic closure wrapping an ``ast.Lambda`` node."""
+
+    def __init__(self, node: ast.Lambda, env: "SymbolicEnv",
+                 translator: "ASTToZ3Translator") -> None:
+        self._node = node
+        self._env = env
+        self._translator = translator
+
+    def apply(self, *args: Any) -> Any:
+        """Apply this closure to concrete/symbolic arguments."""
+        params = [a.arg for a in self._node.args.args]
+        if len(args) != len(params):
+            raise SymbolicExecError(
+                f"Lambda expects {len(params)} args, got {len(args)}"
+            )
+        child = self._env.copy()
+        for name, val in zip(params, args):
+            child.set(name, val)
+        return self._translator._eval_expr(self._node.body, child)
+
+
+# ---------------------------------------------------------------------------
 # Symbolic Environment — tracks variable bindings during execution
 # ---------------------------------------------------------------------------
 
@@ -165,6 +227,10 @@ class ASTToZ3Translator:
 
     def __init__(self) -> None:
         self._fresh_counter: int = 0
+        # String interning: map string literals → unique integers
+        # so that equality semantics are preserved in the integer domain.
+        self._string_map: dict[str, int] = {}
+        self._next_string_id: int = 2**60  # high offset to avoid collision with user ints
 
     def fresh_var(self, prefix: str = "tmp") -> z3.ArithRef:
         """Create a fresh Z3 integer variable for SSA-style assignments."""
@@ -190,6 +256,21 @@ class ASTToZ3Translator:
         """
         env = SymbolicEnv(bindings=dict(param_symbols))
         self._exec_body(func_node.body, env)
+
+        # If the function didn't explicitly return but has pending partial
+        # returns (from conditional returns inside loops/ifs), merge them
+        # with an implicit None return.
+        if not env.has_returned and env.partial_returns:
+            val = z3.IntVal(_NONE_SENTINEL)
+            for guard, partial_val in reversed(env.partial_returns):
+                try:
+                    val = z3.If(guard, partial_val, val)
+                except (z3.Z3Exception, TypeError):
+                    pass
+            env.partial_returns.clear()
+            env.return_value = val
+            env.has_returned = True
+
         return env
 
     # ------------------------------------------------------------------
@@ -240,7 +321,7 @@ class ASTToZ3Translator:
         if node.value is not None:
             val = self._eval_expr(node.value, env)
         else:
-            val = z3.IntVal(0)  # None → 0 for Z3
+            val = z3.IntVal(_NONE_SENTINEL)  # None → unique sentinel (not 0)
 
         # If there are pending partial returns from earlier if-branches,
         # merge them:  final = If(guard1, partial1, If(guard2, partial2, val))
@@ -408,6 +489,25 @@ class ASTToZ3Translator:
             env.partial_returns.append((z3.Not(cond), else_env.return_value))
             # Do NOT set has_returned.
 
+        # Propagate partial returns from branch sub-environments.
+        # These arise from nested if-statements where only one side returned.
+        # Guard each by the branch condition so they compose correctly.
+        if len(env.partial_returns) < MAX_PARTIAL_RETURNS:
+            for guard, val in then_env.partial_returns:
+                if len(env.partial_returns) >= MAX_PARTIAL_RETURNS:
+                    break
+                try:
+                    env.partial_returns.append((z3.And(cond, guard), val))
+                except (z3.Z3Exception, TypeError):
+                    env.partial_returns.append((cond, val))
+            for guard, val in else_env.partial_returns:
+                if len(env.partial_returns) >= MAX_PARTIAL_RETURNS:
+                    break
+                try:
+                    env.partial_returns.append((z3.And(z3.Not(cond), guard), val))
+                except (z3.Z3Exception, TypeError):
+                    env.partial_returns.append((z3.Not(cond), val))
+
     # ------------------------------------------------------------------
     # If-merge helper: merges two values under a Z3 condition.
     # Handles SymbolicList element-wise merging.
@@ -433,9 +533,9 @@ class ASTToZ3Translator:
             return SymbolicList(array=merged_arr, length=merged_len)
 
         if isinstance(true_val, SymbolicDict) and isinstance(false_val, SymbolicDict):
-            # Merge presence and values arrays using z3.If on each tracked key
-            all_keys = list(set(id(k) for k in true_val.tracked_keys) and
-                           true_val.tracked_keys)
+            # Merge presence and values arrays using z3.If on each tracked key.
+            # Collect all unique tracked keys from BOTH branches.
+            all_keys = list(true_val.tracked_keys)
             for k in false_val.tracked_keys:
                 if not any(self._z3_eq(k, tk) for tk in all_keys):
                     all_keys.append(k)
@@ -459,10 +559,15 @@ class ASTToZ3Translator:
 
         if isinstance(true_val, SymbolicSet) and isinstance(false_val, SymbolicSet):
             # SymbolicSet uses a presence array (Int → Bool).
-            # For a point-free merge without tracked keys, use z3.Lambda
-            # or accept a best-effort: the merged array selects per-key.
-            # Since we don't iterate sets, a functional merge suffices:
-            merged = z3.If(cond, true_val.presence, false_val.presence)
+            # Use z3.Lambda for a precise point-wise merge so that
+            # subsequent Select/Store operations distribute correctly.
+            x = z3.Int('__set_merge_key')
+            merged = z3.Lambda(
+                [x],
+                z3.If(cond,
+                      z3.Select(true_val.presence, x),
+                      z3.Select(false_val.presence, x))
+            )
             return SymbolicSet(presence=merged)
 
         try:
@@ -472,9 +577,13 @@ class ASTToZ3Translator:
 
     @staticmethod
     def _z3_eq(a: Any, b: Any) -> bool:
-        """Best-effort structural equality check for Z3 expressions."""
+        """Structural equality check for Z3 expressions using z3.eq()."""
         try:
-            return a is b or str(a) == str(b)
+            if a is b:
+                return True
+            if z3.is_expr(a) and z3.is_expr(b):
+                return z3.eq(a, b)
+            return str(a) == str(b)
         except Exception:
             return False
 
@@ -531,12 +640,22 @@ class ASTToZ3Translator:
                 )
                 return
 
-        # ── BMC: For-loop over a SymbolicList ──
+        # ── Direct dict iteration: `for k in d` (same as `for k in d.keys()`) ──
         iter_val = self._eval_expr(node.iter, env)
+        if isinstance(iter_val, SymbolicDict):
+            self._exec_for_over_dict_items(node, iter_val, "keys", env)
+            return
+
+        # ── BMC: For-loop over a SymbolicList ──
         if isinstance(iter_val, SymbolicList):
             if loop_var is None:
                 raise SymbolicExecError("For-loop over SymbolicList requires a simple variable target.")
             self._exec_for_over_symbolic_list(loop_var, iter_val, node.body, env)
+            return
+
+        # ── For-loop over enumerate() result (_EnumerateResult) ──
+        if isinstance(iter_val, _EnumerateResult):
+            self._exec_for_enumerate(node, iter_val, env)
             return
 
         # ── For-loop over tracked dict keys/values/items (Python list) ──
@@ -559,13 +678,22 @@ class ASTToZ3Translator:
         env: SymbolicEnv,
     ) -> None:
         """
-        Unroll a for-loop with symbolic bounds up to MAX_LOOP_UNROLL iterations.
+        Unroll a for-loop with symbolic bounds up to MAX_SYMBOLIC_RANGE iterations.
         Each iteration is guarded by Z3 If: the body effects only apply
         when the loop variable is still within range.
         """
         current_i = start
 
-        for iteration in range(MAX_LOOP_UNROLL):
+        # Bound the stop value for BMC soundness: we can only verify
+        # up to MAX_SYMBOLIC_RANGE iterations, so add an upper constraint.
+        # We do NOT bound from below — negative stop values are valid
+        # (the loop simply doesn't execute) and we want to detect bugs there.
+        try:
+            env.constraints.append(stop <= z3.IntVal(MAX_SYMBOLIC_RANGE))
+        except (z3.Z3Exception, TypeError, AttributeError):
+            pass
+
+        for iteration in range(MAX_SYMBOLIC_RANGE):
             # Guard: is current_i < stop (for step > 0)?
             # We assume step = 1 for most symbolic ranges
             try:
@@ -578,20 +706,35 @@ class ASTToZ3Translator:
 
             # Execute body in a copy
             body_env = env.copy()
+            body_env.partial_returns = []  # don't inherit outer partials
             body_env.set(loop_var, current_i)
             self._exec_body(body, body_env)
 
             if body_env.has_returned:
-                # Conditional return: only if guard is true
-                if env.return_value is not None:
+                # Record as partial return guarded by this iteration's guard.
+                # Don't break — later iterations may return under different
+                # guards (e.g., early-return inside an if-condition).
+                if len(env.partial_returns) < MAX_PARTIAL_RETURNS:
+                    env.partial_returns.append((guard, body_env.return_value))
+                # Advance loop variable and continue
+                try:
+                    current_i = current_i + step
                     try:
-                        env.return_value = z3.If(guard, body_env.return_value, env.return_value)
-                    except (z3.Z3Exception, TypeError):
-                        env.return_value = body_env.return_value
-                else:
-                    env.return_value = body_env.return_value
-                # Don't set has_returned — later iterations might also matter
-                break
+                        current_i = z3.simplify(current_i)
+                    except (z3.Z3Exception, TypeError, AttributeError):
+                        pass
+                except (z3.Z3Exception, TypeError):
+                    break
+                continue
+
+            # Propagate partial returns from body (e.g., `if cond: return val`)
+            for p_guard, p_val in body_env.partial_returns:
+                if len(env.partial_returns) >= MAX_PARTIAL_RETURNS:
+                    break
+                try:
+                    env.partial_returns.append((z3.And(guard, p_guard), p_val))
+                except (z3.Z3Exception, TypeError):
+                    env.partial_returns.append((guard, p_val))
 
             # Merge modified variables: var = If(guard, body_val, old_val)
             self._merge_env_guarded(env, body_env, guard, skip_vars={loop_var})
@@ -599,6 +742,11 @@ class ASTToZ3Translator:
             # Advance loop variable
             try:
                 current_i = current_i + step
+                # Simplify to keep e.g. IntVal(0)+IntVal(1)+IntVal(1) flat
+                try:
+                    current_i = z3.simplify(current_i)
+                except (z3.Z3Exception, TypeError, AttributeError):
+                    pass
             except (z3.Z3Exception, TypeError):
                 break
 
@@ -626,18 +774,25 @@ class ASTToZ3Translator:
             guard = idx < lst.length  # True iff this iteration is live
 
             body_env = env.copy()
+            body_env.partial_returns = []  # don't inherit outer partials
             body_env.set(loop_var, z3.Select(lst.array, idx))
             self._exec_body(body, body_env)
 
             if body_env.has_returned:
-                if env.return_value is not None:
-                    try:
-                        env.return_value = z3.If(guard, body_env.return_value, env.return_value)
-                    except (z3.Z3Exception, TypeError):
-                        env.return_value = body_env.return_value
-                else:
-                    env.return_value = body_env.return_value
-                break
+                # Record as partial return — don't break; later iterations
+                # may also return under different guards.
+                if len(env.partial_returns) < MAX_PARTIAL_RETURNS:
+                    env.partial_returns.append((guard, body_env.return_value))
+                continue
+
+            # Propagate partial returns from body (e.g., `if cond: return val`)
+            for p_guard, p_val in body_env.partial_returns:
+                if len(env.partial_returns) >= MAX_PARTIAL_RETURNS:
+                    break
+                try:
+                    env.partial_returns.append((z3.And(guard, p_guard), p_val))
+                except (z3.Z3Exception, TypeError):
+                    env.partial_returns.append((guard, p_val))
 
             self._merge_env_guarded(env, body_env, guard, skip_vars={loop_var})
 
@@ -683,6 +838,72 @@ class ASTToZ3Translator:
                 break
 
     # ------------------------------------------------------------------
+    # For-loop over enumerate() — bounded, guarded by source length
+    # ------------------------------------------------------------------
+
+    def _exec_for_enumerate(
+        self,
+        node: ast.For,
+        enum_result: _EnumerateResult,
+        env: SymbolicEnv,
+    ) -> None:
+        """
+        Execute ``for i, val in enumerate(lst)`` (or ``for item in enumerate(lst)``).
+
+        Each iteration is guarded by ``index < source_length`` so that
+        body effects are only applied for live indices, matching
+        SymbolicList BMC semantics.
+        """
+        for idx_z3, elem_z3 in enum_result.pairs:
+            guard = idx_z3 < enum_result.source_length
+
+            body_env = env.copy()
+            body_env.partial_returns = []  # don't inherit outer partials
+
+            # Bind loop variable(s)
+            if isinstance(node.target, ast.Tuple) and len(node.target.elts) == 2:
+                # for i, val in enumerate(...)
+                i_elt, v_elt = node.target.elts
+                if isinstance(i_elt, ast.Name):
+                    body_env.set(i_elt.id, idx_z3)
+                if isinstance(v_elt, ast.Name):
+                    body_env.set(v_elt.id, elem_z3)
+            elif isinstance(node.target, ast.Name):
+                # for item in enumerate(...) — bind as tuple
+                body_env.set(node.target.id, (idx_z3, elem_z3))
+            else:
+                raise SymbolicExecError(
+                    "enumerate() iteration requires `for i, v in …` "
+                    "or `for item in …`"
+                )
+
+            self._exec_body(node.body, body_env)
+
+            if body_env.has_returned:
+                if len(env.partial_returns) < MAX_PARTIAL_RETURNS:
+                    env.partial_returns.append((guard, body_env.return_value))
+                continue
+
+            # Propagate partial returns from body
+            for p_guard, p_val in body_env.partial_returns:
+                if len(env.partial_returns) >= MAX_PARTIAL_RETURNS:
+                    break
+                try:
+                    env.partial_returns.append((z3.And(guard, p_guard), p_val))
+                except (z3.Z3Exception, TypeError):
+                    env.partial_returns.append((guard, p_val))
+
+            # Guarded merge — effects only apply when index is in bounds
+            skip: set[str] = set()
+            if isinstance(node.target, ast.Tuple):
+                skip = {
+                    e.id for e in node.target.elts if isinstance(e, ast.Name)
+                }
+            elif isinstance(node.target, ast.Name):
+                skip = {node.target.id}
+            self._merge_env_guarded(env, body_env, guard, skip_vars=skip)
+
+    # ------------------------------------------------------------------
     # BMC: For-loop over a SymbolicDict (.items / .keys / .values)
     # ------------------------------------------------------------------
 
@@ -713,6 +934,7 @@ class ASTToZ3Translator:
             guard = z3.Select(dct.presence, key)
 
             body_env = env.copy()
+            body_env.partial_returns = []  # don't inherit outer partials
 
             # ── Bind loop variable(s) ──
             if method == "items":
@@ -751,16 +973,18 @@ class ASTToZ3Translator:
             self._exec_body(node.body, body_env)
 
             if body_env.has_returned:
-                if env.return_value is not None:
-                    try:
-                        env.return_value = z3.If(
-                            guard, body_env.return_value, env.return_value,
-                        )
-                    except (z3.Z3Exception, TypeError):
-                        env.return_value = body_env.return_value
-                else:
-                    env.return_value = body_env.return_value
-                break
+                if len(env.partial_returns) < MAX_PARTIAL_RETURNS:
+                    env.partial_returns.append((guard, body_env.return_value))
+                continue
+
+            # Propagate partial returns from body
+            for p_guard, p_val in body_env.partial_returns:
+                if len(env.partial_returns) >= MAX_PARTIAL_RETURNS:
+                    break
+                try:
+                    env.partial_returns.append((z3.And(guard, p_guard), p_val))
+                except (z3.Z3Exception, TypeError):
+                    env.partial_returns.append((guard, p_val))
 
             # ── Guarded merge — effects only apply when key is present ──
             skip: set[str] = set()
@@ -831,7 +1055,13 @@ class ASTToZ3Translator:
                     continue
 
             try:
-                env.set(var_name, z3.If(guard, body_val, old_val))
+                merged = z3.If(guard, body_val, old_val)
+                # Simplify to prevent expression blow-up in loops
+                try:
+                    merged = z3.simplify(merged)
+                except (z3.Z3Exception, TypeError, AttributeError):
+                    pass
+                env.set(var_name, merged)
             except (z3.Z3Exception, TypeError):
                 env.set(var_name, body_val)
 
@@ -885,6 +1115,13 @@ class ASTToZ3Translator:
             return val.as_long()
         if z3.is_int_value(val):
             return val.as_long()
+        # Try simplifying first — catches IntVal(0)+IntVal(1) → IntVal(1)
+        try:
+            simplified = z3.simplify(val)
+            if z3.is_int_value(simplified):
+                return simplified.as_long()
+        except (z3.Z3Exception, TypeError, AttributeError):
+            pass
         return None
 
     # ------------------------------------------------------------------
@@ -892,38 +1129,58 @@ class ASTToZ3Translator:
     # ------------------------------------------------------------------
 
     def _exec_while(self, node: ast.While, env: SymbolicEnv) -> None:
+        terminated = False  # did the loop exit cleanly (cond=False or return)?
+
         for _ in range(MAX_LOOP_UNROLL):
             cond = self._eval_expr(node.test, env)
 
             # If we can concretely evaluate the condition, use it
             concrete = self._try_concrete_bool(cond)
             if concrete is False:
+                terminated = True
                 break
 
             if concrete is True:
                 self._exec_body(node.body, env)
                 if env.has_returned:
+                    terminated = True
                     break
                 continue
 
             # Symbolic condition — unroll one more iteration with guard
             body_env = env.copy()
+            body_env.partial_returns = []  # don't inherit outer partials
             self._exec_body(node.body, body_env)
 
-            # Merge
-            for var in body_env.bindings:
-                if var in env.bindings:
-                    try:
-                        env.set(var, z3.If(cond, body_env.bindings[var], env.bindings[var]))
-                    except (z3.Z3Exception, TypeError):
-                        env.set(var, body_env.bindings[var])
-                else:
-                    env.set(var, body_env.bindings[var])
-
             if body_env.has_returned:
-                env.return_value = body_env.return_value
-                env.has_returned = True
-                break
+                # Guard the return by the loop condition — it only fires
+                # when cond is True.
+                if len(env.partial_returns) < MAX_PARTIAL_RETURNS:
+                    env.partial_returns.append((cond, body_env.return_value))
+                # Don't set has_returned or break — later iterations or
+                # code after the loop may also need to run (cond could be False).
+            else:
+                # Propagate partial returns from body
+                for p_guard, p_val in body_env.partial_returns:
+                    if len(env.partial_returns) >= MAX_PARTIAL_RETURNS:
+                        break
+                    try:
+                        env.partial_returns.append((z3.And(cond, p_guard), p_val))
+                    except (z3.Z3Exception, TypeError):
+                        env.partial_returns.append((cond, p_val))
+
+                # Merge variables via the proper helper (handles SymbolicList/Dict/Set)
+                self._merge_env_guarded(env, body_env, cond)
+
+        if not terminated:
+            # Exhausted MAX_LOOP_UNROLL without the condition becoming
+            # concretely False → the symbolic proof would be unsound.
+            # Force fallback to concrete testing.
+            raise SymbolicExecError(
+                f"While-loop exceeded {MAX_LOOP_UNROLL} unroll iterations "
+                f"with a symbolic or always-true condition — cannot produce "
+                f"a sound proof. Falling back to concrete testing."
+            )
 
         if node.orelse and not env.has_returned:
             self._exec_body(node.orelse, env)
@@ -938,6 +1195,15 @@ class ASTToZ3Translator:
             return True
         if z3.is_false(val):
             return False
+        # Try simplifying — catches e.g. IntVal(3) < IntVal(5) → True
+        try:
+            simplified = z3.simplify(val)
+            if z3.is_true(simplified):
+                return True
+            if z3.is_false(simplified):
+                return False
+        except (z3.Z3Exception, TypeError, AttributeError):
+            pass
         return None
 
     # ------------------------------------------------------------------
@@ -969,6 +1235,10 @@ class ASTToZ3Translator:
             return self._eval_dict_literal(node, env)
         elif isinstance(node, ast.Set):
             return self._eval_set_literal(node, env)
+        elif isinstance(node, ast.ListComp):
+            return self._eval_listcomp(node, env)
+        elif isinstance(node, ast.Lambda):
+            return self._eval_lambda(node, env)
         elif isinstance(node, ast.Attribute):
             # Attribute access on SymbolicList — return a marker for method dispatch
             # (actual dispatch happens in _eval_call for method calls)
@@ -1057,11 +1327,101 @@ class ASTToZ3Translator:
         return SymbolicSet(presence=presence)
 
     # ------------------------------------------------------------------
+    # List comprehension → SymbolicList
+    # ------------------------------------------------------------------
+
+    def _eval_listcomp(self, node: ast.ListComp, env: SymbolicEnv) -> SymbolicList:
+        """
+        Translate ``[expr for var in iterable]`` and
+        ``[expr for var in iterable if cond]`` into a SymbolicList.
+
+        Only single-generator comprehensions are supported.  The output
+        array is built by conditionally appending each element, so
+        filtered comprehensions get a symbolic length.
+        """
+        if len(node.generators) != 1:
+            raise SymbolicExecError(
+                "Only single-generator list comprehensions are supported"
+            )
+
+        gen = node.generators[0]
+        if not isinstance(gen.target, ast.Name):
+            raise SymbolicExecError(
+                "List comprehension target must be a simple variable"
+            )
+
+        var_name = gen.target.id
+        iter_val = self._eval_expr(gen.iter, env)
+
+        arr_name = f"__listcomp_{self._fresh_counter}"
+        self._fresh_counter += 1
+        result_arr = z3.Array(arr_name, z3.IntSort(), z3.IntSort())
+        result_len = z3.IntVal(0)
+
+        items: list[tuple[Any, Any]] = []  # (guard, value)
+
+        if isinstance(iter_val, SymbolicList):
+            for k in range(MAX_BMC_LENGTH):
+                k_idx = z3.IntVal(k)
+                in_bounds = k_idx < iter_val.length
+
+                comp_env = env.copy()
+                elem = z3.Select(iter_val.array, k_idx)
+                comp_env.set(var_name, elem)
+
+                include: Any = in_bounds
+                for if_clause in gen.ifs:
+                    cond_val = self._eval_expr(if_clause, comp_env)
+                    include = z3.And(include, cond_val)
+
+                val = self._eval_expr(node.elt, comp_env)
+                items.append((include, val))
+
+        elif isinstance(iter_val, (list, tuple)):
+            for item in iter_val:
+                comp_env = env.copy()
+                comp_env.set(var_name, item)
+
+                include = z3.BoolVal(True)
+                for if_clause in gen.ifs:
+                    cond_val = self._eval_expr(if_clause, comp_env)
+                    include = z3.And(include, cond_val)
+
+                val = self._eval_expr(node.elt, comp_env)
+                items.append((include, val))
+        else:
+            raise SymbolicExecError(
+                f"List comprehension over unsupported iterable: "
+                f"{type(iter_val).__name__}"
+            )
+
+        # Build result: conditionally append each element
+        for guard, val in items:
+            result_arr = z3.If(
+                guard,
+                z3.Store(result_arr, result_len, val),
+                result_arr,
+            )
+            result_len = z3.If(guard, result_len + 1, result_len)
+
+        return SymbolicList(array=result_arr, length=result_len)
+
+    # ------------------------------------------------------------------
+    # Lambda expressions — basic support for map/filter patterns
+    # ------------------------------------------------------------------
+
+    def _eval_lambda(self, node: ast.Lambda, env: SymbolicEnv) -> "_LambdaClosure":
+        """
+        Return a closure object that can be applied element-wise by
+        built-in higher-order dispatchers (map, filter, sorted key=).
+        """
+        return _LambdaClosure(node=node, env=env, translator=self)
+
+    # ------------------------------------------------------------------
     # Constants
     # ------------------------------------------------------------------
 
-    @staticmethod
-    def _eval_constant(node: ast.Constant) -> Any:
+    def _eval_constant(self, node: ast.Constant) -> Any:
         v = node.value
         if isinstance(v, bool):
             return z3.BoolVal(v)
@@ -1071,8 +1431,13 @@ class ASTToZ3Translator:
             # Approximate floats as Z3 reals
             return z3.RealVal(v)
         if v is None:
-            return z3.IntVal(0)
-        # Strings and other types — not easily representable
+            return z3.IntVal(_NONE_SENTINEL)
+        if isinstance(v, str):
+            # Intern strings as unique integers: preserves == / != semantics.
+            if v not in self._string_map:
+                self._string_map[v] = self._next_string_id
+                self._next_string_id += 1
+            return z3.IntVal(self._string_map[v])
         raise SymbolicExecError(f"Unsupported constant type: {type(v).__name__}")
 
     # ------------------------------------------------------------------
@@ -1086,6 +1451,11 @@ class ASTToZ3Translator:
 
     @staticmethod
     def _apply_binop(op: ast.operator, left: Any, right: Any) -> Any:
+        # Coerce Bool → Int for arithmetic ops so Z3 sorts agree
+        if isinstance(left, z3.BoolRef):
+            left = z3.If(left, z3.IntVal(1), z3.IntVal(0))
+        if isinstance(right, z3.BoolRef):
+            right = z3.If(right, z3.IntVal(1), z3.IntVal(0))
         if isinstance(op, ast.Add):
             return left + right
         elif isinstance(op, ast.Sub):
@@ -1093,9 +1463,44 @@ class ASTToZ3Translator:
         elif isinstance(op, ast.Mult):
             return left * right
         elif isinstance(op, ast.FloorDiv):
-            return left / right  # Z3 integer division
+            # Python // uses floor division (rounds toward -∞).
+            # Z3 integer / truncates toward zero (SMT-LIB semantics).
+            # Floor division: q = trunc(a/b) adjusted when the remainder
+            # is non-zero and the operand signs differ.
+            trunc_q = left / right
+
+            # Optimisation: if the divisor is a concrete positive constant,
+            # we only need to check if the dividend is negative.
+            concrete_right = None
+            if isinstance(right, int) and right > 0:
+                concrete_right = right
+            elif z3.is_int_value(right) and right.as_long() > 0:
+                concrete_right = right.as_long()
+
+            if concrete_right is not None:
+                remainder = left - trunc_q * z3.IntVal(concrete_right)
+                needs_adjust = z3.And(left < 0, remainder != 0)
+                return z3.simplify(z3.If(needs_adjust, trunc_q - 1, trunc_q))
+
+            # General case — both operands may be symbolic
+            remainder = left - trunc_q * right
+            signs_differ = z3.Or(
+                z3.And(left < 0, right > 0),
+                z3.And(left > 0, right < 0),
+            )
+            needs_adjust = z3.And(signs_differ, remainder != 0)
+            return z3.simplify(z3.If(needs_adjust, trunc_q - 1, trunc_q))
         elif isinstance(op, ast.Mod):
-            return left % right
+            # Python % returns a value with the sign of the divisor.
+            # Z3 % uses truncation semantics.  Adjust to match Python:
+            # python_mod = trunc_mod + (divisor if signs_differ and trunc_mod != 0 else 0)
+            trunc_mod = left % right
+            signs_differ = z3.Or(
+                z3.And(left < 0, right > 0),
+                z3.And(left > 0, right < 0),
+            )
+            needs_adjust = z3.And(signs_differ, trunc_mod != 0)
+            return z3.simplify(z3.If(needs_adjust, trunc_mod + right, trunc_mod))
         elif isinstance(op, ast.Pow):
             # Z3 doesn't natively support symbolic exponentiation well;
             # for concrete exponents, unroll
@@ -1138,6 +1543,25 @@ class ASTToZ3Translator:
         elif isinstance(node.op, ast.UAdd):
             return operand
         elif isinstance(node.op, ast.Not):
+            # Python `not x` on ints: not 0 → True, not N → False
+            if isinstance(operand, z3.ArithRef):
+                return operand == z3.IntVal(0)
+            # Python `not` on data structures: empty → True, non-empty → False
+            if isinstance(operand, SymbolicList):
+                return operand.length == z3.IntVal(0)
+            if isinstance(operand, SymbolicDict):
+                # A dict is falsy when no tracked key is present.
+                if not operand.tracked_keys:
+                    return z3.BoolVal(True)
+                any_present = z3.Or(*[
+                    z3.Select(operand.presence, k)
+                    for k in operand.tracked_keys
+                ])
+                return z3.Not(any_present)
+            if isinstance(operand, SymbolicSet):
+                # SymbolicSet has no tracked keys — conservatively
+                # create a fresh bool to avoid crashing.
+                return self.fresh_bool("set_empty")
             return z3.Not(operand)
         elif isinstance(node.op, ast.Invert):
             return ~operand
@@ -1148,11 +1572,33 @@ class ASTToZ3Translator:
     # ------------------------------------------------------------------
 
     def _eval_boolop(self, node: ast.BoolOp, env: SymbolicEnv) -> Any:
-        values = [self._eval_expr(v, env) for v in node.values]
+        """Evaluate and/or with short-circuit semantics.
+
+        Later operands are wrapped in try/except so that if an earlier
+        guard makes them unreachable (e.g. `len(x) > 0 and x[0]`),
+        a SymbolicExecError in the second operand doesn't crash the
+        whole translation.
+        """
         if isinstance(node.op, ast.And):
-            return z3.And(*values)
+            result = self._eval_expr(node.values[0], env)
+            for val_node in node.values[1:]:
+                try:
+                    next_val = self._eval_expr(val_node, env)
+                    result = z3.And(result, next_val)
+                except SymbolicExecError:
+                    # Short-circuit: if earlier condition is False the rest
+                    # is unreachable — keep result as-is.
+                    break
+            return result
         elif isinstance(node.op, ast.Or):
-            return z3.Or(*values)
+            result = self._eval_expr(node.values[0], env)
+            for val_node in node.values[1:]:
+                try:
+                    next_val = self._eval_expr(val_node, env)
+                    result = z3.Or(result, next_val)
+                except SymbolicExecError:
+                    break
+            return result
         raise SymbolicExecError(f"Unsupported bool op: {type(node.op).__name__}")
 
     # ------------------------------------------------------------------
@@ -1170,12 +1616,35 @@ class ASTToZ3Translator:
             return parts[0]
         return z3.And(*parts)
 
+    @staticmethod
+    def _coerce_to_int(val: Any) -> Any:
+        """Convert a Z3 BoolRef to IntRef (True→1, False→0) for mixed-sort ops."""
+        if isinstance(val, z3.BoolRef):
+            return z3.If(val, z3.IntVal(1), z3.IntVal(0))
+        return val
+
+    @staticmethod
+    def _coerce_pair(left: Any, right: Any) -> tuple[Any, Any]:
+        """If one operand is Bool and the other Int, coerce Bool→Int."""
+        l_bool = isinstance(left, z3.BoolRef)
+        r_bool = isinstance(right, z3.BoolRef)
+        l_int = isinstance(left, z3.ArithRef) or isinstance(left, int)
+        r_int = isinstance(right, z3.ArithRef) or isinstance(right, int)
+        if l_bool and r_int:
+            return z3.If(left, z3.IntVal(1), z3.IntVal(0)), right
+        if r_bool and l_int:
+            return left, z3.If(right, z3.IntVal(1), z3.IntVal(0))
+        return left, right
+
     def _apply_cmpop(self, op: ast.cmpop, left: Any, right: Any) -> Any:
         # ── Handle `x in list` and `x not in list` ──
         if isinstance(op, ast.In):
             return self._symbolic_in(left, right)
         if isinstance(op, ast.NotIn):
             return z3.Not(self._symbolic_in(left, right))
+
+        # Coerce Bool/Int sorts so Z3 doesn't throw a sort mismatch error
+        left, right = self._coerce_pair(left, right)
 
         if isinstance(op, ast.Lt):
             return left < right
@@ -1255,6 +1724,9 @@ class ASTToZ3Translator:
 
             if fname == "min":
                 if len(args) == 1 and isinstance(args[0], (list, SymbolicList)):
+                    if isinstance(args[0], SymbolicList):
+                        # Precondition: Python raises ValueError on empty list
+                        env.constraints.append(args[0].length > 0)
                     return self._symbolic_min_of(args[0])
                 if len(args) >= 2:
                     return self._symbolic_min(args)
@@ -1262,6 +1734,8 @@ class ASTToZ3Translator:
 
             if fname == "max":
                 if len(args) == 1 and isinstance(args[0], (list, SymbolicList)):
+                    if isinstance(args[0], SymbolicList):
+                        env.constraints.append(args[0].length > 0)
                     return self._symbolic_max_of(args[0])
                 if len(args) >= 2:
                     return self._symbolic_max(args)
@@ -1298,6 +1772,23 @@ class ASTToZ3Translator:
                     return result
                 raise SymbolicExecError("sum() on non-list not supported")
 
+            if fname == "enumerate":
+                # enumerate(iterable) → list of (index, element) tuples
+                if len(args) != 1:
+                    raise SymbolicExecError("enumerate() requires exactly 1 argument")
+                arg = args[0]
+                if isinstance(arg, SymbolicList):
+                    # Return bounded list of (IntVal(i), Select(arr, i)) guarded
+                    # by i < length.  The caller (_exec_for_over_python_list or
+                    # _exec_for_enumerate) handles unrolling.
+                    result_pairs: list[tuple[Any, Any]] = []
+                    for k in range(MAX_BMC_LENGTH):
+                        k_idx = z3.IntVal(k)
+                        result_pairs.append((k_idx, z3.Select(arg.array, k_idx)))
+                    # Attach the source length so the for-loop can guard iterations
+                    return _EnumerateResult(pairs=result_pairs, source_length=arg.length)
+                raise SymbolicExecError("enumerate() only supported for SymbolicList")
+
             if fname == "range":
                 # range() used in expression context (not for-loop)
                 concrete_args = [self._try_concrete(a) for a in args]
@@ -1311,9 +1802,41 @@ class ASTToZ3Translator:
                     return [z3.IntVal(i) for i in range(concrete_args[0], concrete_args[1], concrete_args[2])]
 
             if fname == "sorted":
-                # Cannot truly sort symbolically — return input unchanged
-                if len(args) == 1:
-                    return args[0]
+                # Bounded Bubble Sort in Z3 for SymbolicList
+                if len(args) < 1 or not isinstance(args[0], SymbolicList):
+                    raise SymbolicExecError("sorted() only supported for SymbolicList")
+                # Handle reverse= keyword argument
+                reverse = False
+                for kw in node.keywords:
+                    if kw.arg == "reverse":
+                        kw_val = self._eval_expr(kw.value, env)
+                        concrete_r = self._try_concrete_bool(kw_val)
+                        if concrete_r is True:
+                            reverse = True
+                    elif kw.arg == "key":
+                        raise SymbolicExecError(
+                            "sorted() with key= function not supported "
+                            "(lambda / higher-order functions cannot be "
+                            "translated to Z3)"
+                        )
+                arr = args[0].array
+                n = args[0].length
+                # Z3 Bounded Bubble Sort: MAX_BMC_LENGTH passes
+                for _ in range(MAX_BMC_LENGTH):
+                    for j in range(MAX_BMC_LENGTH - 1):
+                        j_idx = z3.IntVal(j)
+                        next_idx = z3.IntVal(j + 1)
+                        valid = z3.And(j_idx < n, next_idx < n)
+                        v1 = z3.Select(arr, j_idx)
+                        v2 = z3.Select(arr, next_idx)
+                        # Ascending: swap when v1 > v2. Descending: swap when v1 < v2.
+                        swap_cond = z3.And(valid, v1 < v2) if reverse else z3.And(valid, v1 > v2)
+                        arr = z3.If(
+                            swap_cond,
+                            z3.Store(z3.Store(arr, j_idx, v2), next_idx, v1),
+                            arr,
+                        )
+                return SymbolicList(array=arr, length=n)
 
             if fname == "int":
                 if len(args) == 1:
@@ -1359,6 +1882,62 @@ class ASTToZ3Translator:
                     return SymbolicList(array=arr, length=z3.IntVal(0))
                 if len(args) == 1 and isinstance(args[0], SymbolicList):
                     return args[0].copy()
+                # list(map(...)) or list(filter(...)) — unwrap _MapResult / _FilterResult
+                if len(args) == 1 and isinstance(args[0], SymbolicList):
+                    return args[0].copy()
+
+            if fname == "map":
+                # map(fn, iterable) → apply fn element-wise, return SymbolicList
+                if len(args) != 2:
+                    raise SymbolicExecError("map() requires exactly 2 arguments")
+                fn, iterable = args[0], args[1]
+                if not isinstance(fn, _LambdaClosure):
+                    raise SymbolicExecError(
+                        "map() only supported with lambda functions"
+                    )
+                if isinstance(iterable, SymbolicList):
+                    arr_name = f"__map_{self._fresh_counter}"
+                    self._fresh_counter += 1
+                    new_arr = z3.Array(arr_name, z3.IntSort(), z3.IntSort())
+                    for k in range(MAX_BMC_LENGTH):
+                        k_idx = z3.IntVal(k)
+                        elem = z3.Select(iterable.array, k_idx)
+                        mapped = fn.apply(elem)
+                        in_bounds = k_idx < iterable.length
+                        new_arr = z3.If(
+                            in_bounds,
+                            z3.Store(new_arr, k_idx, mapped),
+                            new_arr,
+                        )
+                    return SymbolicList(array=new_arr, length=iterable.length)
+                if isinstance(iterable, list):
+                    return [fn.apply(e) for e in iterable]
+                raise SymbolicExecError("map() only supported for lists")
+
+            if fname == "filter":
+                # filter(fn, iterable) → keep elements where fn returns truthy
+                if len(args) != 2:
+                    raise SymbolicExecError("filter() requires exactly 2 arguments")
+                fn, iterable = args[0], args[1]
+                if not isinstance(fn, _LambdaClosure):
+                    raise SymbolicExecError(
+                        "filter() only supported with lambda functions"
+                    )
+                if isinstance(iterable, SymbolicList):
+                    arr_name = f"__filter_{self._fresh_counter}"
+                    self._fresh_counter += 1
+                    new_arr = z3.Array(arr_name, z3.IntSort(), z3.IntSort())
+                    new_len = z3.IntVal(0)
+                    for k in range(MAX_BMC_LENGTH):
+                        k_idx = z3.IntVal(k)
+                        elem = z3.Select(iterable.array, k_idx)
+                        pred = fn.apply(elem)
+                        in_bounds = k_idx < iterable.length
+                        keep = z3.And(in_bounds, pred) if isinstance(pred, z3.BoolRef) else z3.And(in_bounds, pred != z3.IntVal(0))
+                        new_arr = z3.If(keep, z3.Store(new_arr, new_len, elem), new_arr)
+                        new_len = z3.If(keep, new_len + 1, new_len)
+                    return SymbolicList(array=new_arr, length=new_len)
+                raise SymbolicExecError("filter() only supported for lists")
 
             raise SymbolicExecError(f"Unsupported function call: {fname}()")
 
@@ -1410,10 +1989,12 @@ class ASTToZ3Translator:
                 default = args[1] if len(args) >= 2 else z3.IntVal(0)
                 present = z3.Select(obj.presence, key)
                 result = z3.If(present, z3.Select(obj.values, key), default)
-                # Remove the key
+                # Remove the key from presence array and tracked_keys list
                 new_presence = z3.Store(obj.presence, key, z3.BoolVal(False))
+                new_tracked = [k for k in obj.tracked_keys
+                               if not self._z3_eq(k, key)]
                 updated = SymbolicDict(presence=new_presence, values=obj.values,
-                                       tracked_keys=obj.tracked_keys)
+                                       tracked_keys=new_tracked)
                 if isinstance(attr.value, ast.Name):
                     env.set(attr.value.id, updated)
                 return result
@@ -1618,21 +2199,47 @@ class ASTToZ3Translator:
         idx = self._eval_expr(node.slice, env)
 
         if isinstance(obj, SymbolicDict):
-            return z3.Select(obj.values, idx)
+            # Model Python's KeyError semantics: d[k] raises KeyError
+            # when k is absent.  We model this by returning a fresh
+            # uninterpreted variable for the missing-key case.  This
+            # means Z3 treats d[k] on a missing key as "could be
+            # anything" — which makes d[k] differ from d.get(k, 0)
+            # (the latter returns a concrete 0 for missing keys),
+            # producing SAT and preventing false UNSAT.
+            present = z3.Select(obj.presence, idx)
+            value = z3.Select(obj.values, idx)
+            # Fresh variable: uninterpreted, not constrained to any
+            # value.  Z3 can assign it anything to find a counterexample.
+            fresh = self.fresh_var("keyerror")
+            return z3.If(present, value, fresh)
 
         if isinstance(obj, SymbolicList):
-            return z3.Select(obj.array, idx)
+            # Support negative indexing: if idx < 0, adjust to idx + length
+            try:
+                adjusted = z3.If(idx < 0, idx + obj.length, idx)
+            except (z3.Z3Exception, TypeError):
+                adjusted = idx
+            return z3.Select(obj.array, adjusted)
 
         if isinstance(obj, list):
             # Concrete index into Python list of Z3 values
             concrete_idx = self._try_concrete(idx)
-            if concrete_idx is not None and 0 <= concrete_idx < len(obj):
-                return obj[concrete_idx]
-            # Symbolic index — build If-chain
+            if concrete_idx is not None:
+                # Support negative indexing for concrete lists
+                if concrete_idx < 0:
+                    concrete_idx += len(obj)
+                if 0 <= concrete_idx < len(obj):
+                    return obj[concrete_idx]
+            # Symbolic index — build If-chain (with negative indexing)
             if len(obj) > 0:
+                list_len = z3.IntVal(len(obj))
+                try:
+                    adjusted = z3.If(idx < 0, idx + list_len, idx)
+                except (z3.Z3Exception, TypeError):
+                    adjusted = idx
                 result = obj[-1]
                 for i in range(len(obj) - 1):
-                    result = z3.If(idx == z3.IntVal(i), obj[i], result)
+                    result = z3.If(adjusted == z3.IntVal(i), obj[i], result)
                 return result
             raise SymbolicExecError("Index into empty list")
 

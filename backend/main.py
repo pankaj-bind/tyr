@@ -22,12 +22,13 @@ from pydantic import BaseModel, Field
 
 from llm_service import optimize_code, optimize_with_correction, analyze_complexity
 from z3_verifier import verify_equivalence
+from ast_to_z3 import MAX_BMC_LENGTH, MAX_LOOP_UNROLL, MAX_SYMBOLIC_RANGE
 
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 MAX_CORRECTION_ROUNDS: int = 3  # How many times to retry on SAT
-ENGINE_VERSION: str = "tyr-0.2.0"
+ENGINE_VERSION: str = "tyr-0.3.0"
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -43,7 +44,7 @@ logger = logging.getLogger("tyr")
 # ---------------------------------------------------------------------------
 app = FastAPI(
     title="Tyr — LLM Hallucination Bounding Engine",
-    version="0.2.0",
+    version="0.3.0",
     description=(
         "Counterexample-Guided Self-Correction for LLM code optimization. "
         "Uses Z3 SMT solving + concrete testing to bound LLM hallucinations."
@@ -91,8 +92,9 @@ class VerifyResponse(BaseModel):
     status: str = Field(
         ...,
         description=(
-            "'UNSAT' — proven equivalent. "
+            "'UNSAT' — formally proven equivalent via Z3 (bounded). "
             "'SAT' — counterexample found, semantics differ. "
+            "'WARNING' — Z3 timed out; empirically tested only (not a proof). "
             "'ERROR' — verification could not complete."
         ),
     )
@@ -106,6 +108,7 @@ class VerifyResponse(BaseModel):
     optimized_complexity: ComplexityInfo | None = None
     complexity_improved: bool | None = None
     elapsed_ms: int = 0
+    verification_bounds: dict[str, int] | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -251,6 +254,11 @@ async def verify(req: VerifyRequest) -> VerifyResponse:
         optimized_complexity=optimized_cx,
         complexity_improved=complexity_improved,
         elapsed_ms=elapsed,
+        verification_bounds={
+            "max_list_length": MAX_BMC_LENGTH,
+            "max_symbolic_range": MAX_SYMBOLIC_RANGE,
+            "max_loop_unroll": MAX_LOOP_UNROLL,
+        },
     )
 
 
