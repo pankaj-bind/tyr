@@ -555,8 +555,10 @@ function getWebviewHtml(r: VerifyResponse): string {
   }
 
   const applyBtn =
-    r.status === "UNSAT" || r.status === "WARNING"
+    r.status === "UNSAT"
       ? '<button class="btn btn-apply" onclick="apply()">Apply Optimized Code</button>'
+      : r.status === "WARNING"
+      ? '<button class="btn btn-apply" disabled title="Cannot apply: passed empirical tests only, not formally proven. Use at your own risk.">Apply Optimized Code (Unproven)</button>'
       : "";
 
   return `<!DOCTYPE html>

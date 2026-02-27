@@ -21,14 +21,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from llm_service import optimize_code, optimize_with_correction, analyze_complexity
-from z3_verifier import verify_equivalence
-from ast_to_z3 import MAX_BMC_LENGTH, MAX_LOOP_UNROLL, MAX_SYMBOLIC_RANGE
-
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-MAX_CORRECTION_ROUNDS: int = 3  # How many times to retry on SAT
-ENGINE_VERSION: str = "tyr-0.3.0"
+from verifier import verify_equivalence
+from config import (
+    MAX_BMC_LENGTH, MAX_LOOP_UNROLL, MAX_SYMBOLIC_RANGE,
+    MAX_CORRECTION_ROUNDS, ENGINE_VERSION,
+)
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -44,7 +41,7 @@ logger = logging.getLogger("tyr")
 # ---------------------------------------------------------------------------
 app = FastAPI(
     title="Tyr — LLM Hallucination Bounding Engine",
-    version="0.3.0",
+    version=ENGINE_VERSION,
     description=(
         "Counterexample-Guided Self-Correction for LLM code optimization. "
         "Uses Z3 SMT solving + concrete testing to bound LLM hallucinations."
