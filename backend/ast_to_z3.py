@@ -520,6 +520,17 @@ class ASTToZ3Translator:
                 self._exec_symbolic_for(loop_var, sym_start, sym_stop, sym_step, node.body, env)
                 return
 
+        # ── Detect dict.items() / dict.keys() / dict.values() on SymbolicDict ──
+        if (isinstance(node.iter, ast.Call)
+                and isinstance(node.iter.func, ast.Attribute)
+                and node.iter.func.attr in ("items", "keys", "values")):
+            dict_obj = self._eval_expr(node.iter.func.value, env)
+            if isinstance(dict_obj, SymbolicDict):
+                self._exec_for_over_dict_items(
+                    node, dict_obj, node.iter.func.attr, env,
+                )
+                return
+
         # ── BMC: For-loop over a SymbolicList ──
         iter_val = self._eval_expr(node.iter, env)
         if isinstance(iter_val, SymbolicList):
@@ -670,6 +681,96 @@ class ASTToZ3Translator:
             self._exec_body(node.body, env)
             if env.has_returned:
                 break
+
+    # ------------------------------------------------------------------
+    # BMC: For-loop over a SymbolicDict (.items / .keys / .values)
+    # ------------------------------------------------------------------
+
+    def _exec_for_over_dict_items(
+        self,
+        node: ast.For,
+        dct: SymbolicDict,
+        method: str,
+        env: SymbolicEnv,
+    ) -> None:
+        """
+        Bounded, presence-guarded iteration over a SymbolicDict.
+
+        Unlike `_exec_for_over_python_list`, every iteration is wrapped
+        in a Z3 guard derived from `Select(dct.presence, key)` so that
+        body effects are only applied when the key actually exists.
+        This is critical for BMC correctness: tracked_keys may include
+        keys that are only *conditionally* present.
+
+        Parameters
+        ----------
+        node   : The `ast.For` node (used for target unpacking).
+        dct    : The SymbolicDict being iterated.
+        method : One of "items", "keys", "values".
+        env    : The live symbolic environment.
+        """
+        for key in dct.tracked_keys:
+            guard = z3.Select(dct.presence, key)
+
+            body_env = env.copy()
+
+            # ── Bind loop variable(s) ──
+            if method == "items":
+                val = z3.Select(dct.values, key)
+                if isinstance(node.target, ast.Tuple) and len(node.target.elts) == 2:
+                    k_elt, v_elt = node.target.elts
+                    if isinstance(k_elt, ast.Name):
+                        body_env.set(k_elt.id, key)
+                    if isinstance(v_elt, ast.Name):
+                        body_env.set(v_elt.id, val)
+                elif isinstance(node.target, ast.Name):
+                    # `for item in d.items()` — bind as tuple
+                    body_env.set(node.target.id, (key, val))
+                else:
+                    raise SymbolicExecError(
+                        "dict.items() iteration requires `for k, v in …` "
+                        "or `for item in …`"
+                    )
+            elif method == "keys":
+                if isinstance(node.target, ast.Name):
+                    body_env.set(node.target.id, key)
+                else:
+                    raise SymbolicExecError(
+                        "dict.keys() iteration requires a simple variable target"
+                    )
+            elif method == "values":
+                val = z3.Select(dct.values, key)
+                if isinstance(node.target, ast.Name):
+                    body_env.set(node.target.id, val)
+                else:
+                    raise SymbolicExecError(
+                        "dict.values() iteration requires a simple variable target"
+                    )
+
+            # ── Execute body ──
+            self._exec_body(node.body, body_env)
+
+            if body_env.has_returned:
+                if env.return_value is not None:
+                    try:
+                        env.return_value = z3.If(
+                            guard, body_env.return_value, env.return_value,
+                        )
+                    except (z3.Z3Exception, TypeError):
+                        env.return_value = body_env.return_value
+                else:
+                    env.return_value = body_env.return_value
+                break
+
+            # ── Guarded merge — effects only apply when key is present ──
+            skip: set[str] = set()
+            if isinstance(node.target, ast.Tuple):
+                skip = {
+                    e.id for e in node.target.elts if isinstance(e, ast.Name)
+                }
+            elif isinstance(node.target, ast.Name):
+                skip = {node.target.id}
+            self._merge_env_guarded(env, body_env, guard, skip_vars=skip)
 
     # ------------------------------------------------------------------
     # Env merging helper (shared by symbolic for & BMC list for)
