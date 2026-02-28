@@ -1,11 +1,2 @@
 id,name,category,difficulty,original_complexity,target_complexity,verdict,optimized_complexity_time,complexity_improved,total_rounds,message,has_counterexample,latency_ms
-TYR-021,find_first_duplicate,frequency,easy,O(N^2),O(N),TIMEOUT,N/A,,0,Request timed out (120s),False,188338.0
-TYR-001,two_sum_exists,pair-finding,easy,O(N^2),O(N),UNSAT,O(n),True,1,"Tyr: Formal Proof Successful (UNSAT). The optimized code is mathematically equivalent to the original STRICTLY WITHIN the Bounded Model Checking limits (lists ≤ 5 elements, symbolic ranges ≤ 10 iterations, while-loops ≤ 30 iterations). No counterexam",False,209218.5
-TYR-022,count_elements_appearing_twice,frequency,medium,O(N^2),O(N),TIMEOUT,N/A,,0,Request timed out (120s),False,122068.6
-TYR-023,count_inversions,frequency,medium,O(N^2),O(N log N),TIMEOUT,N/A,,0,Request timed out (120s),False,122059.5
-TYR-024,missing_number,frequency,easy,O(N^2),O(N),TIMEOUT,N/A,,0,Request timed out (120s),False,122054.9
-TYR-025,count_matching_last_digit_pairs,frequency,easy,O(N^2),O(N),TIMEOUT,N/A,,0,Request timed out (120s),False,122037.9
-TYR-026,count_unique_elements,frequency,easy,O(N^2),O(N),TIMEOUT,N/A,,0,Request timed out (120s),False,122073.5
-TYR-002,count_pairs_with_sum,pair-finding,easy,O(N^2),O(N),TIMEOUT,N/A,,0,Request timed out (600s),False,602047.2
-TYR-027,single_number,frequency,easy,O(N^2),O(N),TIMEOUT,N/A,,0,Request timed out (120s),False,122048.6
-TYR-028,count_greater_than_all_right,frequency,medium,O(N^2),O(N),TIMEOUT,N/A,,0,Request timed out (120s),False,122045.2
+TYR-001,two_sum_exists,pair-finding,easy,O(N^2),O(N),TIMEOUT,N/A,,0,Request timed out (600s),False,602100.2

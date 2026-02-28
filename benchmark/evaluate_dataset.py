@@ -167,7 +167,8 @@ def _safe_get(d: dict, *keys: str, default: Any = "") -> Any:
 # Main evaluator
 # ═══════════════════════════════════════════════════════════════════════
 
-def run(api_url: str, benchmark_path: Path, csv_out: Path, timeout: int) -> None:
+def run(api_url: str, benchmark_path: Path, csv_out: Path, timeout: int,
+       batch: int = 0) -> None:
     # ── Load dataset ──────────────────────────────────────────────────
     if not benchmark_path.exists():
         sys.exit(f"ERROR: Benchmark file not found: {benchmark_path}\n"
@@ -184,16 +185,46 @@ def run(api_url: str, benchmark_path: Path, csv_out: Path, timeout: int) -> None
     print(f"  Timeout: {timeout}s per problem")
     print(f"{'═' * 64}\n")
 
-    # ── Nuke stale CSV — zero tolerance for ghost rows ────────────────
+    # ── Resume logic: detect already-evaluated problems ───────────────
     csv_out.parent.mkdir(parents=True, exist_ok=True)
-    if csv_out.exists():
-        csv_out.unlink()
-        print(f"  ✓ Deleted stale CSV: {csv_out.name}")
+    done_ids: set[str] = set()
+    resuming = False
 
-    # ── Write fresh header ────────────────────────────────────────────
-    with open(csv_out, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=CSV_FIELDS, extrasaction="ignore")
-        writer.writeheader()
+    if csv_out.exists() and csv_out.stat().st_size > 0:
+        try:
+            with open(csv_out, "r", newline="", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    rid = row.get("id", "")
+                    if rid:
+                        done_ids.add(rid)
+            resuming = bool(done_ids)
+        except Exception as exc:
+            print(f"  ⚠ Could not parse existing CSV ({exc}) — starting fresh",
+                  file=sys.stderr)
+            done_ids.clear()
+
+    if resuming:
+        remaining = [p for p in problems if p.get("id") not in done_ids]
+        print(f"  ↻ Resuming benchmark: Skipping {len(done_ids)} already "
+              f"evaluated problems. {len(remaining)} remaining.")
+    else:
+        remaining = problems
+        # Fresh start — write header
+        with open(csv_out, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=CSV_FIELDS, extrasaction="ignore")
+            writer.writeheader()
+        print(f"  ✓ Fresh run — CSV initialised with header")
+
+    # ── Batch slicing ─────────────────────────────────────────────────
+    if batch > 0 and len(remaining) > batch:
+        deferred = len(remaining) - batch
+        remaining = remaining[:batch]
+        print(f"  ⏱ Batch Mode: Executing the next {batch} problems. "
+              f"{deferred} will be left for later.")
+    elif batch > 0:
+        print(f"  ⏱ Batch Mode: {len(remaining)} problems remaining "
+              f"(≤ batch size {batch}). This is the final batch.")
 
     # ── Counters ──────────────────────────────────────────────────────
     verdicts: dict[str, int] = {}
@@ -203,7 +234,7 @@ def run(api_url: str, benchmark_path: Path, csv_out: Path, timeout: int) -> None
     total_assessed = 0
 
     # ── Progress bar ──────────────────────────────────────────────────
-    bar = tqdm(problems, desc="Evaluating", unit="prob",
+    bar = tqdm(remaining, desc="Evaluating", unit="prob",
                bar_format=("{l_bar}{bar}| {n_fmt}/{total_fmt} "
                            "[{elapsed}<{remaining}, {rate_fmt}]"))
 
@@ -293,18 +324,25 @@ def run(api_url: str, benchmark_path: Path, csv_out: Path, timeout: int) -> None
     bar.close()
 
     # ══════════════════════════════════════════════════════════════════
-    # Summary
+    # Summary (covers THIS run only; full results are in the CSV)
     # ══════════════════════════════════════════════════════════════════
+    evaluated_this_run = len(remaining)
+    total_in_csv = len(done_ids) + evaluated_this_run
+
     print(f"\n{'═' * 64}")
-    print("  BENCHMARK RESULTS — VERDICT DISTRIBUTION")
+    print("  BENCHMARK RESULTS — VERDICT DISTRIBUTION (this run)")
     print(f"{'═' * 64}")
     for v in ["UNSAT", "SAT", "WARNING", "TIMEOUT", "ERROR"]:
         cnt = verdicts.get(v, 0)
-        pct = cnt / n * 100 if n else 0
+        pct = cnt / evaluated_this_run * 100 if evaluated_this_run else 0
         bar_str = "█" * int(pct / 2)
-        print(f"  {v:8s}  {cnt:4d} / {n}  ({pct:5.1f}%)  {bar_str}")
+        print(f"  {v:8s}  {cnt:4d} / {evaluated_this_run}  ({pct:5.1f}%)  {bar_str}")
     total_pass = verdicts.get("UNSAT", 0)
-    print(f"\n  PASS RATE: {total_pass}/{n} = {total_pass / n * 100:.1f}%")
+    print(f"\n  PASS RATE (this run): {total_pass}/{evaluated_this_run}"
+          f" = {total_pass / evaluated_this_run * 100:.1f}%"
+          if evaluated_this_run else "\n  No problems evaluated this run.")
+    if resuming:
+        print(f"  TOTAL IN CSV: {total_in_csv}/{n} problems evaluated")
 
     # Category breakdown
     print(f"\n{'─' * 64}")
@@ -362,6 +400,8 @@ def main() -> None:
                     help="Output CSV path")
     ap.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT,
                     help=f"Per-problem timeout in seconds (default: {DEFAULT_TIMEOUT})")
+    ap.add_argument("--batch",   type=int, default=0,
+                    help="Max problems to evaluate this run (0 = all remaining)")
     args = ap.parse_args()
 
     run(
@@ -369,6 +409,7 @@ def main() -> None:
         benchmark_path=Path(args.bench),
         csv_out=Path(args.out),
         timeout=args.timeout,
+        batch=args.batch,
     )
 
 
