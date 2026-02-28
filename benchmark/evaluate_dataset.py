@@ -168,7 +168,8 @@ def _safe_get(d: dict, *keys: str, default: Any = "") -> Any:
 # ═══════════════════════════════════════════════════════════════════════
 
 def run(api_url: str, benchmark_path: Path, csv_out: Path, timeout: int,
-       batch: int = 0) -> None:
+       batch: int = 0, ids: list[str] | None = None,
+       index_range: tuple[int, int] | None = None) -> None:
     # ── Load dataset ──────────────────────────────────────────────────
     if not benchmark_path.exists():
         sys.exit(f"ERROR: Benchmark file not found: {benchmark_path}\n"
@@ -215,6 +216,28 @@ def run(api_url: str, benchmark_path: Path, csv_out: Path, timeout: int,
             writer = csv.DictWriter(f, fieldnames=CSV_FIELDS, extrasaction="ignore")
             writer.writeheader()
         print(f"  ✓ Fresh run — CSV initialised with header")
+
+    # ── Precision filter: --ids or --range ────────────────────────────
+    if ids:
+        id_set = set(ids)
+        remaining = [p for p in remaining if p.get("id") in id_set]
+        matched = [p.get("id") for p in remaining]
+        missing = id_set - set(matched)
+        print(f"  🎯 Precision Mode: Running specific IDs "
+              f"{matched}")
+        if missing:
+            print(f"     ⚠ IDs not found or already done: "
+                  f"{sorted(missing)}")
+    elif index_range:
+        start, end = index_range
+        # Apply range to the FULL problem list (1-based), then intersect
+        # with remaining (resume-filtered) to skip already-done entries.
+        ranged_ids = {
+            p.get("id") for p in problems[start - 1 : end]
+        }
+        remaining = [p for p in remaining if p.get("id") in ranged_ids]
+        print(f"  📍 Range Mode: Running problems {start} to {end} "
+              f"({len(remaining)} after resume filter).")
 
     # ── Batch slicing ─────────────────────────────────────────────────
     if batch > 0 and len(remaining) > batch:
@@ -402,7 +425,33 @@ def main() -> None:
                     help=f"Per-problem timeout in seconds (default: {DEFAULT_TIMEOUT})")
     ap.add_argument("--batch",   type=int, default=0,
                     help="Max problems to evaluate this run (0 = all remaining)")
+
+    precision = ap.add_mutually_exclusive_group()
+    precision.add_argument(
+        "--ids", type=str, default=None,
+        help="Comma-separated problem IDs (e.g. TYR-001,TYR-005,TYR-010)")
+    precision.add_argument(
+        "--range", type=str, default=None, dest="idx_range",
+        help="1-based start,end index range (e.g. 1,10)")
+
     args = ap.parse_args()
+
+    # Parse --ids / --range into typed values
+    parsed_ids: list[str] | None = None
+    parsed_range: tuple[int, int] | None = None
+
+    if args.ids:
+        parsed_ids = [x.strip() for x in args.ids.split(",") if x.strip()]
+    if args.idx_range:
+        parts = args.idx_range.split(",")
+        if len(parts) != 2:
+            ap.error("--range requires exactly two values: start,end (e.g. 1,10)")
+        try:
+            parsed_range = (int(parts[0]), int(parts[1]))
+        except ValueError:
+            ap.error("--range values must be integers")
+        if parsed_range[0] < 1 or parsed_range[1] < parsed_range[0]:
+            ap.error("--range: start must be >= 1 and end must be >= start")
 
     run(
         api_url=args.url,
@@ -410,6 +459,8 @@ def main() -> None:
         csv_out=Path(args.out),
         timeout=args.timeout,
         batch=args.batch,
+        ids=parsed_ids,
+        index_range=parsed_range,
     )
 
 
