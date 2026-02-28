@@ -12,9 +12,8 @@ __pycache__/
 .env
 .venv/
 
-# ----- Research Paper (data & figures) ------
-Research_Paper/data/
-Research_Paper/figures/
+# ----- Research Paper (generated artifacts) -
+Research_Paper/
 
 # ----- VS Code Extension --------------------
 vscode-extension/out/

@@ -1,2 +1,0 @@
-id,name,category,difficulty,original_complexity,target_complexity,verdict,optimized_complexity_time,complexity_improved,total_rounds,message,has_counterexample,latency_ms
-TYR-001,two_sum_exists,pair-finding,easy,O(N^2),O(N),TIMEOUT,N/A,,0,Request timed out (600s),False,602100.2
