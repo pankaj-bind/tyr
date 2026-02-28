@@ -58,6 +58,14 @@ class ExpressionEvaluator:
             return self._eval_set_literal(node, env)
         if isinstance(node, ast.ListComp):
             return self._eval_listcomp(node, env)
+        if isinstance(node, ast.DictComp):
+            return self._eval_dictcomp(node, env)
+        if isinstance(node, ast.SetComp):
+            return self._eval_setcomp(node, env)
+        if isinstance(node, ast.GeneratorExp):
+            # Treat generators as lists (materialised) — sufficient for
+            # sum(), min(), max(), any(), all() wrappers.
+            return self._eval_generatorexp(node, env)
         if isinstance(node, ast.Lambda):
             return LambdaClosure(node=node, env=env, translator=self)
         if isinstance(node, ast.Attribute):
@@ -173,7 +181,16 @@ class ExpressionEvaluator:
 
     @staticmethod
     def _coerce_sorts(left: Any, right: Any) -> tuple[Any, Any]:
-        """Promote both operands to the same Z3 sort (Int vs Real)."""
+        """Promote both operands to the same Z3 sort (Int vs Real vs Bool).
+
+        Bool → Int promotion is applied first so that subsequent
+        Real ↔ Int coercion works uniformly.
+        """
+        # Bool → Int promotion (needed before z3.If across branches)
+        if isinstance(left, z3.BoolRef) and not isinstance(right, z3.BoolRef):
+            left = z3.If(left, z3.IntVal(1), z3.IntVal(0))
+        if isinstance(right, z3.BoolRef) and not isinstance(left, z3.BoolRef):
+            right = z3.If(right, z3.IntVal(1), z3.IntVal(0))
         try:
             if isinstance(left, z3.ArithRef) and isinstance(right, z3.ArithRef):
                 if left.sort() != right.sort():
@@ -184,6 +201,27 @@ class ExpressionEvaluator:
         except (z3.Z3Exception, TypeError, AttributeError):
             pass
         return left, right
+
+    @staticmethod
+    def _to_z3_bool(val: Any) -> Any:
+        """Coerce a Z3 expression to BoolRef for use as a condition.
+
+        Python truthiness rules:
+          int   → val != 0
+          bool  → val (already BoolRef)
+        """
+        if isinstance(val, z3.BoolRef):
+            return val
+        if isinstance(val, bool):
+            return z3.BoolVal(val)
+        if isinstance(val, int):
+            return z3.BoolVal(bool(val))
+        if isinstance(val, z3.ArithRef):
+            return val != z3.IntVal(0)
+        # SymbolicList — truthy when non-empty
+        if hasattr(val, 'length'):
+            return val.length != z3.IntVal(0)
+        return val
 
     # ── Unary operations ──────────────────────────────────────────────
 
@@ -216,13 +254,28 @@ class ExpressionEvaluator:
     # ── Boolean operations ────────────────────────────────────────────
 
     def _eval_boolop(self, node: ast.BoolOp, env: SymbolicEnv) -> Any:
+        """Model Python ``and`` / ``or`` with correct short-circuit semantics.
+
+        Python ``and`` returns the first falsy operand or the last operand.
+        Python ``or``  returns the first truthy operand or the last operand.
+        When the result is subsequently used in a boolean context (e.g. an
+        ``if``), the caller coerces via ``_to_z3_bool``.
+
+        For SMT equivalence checking we primarily need correctness for
+        the boolean *truth value*, so we emit ``z3.And`` / ``z3.Or`` over
+        coerced BoolRef operands.  When all operands are already BoolRef
+        this is exact; when some are ArithRef (integers used as booleans)
+        we coerce them to ``val != 0``.
+        """
         if isinstance(node.op, ast.And):
             result = self._eval_expr(node.values[0], env)
             for val_node in node.values[1:]:
                 try:
                     nv = self._eval_expr(val_node, env)
-                    result = z3.And(result, nv)
-                except SymbolicExecError:
+                    rb = self._to_z3_bool(result)
+                    nb = self._to_z3_bool(nv)
+                    result = z3.And(rb, nb)
+                except (SymbolicExecError, z3.Z3Exception, TypeError):
                     break
             return result
         if isinstance(node.op, ast.Or):
@@ -230,8 +283,10 @@ class ExpressionEvaluator:
             for val_node in node.values[1:]:
                 try:
                     nv = self._eval_expr(val_node, env)
-                    result = z3.Or(result, nv)
-                except SymbolicExecError:
+                    rb = self._to_z3_bool(result)
+                    nb = self._to_z3_bool(nv)
+                    result = z3.Or(rb, nb)
+                except (SymbolicExecError, z3.Z3Exception, TypeError):
                     break
             return result
         raise SymbolicExecError(f"Unsupported bool op: {type(node.op).__name__}")
@@ -310,6 +365,7 @@ class ExpressionEvaluator:
 
     def _eval_ifexp(self, node: ast.IfExp, env: SymbolicEnv) -> Any:
         cond = self._eval_expr(node.test, env)
+        cond = self._to_z3_bool(cond)  # V3 fix: coerce ArithRef condition
         tv = self._eval_expr(node.body, env)
         fv = self._eval_expr(node.orelse, env)
         tv, fv = self._coerce_sorts(tv, fv)
@@ -442,6 +498,142 @@ class ExpressionEvaluator:
             result_arr = z3.If(guard, z3.Store(result_arr, result_len, val), result_arr)
             result_len = z3.If(guard, result_len + 1, result_len)
         return SymbolicList(array=result_arr, length=result_len)
+
+    # ── Dict comprehension ────────────────────────────────────────────
+
+    def _eval_dictcomp(self, node: ast.DictComp, env: SymbolicEnv) -> SymbolicDict:
+        if len(node.generators) != 1:
+            raise SymbolicExecError(
+                "Only single-generator dict comprehensions are supported"
+            )
+        gen = node.generators[0]
+        iter_val = self._eval_expr(gen.iter, env)
+
+        presence = z3.K(z3.IntSort(), z3.BoolVal(False))
+        values = z3.K(z3.IntSort(), z3.IntVal(0))
+        tracked: list[Any] = []
+
+        element_list = self._comprehension_items(gen, iter_val, env)
+        for item, in_bounds in element_list:
+            comp_env = env.copy()
+            self._bind_comp_target(gen.target, item, comp_env)
+            include: Any = in_bounds
+            for if_clause in gen.ifs:
+                cond = self._eval_expr(if_clause, comp_env)
+                include = z3.And(include, self._to_z3_bool(cond))
+            key = self._eval_expr(node.key, comp_env)
+            val = self._eval_expr(node.value, comp_env)
+            presence = z3.If(include,
+                             z3.Store(presence, key, z3.BoolVal(True)),
+                             presence)
+            values = z3.If(include,
+                           z3.Store(values, key, val),
+                           values)
+            tracked.append(key)
+        return SymbolicDict(presence=presence, values=values,
+                            tracked_keys=tracked)
+
+    # ── Set comprehension ─────────────────────────────────────────────
+
+    def _eval_setcomp(self, node: ast.SetComp, env: SymbolicEnv) -> SymbolicSet:
+        if len(node.generators) != 1:
+            raise SymbolicExecError(
+                "Only single-generator set comprehensions are supported"
+            )
+        gen = node.generators[0]
+        iter_val = self._eval_expr(gen.iter, env)
+
+        presence = z3.K(z3.IntSort(), z3.BoolVal(False))
+
+        element_list = self._comprehension_items(gen, iter_val, env)
+        for item, in_bounds in element_list:
+            comp_env = env.copy()
+            self._bind_comp_target(gen.target, item, comp_env)
+            include: Any = in_bounds
+            for if_clause in gen.ifs:
+                cond = self._eval_expr(if_clause, comp_env)
+                include = z3.And(include, self._to_z3_bool(cond))
+            elt = self._eval_expr(node.elt, comp_env)
+            presence = z3.If(include,
+                             z3.Store(presence, elt, z3.BoolVal(True)),
+                             presence)
+        return SymbolicSet(presence=presence)
+
+    # ── Generator expression (materialised as list) ───────────────────
+
+    def _eval_generatorexp(self, node: ast.GeneratorExp,
+                           env: SymbolicEnv) -> SymbolicList:
+        """Materialise a generator expression into a SymbolicList.
+
+        This is exact for the bounded domain and allows ``sum(x for ...)``,
+        ``any(x for ...)``, etc. to work seamlessly.
+        """
+        if len(node.generators) != 1:
+            raise SymbolicExecError(
+                "Only single-generator generator expressions are supported"
+            )
+        gen = node.generators[0]
+        iter_val = self._eval_expr(gen.iter, env)
+
+        result_arr = z3.Array(self.fresh_array_name("genexp"),
+                              z3.IntSort(), z3.IntSort())
+        result_len = z3.IntVal(0)
+        items: list[tuple[Any, Any]] = []
+
+        element_list = self._comprehension_items(gen, iter_val, env)
+        for item, in_bounds in element_list:
+            comp_env = env.copy()
+            self._bind_comp_target(gen.target, item, comp_env)
+            include: Any = in_bounds
+            for if_clause in gen.ifs:
+                cond = self._eval_expr(if_clause, comp_env)
+                include = z3.And(include, self._to_z3_bool(cond))
+            items.append((include, self._eval_expr(node.elt, comp_env)))
+
+        for guard, val in items:
+            result_arr = z3.If(guard, z3.Store(result_arr, result_len, val),
+                               result_arr)
+            result_len = z3.If(guard, result_len + 1, result_len)
+        return SymbolicList(array=result_arr, length=result_len)
+
+    # ── Shared comprehension helpers ──────────────────────────────────
+
+    def _comprehension_items(
+        self,
+        gen: ast.comprehension,
+        iter_val: Any,
+        env: SymbolicEnv,
+    ) -> list[tuple[Any, Any]]:
+        """Return ``(element, in_bounds_guard)`` pairs for a comprehension."""
+        if isinstance(iter_val, SymbolicList):
+            result = []
+            for k in range(MAX_BMC_LENGTH):
+                ki = z3.IntVal(k)
+                result.append((z3.Select(iter_val.array, ki),
+                               ki < iter_val.length))
+            return result
+        if isinstance(iter_val, (list, tuple)):
+            return [(item, z3.BoolVal(True)) for item in iter_val]
+        raise SymbolicExecError(
+            f"Comprehension over unsupported iterable: "
+            f"{type(iter_val).__name__}"
+        )
+
+    def _bind_comp_target(self, target: ast.expr, item: Any,
+                          env: SymbolicEnv) -> None:
+        """Bind a comprehension iteration variable (supports tuples)."""
+        if isinstance(target, ast.Name):
+            env.set(target.id, item)
+        elif isinstance(target, ast.Tuple):
+            if isinstance(item, (list, tuple)):
+                for j, elt in enumerate(target.elts):
+                    if isinstance(elt, ast.Name):
+                        env.set(elt.id,
+                                item[j] if j < len(item) else z3.IntVal(0))
+        else:
+            raise SymbolicExecError(
+                f"Unsupported comprehension target: {type(target).__name__}"
+            )
 
     # ── Static helpers ────────────────────────────────────────────────
 

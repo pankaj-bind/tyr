@@ -8,6 +8,7 @@ inputs to search for output divergence.
 from __future__ import annotations
 
 import ast
+import copy
 import ctypes
 import logging
 import itertools
@@ -257,13 +258,18 @@ def concrete_test_fallback(
     first_ce: dict[str, Any] | None = None
 
     for inputs in test_inputs:
+        # Deep-copy mutable inputs (lists) so orig_func and opt_func
+        # each get independent objects  (V7 fix).
+        inputs_o = tuple(copy.deepcopy(v) for v in inputs)
+        inputs_p = tuple(copy.deepcopy(v) for v in inputs)
+
         ok_o, res_o = _run_func_in_process(
-            orig_func, inputs, CONCRETE_EXEC_TIMEOUT_S,
+            orig_func, inputs_o, CONCRETE_EXEC_TIMEOUT_S,
         )
         if not ok_o:
             continue
         ok_p, res_p = _run_func_in_process(
-            opt_func, inputs, CONCRETE_EXEC_TIMEOUT_S,
+            opt_func, inputs_p, CONCRETE_EXEC_TIMEOUT_S,
         )
         if not ok_p:
             res_p = "__TIMEOUT__"

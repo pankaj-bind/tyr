@@ -13,7 +13,7 @@ from typing import Any
 
 import z3
 
-from config import NONE_SENTINEL, MAX_PARTIAL_RETURNS
+from config import NONE_SENTINEL, MAX_PARTIAL_RETURNS, STRING_ID_BASE
 from symbolic.types import (
     SymbolicEnv, SymbolicExecError,
 )
@@ -53,7 +53,8 @@ class ASTToZ3Translator(
             shared_string_map if shared_string_map is not None else {}
         )
         self._next_string_id_ref: list[int] = (
-            shared_next_string_id if shared_next_string_id is not None else [2**60]
+            shared_next_string_id if shared_next_string_id is not None
+            else [STRING_ID_BASE]
         )
 
     # ── Fresh-variable factories ──────────────────────────────────────

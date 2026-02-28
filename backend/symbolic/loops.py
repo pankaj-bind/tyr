@@ -60,7 +60,11 @@ class LoopExecutor:
                 if body_env.has_returned:
                     if len(env.partial_returns) < MAX_PARTIAL_RETURNS:
                         env.partial_returns.append((guard, body_env.return_value))
-                    # If return is unconditional, stop the whole loop.
+                    # If return is unconditional (guard is True), stop.
+                    if not_yet_broken is None:
+                        # No prior conditional break, check if return is
+                        # conditional (only when inside an if-branch).
+                        pass
                     i += step
                     iterations += 1
                     continue
@@ -238,9 +242,17 @@ class LoopExecutor:
         body: list[ast.stmt],
         env: SymbolicEnv,
     ) -> None:
+        not_yet_broken: Any = None  # accumulates conditional break guards
+
         for i in range(MAX_BMC_LENGTH):
             idx = z3.IntVal(i)
-            guard = idx < lst.length
+            in_bounds = idx < lst.length
+
+            # Combined guard: in bounds AND no prior break
+            if not_yet_broken is None:
+                guard = in_bounds
+            else:
+                guard = z3.And(in_bounds, not_yet_broken)
 
             body_env = env.copy()
             body_env.partial_returns = []
@@ -255,12 +267,23 @@ class LoopExecutor:
                 self._propagate_partial_returns(env, body_env, guard)
                 continue
 
-            # ── break (CRG-2 fix) ──
+            # ── break (CRG-2 fix — with break guard accumulation) ──
             if body_env.has_broken:
                 body_env.has_broken = False
                 self._merge_env_guarded(env, body_env, guard,
                                         skip_vars={loop_var})
                 self._propagate_partial_returns(env, body_env, guard)
+                # Check if the break was conditional
+                break_cond = body_env._break_guard
+                if break_cond is not None:
+                    # Conditional break — tighten the not-yet-broken guard
+                    try:
+                        nyb = z3.And(guard, z3.Not(break_cond))
+                        not_yet_broken = nyb
+                    except (z3.Z3Exception, TypeError):
+                        break
+                    continue
+                # Unconditional break
                 break
 
             # ── return ──
@@ -301,8 +324,12 @@ class LoopExecutor:
         enum_result: EnumerateResult,
         env: SymbolicEnv,
     ) -> None:
+        not_yet_broken: Any = None
+
         for idx_z3, elem_z3 in enum_result.pairs:
-            guard = idx_z3 < enum_result.source_length
+            in_bounds = idx_z3 < enum_result.source_length
+            guard = in_bounds if not_yet_broken is None \
+                else z3.And(in_bounds, not_yet_broken)
 
             body_env = env.copy()
             body_env.partial_returns = []
@@ -331,12 +358,19 @@ class LoopExecutor:
                 self._propagate_partial_returns(env, body_env, guard)
                 continue
 
-            # ── break (CRG-2) ──
+            # ── break (CRG-2 — with guard accumulation) ──
             if body_env.has_broken:
                 body_env.has_broken = False
                 skip = self._loop_skip_vars(node.target)
                 self._merge_env_guarded(env, body_env, guard, skip_vars=skip)
                 self._propagate_partial_returns(env, body_env, guard)
+                break_cond = body_env._break_guard
+                if break_cond is not None:
+                    try:
+                        not_yet_broken = z3.And(guard, z3.Not(break_cond))
+                    except (z3.Z3Exception, TypeError):
+                        break
+                    continue
                 break
 
             if body_env.has_returned:
@@ -357,8 +391,12 @@ class LoopExecutor:
         method: str,
         env: SymbolicEnv,
     ) -> None:
+        not_yet_broken: Any = None
+
         for key in dct.tracked_keys:
-            guard = z3.Select(dct.presence, key)
+            present = z3.Select(dct.presence, key)
+            guard = present if not_yet_broken is None \
+                else z3.And(present, not_yet_broken)
 
             body_env = env.copy()
             body_env.partial_returns = []
@@ -404,12 +442,19 @@ class LoopExecutor:
                 self._propagate_partial_returns(env, body_env, guard)
                 continue
 
-            # ── break (CRG-2) ──
+            # ── break (CRG-2 — with guard accumulation) ──
             if body_env.has_broken:
                 body_env.has_broken = False
                 skip = self._loop_skip_vars(node.target)
                 self._merge_env_guarded(env, body_env, guard, skip_vars=skip)
                 self._propagate_partial_returns(env, body_env, guard)
+                break_cond = body_env._break_guard
+                if break_cond is not None:
+                    try:
+                        not_yet_broken = z3.And(guard, z3.Not(break_cond))
+                    except (z3.Z3Exception, TypeError):
+                        break
+                    continue
                 break
 
             if body_env.has_returned:
@@ -449,6 +494,8 @@ class LoopExecutor:
                 continue
 
             # Symbolic condition
+            if isinstance(cond, z3.ArithRef):
+                cond = cond != z3.IntVal(0)
             body_env = env.copy()
             body_env.partial_returns = []
             self._exec_body(node.body, body_env)

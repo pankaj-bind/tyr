@@ -23,7 +23,7 @@ import z3
 
 from config import (
     MAX_BMC_LENGTH, MAX_SYMBOLIC_RANGE, MAX_LOOP_UNROLL,
-    Z3_TIMEOUT_MS, INF_SENTINEL,
+    Z3_TIMEOUT_MS, INF_SENTINEL, STRING_ID_BASE,
 )
 from symbolic import (
     ASTToZ3Translator, SymbolicExecError,
@@ -98,7 +98,7 @@ def verify_equivalence(
 
     # 4. Symbolic execution
     smap: dict[str, int] = {}
-    snext: list[int] = [2**60]
+    snext: list[int] = [STRING_ID_BASE]
 
     t_orig = ASTToZ3Translator(shared_string_map=smap,
                                 shared_next_string_id=snext)

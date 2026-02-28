@@ -96,6 +96,19 @@ def _builtin_len(self, _fn, args, _node, _env):
         return a.length
     if isinstance(a, list):
         return z3.IntVal(len(a))
+    if isinstance(a, SymbolicDict):
+        # Count tracked keys whose presence flag is True
+        result = z3.IntVal(0)
+        for k in a.tracked_keys:
+            result = result + z3.If(
+                z3.Select(a.presence, k), z3.IntVal(1), z3.IntVal(0),
+            )
+        return result
+    if isinstance(a, SymbolicSet):
+        # SymbolicSet has no tracked key list; return a fresh symbolic
+        # variable (over-approximation).  This is sound for equivalence
+        # checking because both sides see the same SymbolicSet.
+        return self.fresh_var("set_len")
     raise SymbolicExecError(f"len() on unsupported type: {type(a).__name__}")
 
 
@@ -399,6 +412,73 @@ def _symbolic_max_of(self, arg):
 BuiltinDispatcher._symbolic_max_of = _symbolic_max_of
 
 
+# ── reversed() handler ───────────────────────────────────────────────
+
+def _builtin_reversed(self, _fn, args, _node, _env):
+    if len(args) != 1:
+        raise SymbolicExecError("reversed() requires exactly 1 argument")
+    a = args[0]
+    if isinstance(a, SymbolicList):
+        new_arr = z3.Array(
+            self.fresh_array_name("reversed"), z3.IntSort(), z3.IntSort(),
+        )
+        for k in range(MAX_BMC_LENGTH):
+            ki = z3.IntVal(k)
+            in_bounds = ki < a.length
+            src_idx = a.length - z3.IntVal(1) - ki
+            new_arr = z3.If(
+                in_bounds,
+                z3.Store(new_arr, ki, z3.Select(a.array, src_idx)),
+                new_arr,
+            )
+        return SymbolicList(array=new_arr, length=a.length)
+    if isinstance(a, (list, tuple)):
+        return list(reversed(a))
+    raise SymbolicExecError(f"reversed() on unsupported type: {type(a).__name__}")
+
+
+# ── zip() handler ───────────────────────────────────────────────────
+
+def _builtin_zip(self, _fn, args, _node, _env):
+    """zip(list_a, list_b) → list of (a_i, b_i) tuples."""
+    if len(args) != 2:
+        raise SymbolicExecError("zip() only supported with exactly 2 arguments")
+    a, b = args
+    if isinstance(a, SymbolicList) and isinstance(b, SymbolicList):
+        # Minimum length
+        min_len = z3.If(a.length < b.length, a.length, b.length)
+        pairs = []
+        for k in range(MAX_BMC_LENGTH):
+            ki = z3.IntVal(k)
+            pairs.append((z3.Select(a.array, ki), z3.Select(b.array, ki)))
+        return EnumerateResult(pairs=pairs, source_length=min_len)
+    if isinstance(a, (list, tuple)) and isinstance(b, (list, tuple)):
+        return [list(p) for p in zip(a, b)]
+    raise SymbolicExecError("zip() only supported for two lists")
+
+
+# ── tuple() handler ─────────────────────────────────────────────────
+
+def _builtin_tuple(self, _fn, args, _node, _env):
+    if len(args) == 0:
+        arr = z3.Array(
+            self.fresh_array_name("emptytuple"), z3.IntSort(), z3.IntSort(),
+        )
+        return SymbolicList(array=arr, length=z3.IntVal(0))
+    if len(args) == 1 and isinstance(args[0], SymbolicList):
+        return args[0].copy()
+    if len(args) == 1 and isinstance(args[0], (list, tuple)):
+        return list(args[0])
+    raise SymbolicExecError("tuple() requires 0 args or a list/SymbolicList")
+
+
+# ── print() no-op ──────────────────────────────────────────────────
+
+def _builtin_print(self, _fn, args, _node, _env):
+    """print() is a side-effect — ignore for equivalence checking."""
+    return z3.IntVal(0)
+
+
 # ── Dispatch table ────────────────────────────────────────────────
 
 _BUILTIN_TABLE: dict[str, Any] = {
@@ -420,4 +500,8 @@ _BUILTIN_TABLE: dict[str, Any] = {
     "all": _builtin_all,
     "any": _builtin_any,
     "float": _builtin_float,
+    "reversed": _builtin_reversed,
+    "zip": _builtin_zip,
+    "tuple": _builtin_tuple,
+    "print": _builtin_print,
 }

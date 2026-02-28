@@ -122,15 +122,23 @@ class StatementExecutor:
             elif z3.is_array(arr):
                 if isinstance(node.target.value, ast.Name):
                     env.set(node.target.value.id, z3.Store(arr, idx, result))
+        else:
+            raise SymbolicExecError(
+                f"Unsupported augmented assignment target: "
+                f"{type(node.target).__name__}"
+            )
 
     # ── If / Else ─────────────────────────────────────────────────────
 
     def _exec_if(self, node: ast.If, env: SymbolicEnv) -> None:
         cond = self._eval_expr(node.test, env)
+        # Coerce to BoolRef (V3 fix: ArithRef used as condition)
         if isinstance(cond, bool):
             cond = z3.BoolVal(cond)
         elif isinstance(cond, int):
             cond = z3.BoolVal(bool(cond))
+        elif isinstance(cond, z3.ArithRef):
+            cond = cond != z3.IntVal(0)
 
         then_env = env.copy()
         self._exec_body(node.body, then_env)
