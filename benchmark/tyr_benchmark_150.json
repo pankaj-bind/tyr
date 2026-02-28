@@ -1,0 +1,1502 @@
+[
+  {
+    "id": "TYR-001",
+    "name": "two_sum_exists",
+    "category": "pair-finding",
+    "difficulty": "easy",
+    "description": "Return 1 if any pair of elements sums to target, else 0.",
+    "original_code": "def two_sum_exists(nums, target):\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            if nums[i] + nums[j] == target:\n                return 1\n    return 0\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-002",
+    "name": "count_pairs_with_sum",
+    "category": "pair-finding",
+    "difficulty": "easy",
+    "description": "Count the number of (i<j) pairs whose sum equals target.",
+    "original_code": "def count_pairs_with_sum(nums, target):\n    count = 0\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            if nums[i] + nums[j] == target:\n                count += 1\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-003",
+    "name": "has_pair_with_diff",
+    "category": "pair-finding",
+    "difficulty": "easy",
+    "description": "Return 1 if any pair has absolute difference equal to target.",
+    "original_code": "def has_pair_with_diff(nums, target):\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            if abs(nums[i] - nums[j]) == target:\n                return 1\n    return 0\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-004",
+    "name": "count_equal_pairs",
+    "category": "pair-finding",
+    "difficulty": "easy",
+    "description": "Count pairs (i<j) where nums[i] == nums[j].",
+    "original_code": "def count_equal_pairs(nums):\n    count = 0\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            if nums[i] == nums[j]:\n                count += 1\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-005",
+    "name": "closest_pair_sum",
+    "category": "pair-finding",
+    "difficulty": "medium",
+    "description": "Return the pair sum closest to target.",
+    "original_code": "def closest_pair_sum(nums, target):\n    if len(nums) < 2:\n        return 0\n    best = nums[0] + nums[1]\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            s = nums[i] + nums[j]\n            if abs(s - target) < abs(best - target):\n                best = s\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-006",
+    "name": "count_pairs_divisible_sum",
+    "category": "pair-finding",
+    "difficulty": "medium",
+    "description": "Count pairs (i<j) whose sum is divisible by k.",
+    "original_code": "def count_pairs_divisible_sum(nums, k):\n    if k == 0:\n        return 0\n    count = 0\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            if (nums[i] + nums[j]) % k == 0:\n                count += 1\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-007",
+    "name": "max_pair_sum",
+    "category": "pair-finding",
+    "difficulty": "easy",
+    "description": "Return the maximum sum of any pair of distinct-index elements.",
+    "original_code": "def max_pair_sum(nums):\n    if len(nums) < 2:\n        return 0\n    best = nums[0] + nums[1]\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            s = nums[i] + nums[j]\n            if s > best:\n                best = s\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-008",
+    "name": "count_pairs_sum_less",
+    "category": "pair-finding",
+    "difficulty": "easy",
+    "description": "Count pairs (i<j) whose sum is strictly less than target.",
+    "original_code": "def count_pairs_sum_less(nums, target):\n    count = 0\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            if nums[i] + nums[j] < target:\n                count += 1\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-009",
+    "name": "count_pairs_sum_greater",
+    "category": "pair-finding",
+    "difficulty": "easy",
+    "description": "Count pairs (i<j) whose sum is strictly greater than target.",
+    "original_code": "def count_pairs_sum_greater(nums, target):\n    count = 0\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            if nums[i] + nums[j] > target:\n                count += 1\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-010",
+    "name": "has_pair_product",
+    "category": "pair-finding",
+    "difficulty": "easy",
+    "description": "Return 1 if any pair of elements has product equal to target.",
+    "original_code": "def has_pair_product(nums, target):\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            if nums[i] * nums[j] == target:\n                return 1\n    return 0\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-011",
+    "name": "min_abs_pair_diff",
+    "category": "pair-finding",
+    "difficulty": "easy",
+    "description": "Return the minimum absolute difference between any two elements.",
+    "original_code": "def min_abs_pair_diff(nums):\n    if len(nums) < 2:\n        return 0\n    best = abs(nums[0] - nums[1])\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            d = abs(nums[i] - nums[j])\n            if d < best:\n                best = d\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N log N)"
+  },
+  {
+    "id": "TYR-012",
+    "name": "count_reverse_pairs",
+    "category": "pair-finding",
+    "difficulty": "medium",
+    "description": "Count pairs (i<j) where nums[i] > 2 * nums[j].",
+    "original_code": "def count_reverse_pairs(nums):\n    count = 0\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            if nums[i] > 2 * nums[j]:\n                count += 1\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N log N)"
+  },
+  {
+    "id": "TYR-013",
+    "name": "count_pairs_abs_diff_k",
+    "category": "pair-finding",
+    "difficulty": "easy",
+    "description": "Count pairs (i<j) with absolute difference exactly k.",
+    "original_code": "def count_pairs_abs_diff_k(nums, k):\n    count = 0\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            if abs(nums[i] - nums[j]) == k:\n                count += 1\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-014",
+    "name": "count_distinct_pair_sums",
+    "category": "pair-finding",
+    "difficulty": "medium",
+    "description": "Count the number of distinct pair sums (i<j).",
+    "original_code": "def count_distinct_pair_sums(nums):\n    seen = {}\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            s = nums[i] + nums[j]\n            seen[s] = 1\n    total = 0\n    for k in seen:\n        total += 1\n    return total\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-015",
+    "name": "two_sum_less_than_k",
+    "category": "pair-finding",
+    "difficulty": "medium",
+    "description": "Return the largest pair sum that is strictly less than k, or -1.",
+    "original_code": "def two_sum_less_than_k(nums, k):\n    best = -1\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            s = nums[i] + nums[j]\n            if s < k and s > best:\n                best = s\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N log N)"
+  },
+  {
+    "id": "TYR-016",
+    "name": "most_frequent_element",
+    "category": "frequency",
+    "difficulty": "easy",
+    "description": "Return the element with the highest frequency (first wins on tie).",
+    "original_code": "def most_frequent_element(nums):\n    if len(nums) == 0:\n        return -1\n    best = nums[0]\n    best_count = 0\n    for i in range(len(nums)):\n        count = 0\n        for j in range(len(nums)):\n            if nums[j] == nums[i]:\n                count += 1\n        if count > best_count:\n            best_count = count\n            best = nums[i]\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-017",
+    "name": "has_duplicate",
+    "category": "frequency",
+    "difficulty": "easy",
+    "description": "Return 1 if the array contains any duplicate, else 0.",
+    "original_code": "def has_duplicate(nums):\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            if nums[i] == nums[j]:\n                return 1\n    return 0\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-018",
+    "name": "first_non_repeating",
+    "category": "frequency",
+    "difficulty": "easy",
+    "description": "Return the first element that appears exactly once, or -1.",
+    "original_code": "def first_non_repeating(nums):\n    for i in range(len(nums)):\n        found_dup = 0\n        for j in range(len(nums)):\n            if i != j and nums[i] == nums[j]:\n                found_dup = 1\n        if found_dup == 0:\n            return nums[i]\n    return -1\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-019",
+    "name": "count_distinct",
+    "category": "frequency",
+    "difficulty": "easy",
+    "description": "Return the number of distinct elements in the array.",
+    "original_code": "def count_distinct(nums):\n    count = 0\n    for i in range(len(nums)):\n        is_first = 1\n        for j in range(i):\n            if nums[j] == nums[i]:\n                is_first = 0\n        count += is_first\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-020",
+    "name": "majority_element",
+    "category": "frequency",
+    "difficulty": "easy",
+    "description": "Return the element appearing more than n/2 times, or -1.",
+    "original_code": "def majority_element(nums):\n    n = len(nums)\n    for i in range(n):\n        count = 0\n        for j in range(n):\n            if nums[j] == nums[i]:\n                count += 1\n        if count > n // 2:\n            return nums[i]\n    return -1\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-021",
+    "name": "find_first_duplicate",
+    "category": "frequency",
+    "difficulty": "easy",
+    "description": "Return the first element (by second occurrence) that was seen before.",
+    "original_code": "def find_first_duplicate(nums):\n    for i in range(len(nums)):\n        for j in range(i):\n            if nums[j] == nums[i]:\n                return nums[i]\n    return -1\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-022",
+    "name": "count_elements_appearing_twice",
+    "category": "frequency",
+    "difficulty": "medium",
+    "description": "Count how many distinct values appear exactly twice.",
+    "original_code": "def count_elements_appearing_twice(nums):\n    result = 0\n    for i in range(len(nums)):\n        is_first = 1\n        for k in range(i):\n            if nums[k] == nums[i]:\n                is_first = 0\n        if is_first == 0:\n            continue\n        count = 0\n        for j in range(len(nums)):\n            if nums[j] == nums[i]:\n                count += 1\n        if count == 2:\n            result += 1\n    return result\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-023",
+    "name": "count_inversions",
+    "category": "frequency",
+    "difficulty": "medium",
+    "description": "Count pairs (i<j) where nums[i] > nums[j] (inversion count).",
+    "original_code": "def count_inversions(nums):\n    count = 0\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            if nums[i] > nums[j]:\n                count += 1\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N log N)"
+  },
+  {
+    "id": "TYR-024",
+    "name": "missing_number",
+    "category": "frequency",
+    "difficulty": "easy",
+    "description": "Find the missing number in an array containing 0..n with one gap.",
+    "original_code": "def missing_number(nums):\n    n = len(nums)\n    for i in range(n + 1):\n        found = 0\n        for j in range(n):\n            if nums[j] == i:\n                found = 1\n        if found == 0:\n            return i\n    return -1\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-025",
+    "name": "count_matching_last_digit_pairs",
+    "category": "frequency",
+    "difficulty": "easy",
+    "description": "Count pairs (i<j) where nums[i] and nums[j] share the same last digit.",
+    "original_code": "def count_matching_last_digit_pairs(nums):\n    count = 0\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            if nums[i] % 10 == nums[j] % 10:\n                count += 1\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-026",
+    "name": "count_unique_elements",
+    "category": "frequency",
+    "difficulty": "easy",
+    "description": "Count elements that appear exactly once in the array.",
+    "original_code": "def count_unique_elements(nums):\n    count = 0\n    for i in range(len(nums)):\n        freq = 0\n        for j in range(len(nums)):\n            if nums[j] == nums[i]:\n                freq += 1\n        if freq == 1:\n            count += 1\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-027",
+    "name": "single_number",
+    "category": "frequency",
+    "difficulty": "easy",
+    "description": "Every element appears twice except one. Find the single one.",
+    "original_code": "def single_number(nums):\n    for i in range(len(nums)):\n        count = 0\n        for j in range(len(nums)):\n            if nums[j] == nums[i]:\n                count += 1\n        if count == 1:\n            return nums[i]\n    return -1\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-028",
+    "name": "count_greater_than_all_right",
+    "category": "frequency",
+    "difficulty": "medium",
+    "description": "Count elements that are greater than every element to their right.",
+    "original_code": "def count_greater_than_all_right(nums):\n    count = 0\n    n = len(nums)\n    for i in range(n):\n        is_leader = 1\n        for j in range(i + 1, n):\n            if nums[j] >= nums[i]:\n                is_leader = 0\n        count += is_leader\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-029",
+    "name": "kth_largest",
+    "category": "frequency",
+    "difficulty": "medium",
+    "description": "Return the k-th largest element in the array.",
+    "original_code": "def kth_largest(nums, k):\n    n = len(nums)\n    for target_rank in range(k):\n        max_val = nums[0]\n        max_idx = 0\n        for i in range(1, n):\n            if nums[i] > max_val:\n                max_val = nums[i]\n                max_idx = i\n        if target_rank == k - 1:\n            return max_val\n        nums[max_idx] = nums[0] - 1\n    return -1\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N log N)"
+  },
+  {
+    "id": "TYR-030",
+    "name": "frequency_of_max",
+    "category": "frequency",
+    "difficulty": "easy",
+    "description": "Return how many times the maximum element appears.",
+    "original_code": "def frequency_of_max(nums):\n    if len(nums) == 0:\n        return 0\n    max_val = nums[0]\n    for i in range(len(nums)):\n        if nums[i] > max_val:\n            max_val = nums[i]\n    count = 0\n    for i in range(len(nums)):\n        if nums[i] == max_val:\n            count += 1\n    return count\n",
+    "original_complexity": "O(N)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-031",
+    "name": "max_subarray_sum",
+    "category": "subarray",
+    "difficulty": "medium",
+    "description": "Return the maximum contiguous subarray sum.",
+    "original_code": "def max_subarray_sum(nums):\n    if len(nums) == 0:\n        return 0\n    best = nums[0]\n    n = len(nums)\n    for i in range(n):\n        cur = 0\n        for j in range(i, n):\n            cur += nums[j]\n            if cur > best:\n                best = cur\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-032",
+    "name": "has_subarray_with_sum",
+    "category": "subarray",
+    "difficulty": "medium",
+    "description": "Return 1 if any contiguous subarray sums to target, else 0.",
+    "original_code": "def has_subarray_with_sum(nums, target):\n    n = len(nums)\n    for i in range(n):\n        cur = 0\n        for j in range(i, n):\n            cur += nums[j]\n            if cur == target:\n                return 1\n    return 0\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-033",
+    "name": "count_subarrays_with_sum",
+    "category": "subarray",
+    "difficulty": "medium",
+    "description": "Count contiguous subarrays whose sum equals k.",
+    "original_code": "def count_subarrays_with_sum(nums, k):\n    count = 0\n    n = len(nums)\n    for i in range(n):\n        cur = 0\n        for j in range(i, n):\n            cur += nums[j]\n            if cur == k:\n                count += 1\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-034",
+    "name": "longest_subarray_sum_k",
+    "category": "subarray",
+    "difficulty": "medium",
+    "description": "Return the length of the longest contiguous subarray with sum k.",
+    "original_code": "def longest_subarray_sum_k(nums, k):\n    best = 0\n    n = len(nums)\n    for i in range(n):\n        cur = 0\n        for j in range(i, n):\n            cur += nums[j]\n            if cur == k:\n                length = j - i + 1\n                if length > best:\n                    best = length\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-035",
+    "name": "max_window_sum_size_k",
+    "category": "subarray",
+    "difficulty": "easy",
+    "description": "Return the maximum sum among all contiguous subarrays of size k.",
+    "original_code": "def max_window_sum_size_k(nums, k):\n    if len(nums) == 0 or k <= 0:\n        return 0\n    best = 0\n    n = len(nums)\n    for i in range(n - k + 1):\n        cur = 0\n        for j in range(i, i + k):\n            cur += nums[j]\n        if i == 0 or cur > best:\n            best = cur\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-036",
+    "name": "min_subarray_len_ge_target",
+    "category": "subarray",
+    "difficulty": "medium",
+    "description": "Return the shortest subarray length with sum >= target, or 0.",
+    "original_code": "def min_subarray_len_ge_target(nums, target):\n    best = 0\n    n = len(nums)\n    for i in range(n):\n        cur = 0\n        for j in range(i, n):\n            cur += nums[j]\n            if cur >= target:\n                length = j - i + 1\n                if best == 0 or length < best:\n                    best = length\n                break\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-037",
+    "name": "max_product_pair",
+    "category": "subarray",
+    "difficulty": "easy",
+    "description": "Return the maximum product of any two distinct-index elements.",
+    "original_code": "def max_product_pair(nums):\n    if len(nums) < 2:\n        return 0\n    best = nums[0] * nums[1]\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            p = nums[i] * nums[j]\n            if p > best:\n                best = p\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-038",
+    "name": "longest_increasing_run",
+    "category": "subarray",
+    "difficulty": "easy",
+    "description": "Return the length of the longest strictly increasing contiguous run.",
+    "original_code": "def longest_increasing_run(nums):\n    if len(nums) == 0:\n        return 0\n    best = 1\n    n = len(nums)\n    for i in range(n):\n        length = 1\n        for j in range(i + 1, n):\n            if nums[j] > nums[j - 1]:\n                length += 1\n            else:\n                break\n        if length > best:\n            best = length\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-039",
+    "name": "max_diff_ordered",
+    "category": "subarray",
+    "difficulty": "easy",
+    "description": "Return max(nums[j] - nums[i]) for all j > i, or 0 if empty.",
+    "original_code": "def max_diff_ordered(nums):\n    if len(nums) < 2:\n        return 0\n    best = nums[1] - nums[0]\n    n = len(nums)\n    for i in range(n):\n        for j in range(i + 1, n):\n            d = nums[j] - nums[i]\n            if d > best:\n                best = d\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-040",
+    "name": "equilibrium_index",
+    "category": "subarray",
+    "difficulty": "easy",
+    "description": "Return the first index where left sum equals right sum, or -1.",
+    "original_code": "def equilibrium_index(nums):\n    n = len(nums)\n    for i in range(n):\n        left_sum = 0\n        for j in range(i):\n            left_sum += nums[j]\n        right_sum = 0\n        for j in range(i + 1, n):\n            right_sum += nums[j]\n        if left_sum == right_sum:\n            return i\n    return -1\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-041",
+    "name": "product_except_self",
+    "category": "subarray",
+    "difficulty": "medium",
+    "description": "Return a list where each element is the product of all others.",
+    "original_code": "def product_except_self(nums):\n    n = len(nums)\n    result = []\n    for i in range(n):\n        prod = 1\n        for j in range(n):\n            if j != i:\n                prod = prod * nums[j]\n        result.append(prod)\n    return result\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-042",
+    "name": "count_positive_subarrays",
+    "category": "subarray",
+    "difficulty": "medium",
+    "description": "Count contiguous subarrays whose sum is strictly positive.",
+    "original_code": "def count_positive_subarrays(nums):\n    count = 0\n    n = len(nums)\n    for i in range(n):\n        cur = 0\n        for j in range(i, n):\n            cur += nums[j]\n            if cur > 0:\n                count += 1\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-043",
+    "name": "min_subarray_sum",
+    "category": "subarray",
+    "difficulty": "medium",
+    "description": "Return the minimum contiguous subarray sum.",
+    "original_code": "def min_subarray_sum(nums):\n    if len(nums) == 0:\n        return 0\n    best = nums[0]\n    n = len(nums)\n    for i in range(n):\n        cur = 0\n        for j in range(i, n):\n            cur += nums[j]\n            if cur < best:\n                best = cur\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-044",
+    "name": "count_subarrays_max_le_k",
+    "category": "subarray",
+    "difficulty": "medium",
+    "description": "Count contiguous subarrays where every element is <= k.",
+    "original_code": "def count_subarrays_max_le_k(nums, k):\n    count = 0\n    n = len(nums)\n    for i in range(n):\n        ok = 1\n        for j in range(i, n):\n            if nums[j] > k:\n                ok = 0\n            if ok == 1:\n                count += 1\n            else:\n                break\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-045",
+    "name": "sum_of_all_subarray_sums",
+    "category": "subarray",
+    "difficulty": "medium",
+    "description": "Return the sum of sums of all contiguous subarrays.",
+    "original_code": "def sum_of_all_subarray_sums(nums):\n    total = 0\n    n = len(nums)\n    for i in range(n):\n        cur = 0\n        for j in range(i, n):\n            cur += nums[j]\n            total += cur\n    return total\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-046",
+    "name": "remove_duplicates_preserve_order",
+    "category": "set-operations",
+    "difficulty": "easy",
+    "description": "Remove duplicates preserving first-occurrence order.",
+    "original_code": "def remove_duplicates_preserve_order(nums):\n    result = []\n    for i in range(len(nums)):\n        found = 0\n        for j in range(i):\n            if nums[j] == nums[i]:\n                found = 1\n        if found == 0:\n            result.append(nums[i])\n    return result\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-047",
+    "name": "symmetric_difference_count",
+    "category": "set-operations",
+    "difficulty": "medium",
+    "description": "Count elements that appear in exactly one of the two halves split at mid.",
+    "original_code": "def symmetric_difference_count(nums):\n    mid = len(nums) // 2\n    count = 0\n    for i in range(mid):\n        found = 0\n        for j in range(mid, len(nums)):\n            if nums[i] == nums[j]:\n                found = 1\n        if found == 0:\n            count += 1\n    for i in range(mid, len(nums)):\n        found = 0\n        for j in range(mid):\n            if nums[i] == nums[j]:\n                found = 1\n        if found == 0:\n            count += 1\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-048",
+    "name": "count_common_elements",
+    "category": "set-operations",
+    "difficulty": "easy",
+    "description": "Count elements in the first half that also appear in the second half.",
+    "original_code": "def count_common_elements(nums):\n    mid = len(nums) // 2\n    count = 0\n    for i in range(mid):\n        for j in range(mid, len(nums)):\n            if nums[i] == nums[j]:\n                count += 1\n                break\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-049",
+    "name": "is_subset_first_half",
+    "category": "set-operations",
+    "difficulty": "easy",
+    "description": "Return 1 if every element in the first half appears in the second half.",
+    "original_code": "def is_subset_first_half(nums):\n    mid = len(nums) // 2\n    for i in range(mid):\n        found = 0\n        for j in range(mid, len(nums)):\n            if nums[i] == nums[j]:\n                found = 1\n        if found == 0:\n            return 0\n    return 1\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-050",
+    "name": "remove_if_more_than_two",
+    "category": "set-operations",
+    "difficulty": "medium",
+    "description": "Keep at most 2 occurrences of each element, preserving order.",
+    "original_code": "def remove_if_more_than_two(nums):\n    result = []\n    for i in range(len(nums)):\n        count = 0\n        for j in range(len(result)):\n            if result[j] == nums[i]:\n                count += 1\n        if count < 2:\n            result.append(nums[i])\n    return result\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-051",
+    "name": "first_missing_positive",
+    "category": "set-operations",
+    "difficulty": "medium",
+    "description": "Return the smallest positive integer not in the array.",
+    "original_code": "def first_missing_positive(nums):\n    candidate = 1\n    while candidate < len(nums) + 2:\n        found = 0\n        for i in range(len(nums)):\n            if nums[i] == candidate:\n                found = 1\n        if found == 0:\n            return candidate\n        candidate += 1\n    return candidate\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-052",
+    "name": "is_permutation_of_other_half",
+    "category": "set-operations",
+    "difficulty": "easy",
+    "description": "Return 1 if sorted first half equals sorted second half.",
+    "original_code": "def is_permutation_of_other_half(nums):\n    mid = len(nums) // 2\n    for i in range(mid):\n        found = 0\n        used = []\n        for j in range(mid, len(nums)):\n            skip = 0\n            for u in range(len(used)):\n                if used[u] == j:\n                    skip = 1\n            if skip == 0 and nums[j] == nums[i]:\n                found = 1\n                used.append(j)\n                break\n        if found == 0:\n            return 0\n    return 1\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-053",
+    "name": "count_elements_in_range",
+    "category": "set-operations",
+    "difficulty": "easy",
+    "description": "Count elements that fall within [lo, hi] where lo=nums[0], hi=nums[-1].",
+    "original_code": "def count_elements_in_range(nums):\n    if len(nums) < 2:\n        return len(nums)\n    lo = nums[0]\n    hi = nums[len(nums) - 1]\n    if lo > hi:\n        lo, hi = hi, lo\n    count = 0\n    for i in range(len(nums)):\n        if nums[i] >= lo and nums[i] <= hi:\n            count += 1\n    return count\n",
+    "original_complexity": "O(N)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-054",
+    "name": "deduplicate_sorted_count",
+    "category": "set-operations",
+    "difficulty": "easy",
+    "description": "Return length of array after removing consecutive duplicates.",
+    "original_code": "def deduplicate_sorted_count(nums):\n    if len(nums) == 0:\n        return 0\n    count = 1\n    for i in range(1, len(nums)):\n        is_dup = 0\n        for j in range(i):\n            if nums[j] == nums[i]:\n                is_dup = 1\n        if is_dup == 0:\n            count += 1\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-055",
+    "name": "count_pairs_from_halves",
+    "category": "set-operations",
+    "difficulty": "medium",
+    "description": "Count pairs (one from each half) whose sum equals first element.",
+    "original_code": "def count_pairs_from_halves(nums):\n    if len(nums) == 0:\n        return 0\n    target = nums[0]\n    mid = len(nums) // 2\n    count = 0\n    for i in range(mid):\n        for j in range(mid, len(nums)):\n            if nums[i] + nums[j] == target:\n                count += 1\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-056",
+    "name": "count_smaller_before",
+    "category": "order-statistics",
+    "difficulty": "medium",
+    "description": "For each element, count how many earlier elements are smaller. Return sum.",
+    "original_code": "def count_smaller_before(nums):\n    total = 0\n    for i in range(len(nums)):\n        for j in range(i):\n            if nums[j] < nums[i]:\n                total += 1\n    return total\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-057",
+    "name": "kth_smallest",
+    "category": "order-statistics",
+    "difficulty": "medium",
+    "description": "Return the k-th smallest element (1-indexed).",
+    "original_code": "def kth_smallest(nums, k):\n    n = len(nums)\n    for rank in range(k):\n        min_val = nums[0]\n        min_idx = 0\n        for i in range(1, n):\n            if nums[i] < min_val:\n                min_val = nums[i]\n                min_idx = i\n        if rank == k - 1:\n            return min_val\n        nums[min_idx] = nums[0] + 1\n    return -1\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N log N)"
+  },
+  {
+    "id": "TYR-058",
+    "name": "sort_binary_array",
+    "category": "order-statistics",
+    "difficulty": "easy",
+    "description": "Sort an array of 0s and 1s.",
+    "original_code": "def sort_binary_array(nums):\n    result = []\n    for i in range(len(nums)):\n        if nums[i] == 0:\n            result.append(0)\n    for i in range(len(nums)):\n        if nums[i] == 1:\n            result.append(1)\n    return result\n",
+    "original_complexity": "O(N)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-059",
+    "name": "second_largest",
+    "category": "order-statistics",
+    "difficulty": "easy",
+    "description": "Return the second largest element, or -1 if fewer than 2 distinct.",
+    "original_code": "def second_largest(nums):\n    if len(nums) < 2:\n        return -1\n    first = nums[0]\n    for i in range(len(nums)):\n        if nums[i] > first:\n            first = nums[i]\n    second = -1\n    found = 0\n    for i in range(len(nums)):\n        if nums[i] != first:\n            if found == 0 or nums[i] > second:\n                second = nums[i]\n                found = 1\n    if found == 0:\n        return -1\n    return second\n",
+    "original_complexity": "O(N)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-060",
+    "name": "count_peaks",
+    "category": "order-statistics",
+    "difficulty": "easy",
+    "description": "Count elements strictly greater than both neighbours.",
+    "original_code": "def count_peaks(nums):\n    count = 0\n    for i in range(1, len(nums) - 1):\n        if nums[i] > nums[i - 1] and nums[i] > nums[i + 1]:\n            count += 1\n    return count\n",
+    "original_complexity": "O(N)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-061",
+    "name": "find_leaders",
+    "category": "order-statistics",
+    "difficulty": "medium",
+    "description": "Return count of elements greater than all elements to their right.",
+    "original_code": "def find_leaders(nums):\n    count = 0\n    n = len(nums)\n    for i in range(n):\n        is_leader = 1\n        for j in range(i + 1, n):\n            if nums[j] >= nums[i]:\n                is_leader = 0\n                break\n        count += is_leader\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-062",
+    "name": "rank_elements_sum",
+    "category": "order-statistics",
+    "difficulty": "medium",
+    "description": "Sum of 1-based ranks of all elements (rank = position in sorted order).",
+    "original_code": "def rank_elements_sum(nums):\n    total = 0\n    n = len(nums)\n    for i in range(n):\n        rank = 1\n        for j in range(n):\n            if nums[j] < nums[i]:\n                rank += 1\n        total += rank\n    return total\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-063",
+    "name": "closest_to_zero",
+    "category": "order-statistics",
+    "difficulty": "easy",
+    "description": "Return the element closest to zero (positive wins on tie).",
+    "original_code": "def closest_to_zero(nums):\n    if len(nums) == 0:\n        return 0\n    best = nums[0]\n    for i in range(len(nums)):\n        a = abs(nums[i])\n        b = abs(best)\n        if a < b:\n            best = nums[i]\n        elif a == b and nums[i] > best:\n            best = nums[i]\n    return best\n",
+    "original_complexity": "O(N)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-064",
+    "name": "count_out_of_place",
+    "category": "order-statistics",
+    "difficulty": "medium",
+    "description": "Count positions where element differs from its sorted-order value.",
+    "original_code": "def count_out_of_place(nums):\n    n = len(nums)\n    sorted_nums = []\n    for v in nums:\n        sorted_nums.append(v)\n    for i in range(n):\n        for j in range(i + 1, n):\n            if sorted_nums[i] > sorted_nums[j]:\n                tmp = sorted_nums[i]\n                sorted_nums[i] = sorted_nums[j]\n                sorted_nums[j] = tmp\n    count = 0\n    for i in range(n):\n        if nums[i] != sorted_nums[i]:\n            count += 1\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N log N)"
+  },
+  {
+    "id": "TYR-065",
+    "name": "element_rank_product",
+    "category": "order-statistics",
+    "difficulty": "medium",
+    "description": "Return the sum of (element * its rank) for all elements.",
+    "original_code": "def element_rank_product(nums):\n    total = 0\n    n = len(nums)\n    for i in range(n):\n        rank = 1\n        for j in range(n):\n            if nums[j] < nums[i]:\n                rank += 1\n        total += nums[i] * rank\n    return total\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-066",
+    "name": "prefix_sum_total",
+    "category": "prefix-sum",
+    "difficulty": "easy",
+    "description": "Return the sum of the prefix sum array.",
+    "original_code": "def prefix_sum_total(nums):\n    total = 0\n    running = 0\n    for i in range(len(nums)):\n        running += nums[i]\n        total += running\n    return total\n",
+    "original_complexity": "O(N)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-067",
+    "name": "range_sum_brute",
+    "category": "prefix-sum",
+    "difficulty": "easy",
+    "description": "Return the sum of elements from index 0 to k (inclusive).",
+    "original_code": "def range_sum_brute(nums, k):\n    total = 0\n    for i in range(len(nums)):\n        if i <= k:\n            total += nums[i]\n    return total\n",
+    "original_complexity": "O(N)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-068",
+    "name": "count_equilibrium_indices",
+    "category": "prefix-sum",
+    "difficulty": "medium",
+    "description": "Count all indices where left sum equals right sum.",
+    "original_code": "def count_equilibrium_indices(nums):\n    count = 0\n    n = len(nums)\n    for i in range(n):\n        left = 0\n        for j in range(i):\n            left += nums[j]\n        right = 0\n        for j in range(i + 1, n):\n            right += nums[j]\n        if left == right:\n            count += 1\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-069",
+    "name": "max_prefix_sum",
+    "category": "prefix-sum",
+    "difficulty": "easy",
+    "description": "Return the maximum prefix sum (sum of nums[0..i] for any i).",
+    "original_code": "def max_prefix_sum(nums):\n    if len(nums) == 0:\n        return 0\n    best = nums[0]\n    cur = 0\n    for i in range(len(nums)):\n        cur += nums[i]\n        if cur > best:\n            best = cur\n    return best\n",
+    "original_complexity": "O(N)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-070",
+    "name": "left_max_minus_right_min",
+    "category": "prefix-sum",
+    "difficulty": "medium",
+    "description": "Max over all splits i: max(nums[0..i]) - min(nums[i+1..n-1]).",
+    "original_code": "def left_max_minus_right_min(nums):\n    if len(nums) < 2:\n        return 0\n    best = nums[0] - nums[1]\n    n = len(nums)\n    for i in range(n - 1):\n        left_max = nums[0]\n        for j in range(1, i + 1):\n            if nums[j] > left_max:\n                left_max = nums[j]\n        right_min = nums[i + 1]\n        for j in range(i + 2, n):\n            if nums[j] < right_min:\n                right_min = nums[j]\n        d = left_max - right_min\n        if d > best:\n            best = d\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-071",
+    "name": "count_subarrays_divisible_by_k",
+    "category": "prefix-sum",
+    "difficulty": "medium",
+    "description": "Count subarrays whose sum is divisible by k.",
+    "original_code": "def count_subarrays_divisible_by_k(nums, k):\n    if k == 0:\n        return 0\n    count = 0\n    n = len(nums)\n    for i in range(n):\n        cur = 0\n        for j in range(i, n):\n            cur += nums[j]\n            if cur % k == 0:\n                count += 1\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-072",
+    "name": "sum_of_all_subarrays",
+    "category": "prefix-sum",
+    "difficulty": "medium",
+    "description": "Return the total sum across all contiguous subarrays.",
+    "original_code": "def sum_of_all_subarrays(nums):\n    total = 0\n    n = len(nums)\n    for i in range(n):\n        cur = 0\n        for j in range(i, n):\n            cur += nums[j]\n            total += cur\n    return total\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-073",
+    "name": "count_subarrays_odd_sum",
+    "category": "prefix-sum",
+    "difficulty": "medium",
+    "description": "Count contiguous subarrays whose sum is odd.",
+    "original_code": "def count_subarrays_odd_sum(nums):\n    count = 0\n    n = len(nums)\n    for i in range(n):\n        cur = 0\n        for j in range(i, n):\n            cur += nums[j]\n            if cur % 2 != 0:\n                count += 1\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-074",
+    "name": "count_zero_sum_subarrays",
+    "category": "prefix-sum",
+    "difficulty": "medium",
+    "description": "Count contiguous subarrays whose sum is exactly zero.",
+    "original_code": "def count_zero_sum_subarrays(nums):\n    count = 0\n    n = len(nums)\n    for i in range(n):\n        cur = 0\n        for j in range(i, n):\n            cur += nums[j]\n            if cur == 0:\n                count += 1\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-075",
+    "name": "max_sum_two_non_overlapping",
+    "category": "prefix-sum",
+    "difficulty": "medium",
+    "description": "Max sum of two non-overlapping subarrays each of length 1 (i.e. max two elements with i!=j).",
+    "original_code": "def max_sum_two_non_overlapping(nums):\n    if len(nums) < 2:\n        return 0\n    best = nums[0] + nums[1]\n    n = len(nums)\n    for i in range(n):\n        for j in range(i + 1, n):\n            s = nums[i] + nums[j]\n            if s > best:\n                best = s\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-076",
+    "name": "max_of_all_windows",
+    "category": "sliding-window",
+    "difficulty": "medium",
+    "description": "Return the list of maximums of every contiguous window of size k.",
+    "original_code": "def max_of_all_windows(nums, k):\n    result = []\n    n = len(nums)\n    for i in range(n - k + 1):\n        mx = nums[i]\n        for j in range(i + 1, i + k):\n            if nums[j] > mx:\n                mx = nums[j]\n        result.append(mx)\n    return result\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-077",
+    "name": "min_of_all_windows",
+    "category": "sliding-window",
+    "difficulty": "medium",
+    "description": "Return the list of minimums of every contiguous window of size k.",
+    "original_code": "def min_of_all_windows(nums, k):\n    result = []\n    n = len(nums)\n    for i in range(n - k + 1):\n        mn = nums[i]\n        for j in range(i + 1, i + k):\n            if nums[j] < mn:\n                mn = nums[j]\n        result.append(mn)\n    return result\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-078",
+    "name": "count_distinct_in_windows",
+    "category": "sliding-window",
+    "difficulty": "medium",
+    "description": "Return count of distinct elements in the first window of size k.",
+    "original_code": "def count_distinct_in_windows(nums, k):\n    if len(nums) < k or k <= 0:\n        return 0\n    count = 0\n    for i in range(k):\n        is_first = 1\n        for j in range(i):\n            if nums[j] == nums[i]:\n                is_first = 0\n        count += is_first\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-079",
+    "name": "sum_of_all_windows",
+    "category": "sliding-window",
+    "difficulty": "easy",
+    "description": "Return the sum of sums of all windows of size k.",
+    "original_code": "def sum_of_all_windows(nums, k):\n    total = 0\n    n = len(nums)\n    for i in range(n - k + 1):\n        cur = 0\n        for j in range(i, i + k):\n            cur += nums[j]\n        total += cur\n    return total\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-080",
+    "name": "has_duplicate_within_k",
+    "category": "sliding-window",
+    "difficulty": "easy",
+    "description": "Return 1 if any two equal elements are at most k positions apart.",
+    "original_code": "def has_duplicate_within_k(nums, k):\n    n = len(nums)\n    for i in range(n):\n        for j in range(i + 1, min(i + k + 1, n)):\n            if nums[i] == nums[j]:\n                return 1\n    return 0\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-081",
+    "name": "max_sum_window",
+    "category": "sliding-window",
+    "difficulty": "easy",
+    "description": "Return the maximum sum of any contiguous window of size k.",
+    "original_code": "def max_sum_window(nums, k):\n    if len(nums) < k:\n        return 0\n    best = 0\n    n = len(nums)\n    for i in range(n - k + 1):\n        cur = 0\n        for j in range(i, i + k):\n            cur += nums[j]\n        if i == 0 or cur > best:\n            best = cur\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-082",
+    "name": "min_sum_window",
+    "category": "sliding-window",
+    "difficulty": "easy",
+    "description": "Return the minimum sum of any contiguous window of size k.",
+    "original_code": "def min_sum_window(nums, k):\n    if len(nums) < k:\n        return 0\n    best = 0\n    n = len(nums)\n    for i in range(n - k + 1):\n        cur = 0\n        for j in range(i, i + k):\n            cur += nums[j]\n        if i == 0 or cur < best:\n            best = cur\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-083",
+    "name": "count_windows_all_positive",
+    "category": "sliding-window",
+    "difficulty": "easy",
+    "description": "Count windows of size k where every element is positive.",
+    "original_code": "def count_windows_all_positive(nums, k):\n    count = 0\n    n = len(nums)\n    for i in range(n - k + 1):\n        all_pos = 1\n        for j in range(i, i + k):\n            if nums[j] <= 0:\n                all_pos = 0\n        count += all_pos\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-084",
+    "name": "max_window_range",
+    "category": "sliding-window",
+    "difficulty": "medium",
+    "description": "Return the maximum (max - min) over all windows of size k.",
+    "original_code": "def max_window_range(nums, k):\n    if len(nums) < k:\n        return 0\n    best = 0\n    n = len(nums)\n    for i in range(n - k + 1):\n        mx = nums[i]\n        mn = nums[i]\n        for j in range(i + 1, i + k):\n            if nums[j] > mx:\n                mx = nums[j]\n            if nums[j] < mn:\n                mn = nums[j]\n        d = mx - mn\n        if d > best:\n            best = d\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-085",
+    "name": "count_windows_with_target_sum",
+    "category": "sliding-window",
+    "difficulty": "easy",
+    "description": "Count windows of size k whose sum equals target.",
+    "original_code": "def count_windows_with_target_sum(nums, k, target):\n    count = 0\n    n = len(nums)\n    for i in range(n - k + 1):\n        cur = 0\n        for j in range(i, i + k):\n            cur += nums[j]\n        if cur == target:\n            count += 1\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-086",
+    "name": "first_recurring_element",
+    "category": "hash-map",
+    "difficulty": "easy",
+    "description": "Return the first element (by second occurrence) seen before, or -1.",
+    "original_code": "def first_recurring_element(nums):\n    for i in range(len(nums)):\n        for j in range(i):\n            if nums[j] == nums[i]:\n                return nums[i]\n    return -1\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-087",
+    "name": "same_frequency_distribution",
+    "category": "hash-map",
+    "difficulty": "medium",
+    "description": "Return 1 if both halves have the same frequency distribution.",
+    "original_code": "def same_frequency_distribution(nums):\n    mid = len(nums) // 2\n    for i in range(mid):\n        count_a = 0\n        for j in range(mid):\n            if nums[j] == nums[i]:\n                count_a += 1\n        count_b = 0\n        for j in range(mid, len(nums)):\n            if nums[j] == nums[i]:\n                count_b += 1\n        if count_a != count_b:\n            return 0\n    return 1\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-088",
+    "name": "longest_consecutive_sequence",
+    "category": "hash-map",
+    "difficulty": "medium",
+    "description": "Return the length of the longest consecutive elements sequence.",
+    "original_code": "def longest_consecutive_sequence(nums):\n    if len(nums) == 0:\n        return 0\n    best = 1\n    n = len(nums)\n    for i in range(n):\n        cur = nums[i]\n        length = 1\n        while True:\n            found = 0\n            for j in range(n):\n                if nums[j] == cur + 1:\n                    found = 1\n                    break\n            if found == 1:\n                cur += 1\n                length += 1\n            else:\n                break\n        if length > best:\n            best = length\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-089",
+    "name": "top_k_frequent_sum",
+    "category": "hash-map",
+    "difficulty": "medium",
+    "description": "Return the sum of the k most-frequent elements.",
+    "original_code": "def top_k_frequent_sum(nums, k):\n    if len(nums) == 0 or k <= 0:\n        return 0\n    n = len(nums)\n    used = []\n    result_sum = 0\n    for rank in range(k):\n        best_val = 0\n        best_count = -1\n        for i in range(n):\n            skip = 0\n            for u in range(len(used)):\n                if used[u] == nums[i]:\n                    skip = 1\n            if skip == 1:\n                continue\n            count = 0\n            for j in range(n):\n                if nums[j] == nums[i]:\n                    count += 1\n            if count > best_count:\n                best_count = count\n                best_val = nums[i]\n        if best_count > 0:\n            used.append(best_val)\n            result_sum += best_val\n    return result_sum\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-090",
+    "name": "group_count_by_remainder",
+    "category": "hash-map",
+    "difficulty": "easy",
+    "description": "Return the count of elements whose remainder mod k equals 0.",
+    "original_code": "def group_count_by_remainder(nums, k):\n    if k == 0:\n        return 0\n    count = 0\n    for i in range(len(nums)):\n        if nums[i] % k == 0:\n            count += 1\n    return count\n",
+    "original_complexity": "O(N)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-091",
+    "name": "count_triplets_with_sum",
+    "category": "hash-map",
+    "difficulty": "medium",
+    "description": "Count triplets (i<j<k) whose sum equals target.",
+    "original_code": "def count_triplets_with_sum(nums, target):\n    count = 0\n    n = len(nums)\n    for i in range(n):\n        for j in range(i + 1, n):\n            for k in range(j + 1, n):\n                if nums[i] + nums[j] + nums[k] == target:\n                    count += 1\n    return count\n",
+    "original_complexity": "O(N^3)",
+    "target_complexity": "O(N^2)"
+  },
+  {
+    "id": "TYR-092",
+    "name": "longest_subarray_all_distinct",
+    "category": "hash-map",
+    "difficulty": "medium",
+    "description": "Return the length of the longest contiguous subarray with all distinct elements.",
+    "original_code": "def longest_subarray_all_distinct(nums):\n    best = 0\n    n = len(nums)\n    for i in range(n):\n        length = 0\n        has_dup = 0\n        for j in range(i, n):\n            for k in range(i, j):\n                if nums[k] == nums[j]:\n                    has_dup = 1\n            if has_dup == 1:\n                break\n            length += 1\n        if length > best:\n            best = length\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-093",
+    "name": "count_four_sum",
+    "category": "hash-map",
+    "difficulty": "medium",
+    "description": "Count quadruplets (i<j<k<l) summing to target.",
+    "original_code": "def count_four_sum(nums, target):\n    count = 0\n    n = len(nums)\n    for i in range(n):\n        for j in range(i + 1, n):\n            for k in range(j + 1, n):\n                for l in range(k + 1, n):\n                    if nums[i] + nums[j] + nums[k] + nums[l] == target:\n                        count += 1\n    return count\n",
+    "original_complexity": "O(N^4)",
+    "target_complexity": "O(N^2)"
+  },
+  {
+    "id": "TYR-094",
+    "name": "has_zero_sum_subarray",
+    "category": "hash-map",
+    "difficulty": "easy",
+    "description": "Return 1 if any contiguous subarray has sum == 0.",
+    "original_code": "def has_zero_sum_subarray(nums):\n    n = len(nums)\n    for i in range(n):\n        cur = 0\n        for j in range(i, n):\n            cur += nums[j]\n            if cur == 0:\n                return 1\n    return 0\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-095",
+    "name": "count_complete_subarrays",
+    "category": "hash-map",
+    "difficulty": "medium",
+    "description": "Count subarrays containing ALL distinct elements of the full array.",
+    "original_code": "def count_complete_subarrays(nums):\n    n = len(nums)\n    total_distinct = 0\n    for i in range(n):\n        is_first = 1\n        for j in range(i):\n            if nums[j] == nums[i]:\n                is_first = 0\n        total_distinct += is_first\n    count = 0\n    for i in range(n):\n        for j in range(i, n):\n            dist = 0\n            for k in range(i, j + 1):\n                is_f = 1\n                for m in range(i, k):\n                    if nums[m] == nums[k]:\n                        is_f = 0\n                dist += is_f\n            if dist == total_distinct:\n                count += 1\n    return count\n",
+    "original_complexity": "O(N^3)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-096",
+    "name": "longest_equal_01_subarray",
+    "category": "hash-map",
+    "difficulty": "medium",
+    "description": "Longest subarray with equal count of 0s and 1s (array has only 0/1).",
+    "original_code": "def longest_equal_01_subarray(nums):\n    best = 0\n    n = len(nums)\n    for i in range(n):\n        zeros = 0\n        ones = 0\n        for j in range(i, n):\n            if nums[j] == 0:\n                zeros += 1\n            else:\n                ones += 1\n            if zeros == ones and zeros + ones > best:\n                best = zeros + ones\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-097",
+    "name": "count_pairs_diff_k",
+    "category": "hash-map",
+    "difficulty": "easy",
+    "description": "Count pairs (i<j) with |nums[i]-nums[j]| == k.",
+    "original_code": "def count_pairs_diff_k(nums, k):\n    count = 0\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            if abs(nums[i] - nums[j]) == k:\n                count += 1\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-098",
+    "name": "longest_band",
+    "category": "hash-map",
+    "difficulty": "medium",
+    "description": "Length of largest subset that forms a contiguous band (consecutive ints).",
+    "original_code": "def longest_band(nums):\n    if len(nums) == 0:\n        return 0\n    best = 1\n    n = len(nums)\n    for i in range(n):\n        cur = nums[i]\n        length = 1\n        while True:\n            found = 0\n            for j in range(n):\n                if nums[j] == cur + 1:\n                    found = 1\n                    break\n            if found == 1:\n                cur += 1\n                length += 1\n            else:\n                break\n        if length > best:\n            best = length\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-099",
+    "name": "find_majority_one_third",
+    "category": "hash-map",
+    "difficulty": "medium",
+    "description": "Return element appearing more than n/3 times, or -1.",
+    "original_code": "def find_majority_one_third(nums):\n    n = len(nums)\n    for i in range(n):\n        count = 0\n        for j in range(n):\n            if nums[j] == nums[i]:\n                count += 1\n        if count > n // 3:\n            return nums[i]\n    return -1\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-100",
+    "name": "count_subarrays_all_same",
+    "category": "hash-map",
+    "difficulty": "easy",
+    "description": "Count contiguous subarrays where all elements are the same.",
+    "original_code": "def count_subarrays_all_same(nums):\n    count = 0\n    n = len(nums)\n    for i in range(n):\n        for j in range(i, n):\n            all_same = 1\n            for k in range(i + 1, j + 1):\n                if nums[k] != nums[i]:\n                    all_same = 0\n                    break\n            count += all_same\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-101",
+    "name": "move_zeros_to_end",
+    "category": "array-transform",
+    "difficulty": "easy",
+    "description": "Move all zeros to the end, preserving order of non-zeros.",
+    "original_code": "def move_zeros_to_end(nums):\n    result = []\n    for i in range(len(nums)):\n        if nums[i] != 0:\n            result.append(nums[i])\n    for i in range(len(nums)):\n        if nums[i] == 0:\n            result.append(0)\n    return result\n",
+    "original_complexity": "O(N)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-102",
+    "name": "rotate_array_by_k",
+    "category": "array-transform",
+    "difficulty": "medium",
+    "description": "Rotate array right by k positions.",
+    "original_code": "def rotate_array_by_k(nums, k):\n    n = len(nums)\n    if n == 0:\n        return []\n    k = k % n\n    result = []\n    for i in range(n - k, n):\n        result.append(nums[i])\n    for i in range(n - k):\n        result.append(nums[i])\n    return result\n",
+    "original_complexity": "O(N)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-103",
+    "name": "segregate_pos_neg",
+    "category": "array-transform",
+    "difficulty": "easy",
+    "description": "Return array with all non-negatives first, then negatives.",
+    "original_code": "def segregate_pos_neg(nums):\n    result = []\n    for i in range(len(nums)):\n        if nums[i] >= 0:\n            result.append(nums[i])\n    for i in range(len(nums)):\n        if nums[i] < 0:\n            result.append(nums[i])\n    return result\n",
+    "original_complexity": "O(N)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-104",
+    "name": "replace_with_rank",
+    "category": "array-transform",
+    "difficulty": "medium",
+    "description": "Replace each element with its rank (1-based, smallest=1).",
+    "original_code": "def replace_with_rank(nums):\n    result = []\n    n = len(nums)\n    for i in range(n):\n        rank = 1\n        for j in range(n):\n            if nums[j] < nums[i]:\n                rank += 1\n            elif nums[j] == nums[i] and j < i:\n                rank += 0\n        result.append(rank)\n    return result\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-105",
+    "name": "remove_all_target",
+    "category": "array-transform",
+    "difficulty": "easy",
+    "description": "Return array with all occurrences of target removed.",
+    "original_code": "def remove_all_target(nums, target):\n    result = []\n    for i in range(len(nums)):\n        if nums[i] != target:\n            result.append(nums[i])\n    return result\n",
+    "original_complexity": "O(N)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-106",
+    "name": "running_sum",
+    "category": "array-transform",
+    "difficulty": "easy",
+    "description": "Return the running sum array.",
+    "original_code": "def running_sum(nums):\n    result = []\n    cur = 0\n    for i in range(len(nums)):\n        cur += nums[i]\n        result.append(cur)\n    return result\n",
+    "original_complexity": "O(N)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-107",
+    "name": "find_disappeared_numbers",
+    "category": "array-transform",
+    "difficulty": "medium",
+    "description": "Find all numbers in [1, n] missing from the array.",
+    "original_code": "def find_disappeared_numbers(nums):\n    n = len(nums)\n    result = []\n    for i in range(1, n + 1):\n        found = 0\n        for j in range(n):\n            if nums[j] == i:\n                found = 1\n        if found == 0:\n            result.append(i)\n    return result\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-108",
+    "name": "find_all_duplicates",
+    "category": "array-transform",
+    "difficulty": "medium",
+    "description": "Find all elements appearing exactly twice (values in 1..n).",
+    "original_code": "def find_all_duplicates(nums):\n    result = []\n    n = len(nums)\n    for i in range(n):\n        is_first = 1\n        for j in range(i):\n            if nums[j] == nums[i]:\n                is_first = 0\n        if is_first == 0:\n            continue\n        count = 0\n        for j in range(n):\n            if nums[j] == nums[i]:\n                count += 1\n        if count == 2:\n            result.append(nums[i])\n    return result\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-109",
+    "name": "array_sign",
+    "category": "array-transform",
+    "difficulty": "easy",
+    "description": "Return 1 if product is positive, -1 if negative, 0 if zero.",
+    "original_code": "def array_sign(nums):\n    neg_count = 0\n    for i in range(len(nums)):\n        if nums[i] == 0:\n            return 0\n        if nums[i] < 0:\n            neg_count += 1\n    if neg_count % 2 == 0:\n        return 1\n    return -1\n",
+    "original_complexity": "O(N)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-110",
+    "name": "max_consecutive_ones",
+    "category": "array-transform",
+    "difficulty": "easy",
+    "description": "Return the maximum number of consecutive 1s.",
+    "original_code": "def max_consecutive_ones(nums):\n    best = 0\n    cur = 0\n    for i in range(len(nums)):\n        if nums[i] == 1:\n            cur += 1\n            if cur > best:\n                best = cur\n        else:\n            cur = 0\n    return best\n",
+    "original_complexity": "O(N)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-111",
+    "name": "check_monotonic",
+    "category": "array-transform",
+    "difficulty": "easy",
+    "description": "Return 1 if the array is monotonic (non-decreasing or non-increasing).",
+    "original_code": "def check_monotonic(nums):\n    if len(nums) <= 1:\n        return 1\n    inc = 1\n    dec = 1\n    for i in range(1, len(nums)):\n        if nums[i] > nums[i - 1]:\n            dec = 0\n        if nums[i] < nums[i - 1]:\n            inc = 0\n    if inc == 1 or dec == 1:\n        return 1\n    return 0\n",
+    "original_complexity": "O(N)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-112",
+    "name": "third_distinct_max",
+    "category": "array-transform",
+    "difficulty": "medium",
+    "description": "Return the third distinct maximum, or the overall maximum.",
+    "original_code": "def third_distinct_max(nums):\n    distinct = []\n    for i in range(len(nums)):\n        found = 0\n        for j in range(len(distinct)):\n            if distinct[j] == nums[i]:\n                found = 1\n        if found == 0:\n            distinct.append(nums[i])\n    if len(distinct) < 3:\n        best = distinct[0]\n        for v in distinct:\n            if v > best:\n                best = v\n        return best\n    for rank in range(3):\n        mx = distinct[0]\n        mx_idx = 0\n        for i in range(1, len(distinct)):\n            if distinct[i] > mx:\n                mx = distinct[i]\n                mx_idx = i\n        if rank == 2:\n            return mx\n        distinct[mx_idx] = distinct[0] - 1\n    return -1\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-113",
+    "name": "degree_shortest_subarray",
+    "category": "array-transform",
+    "difficulty": "medium",
+    "description": "Return length of shortest subarray containing max-frequency element.",
+    "original_code": "def degree_shortest_subarray(nums):\n    n = len(nums)\n    if n == 0:\n        return 0\n    max_freq = 0\n    for i in range(n):\n        count = 0\n        for j in range(n):\n            if nums[j] == nums[i]:\n                count += 1\n        if count > max_freq:\n            max_freq = count\n    best = n\n    for i in range(n):\n        count = 0\n        for j in range(n):\n            if nums[j] == nums[i]:\n                count += 1\n        if count == max_freq:\n            first = -1\n            last = -1\n            for j in range(n):\n                if nums[j] == nums[i]:\n                    if first == -1:\n                        first = j\n                    last = j\n            length = last - first + 1\n            if length < best:\n                best = length\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-114",
+    "name": "shortest_unsorted_subarray",
+    "category": "array-transform",
+    "difficulty": "medium",
+    "description": "Return the length of the shortest subarray that, when sorted, sorts the whole.",
+    "original_code": "def shortest_unsorted_subarray(nums):\n    n = len(nums)\n    sorted_nums = []\n    for v in nums:\n        sorted_nums.append(v)\n    for i in range(n):\n        for j in range(i + 1, n):\n            if sorted_nums[i] > sorted_nums[j]:\n                tmp = sorted_nums[i]\n                sorted_nums[i] = sorted_nums[j]\n                sorted_nums[j] = tmp\n    start = -1\n    end = -1\n    for i in range(n):\n        if nums[i] != sorted_nums[i]:\n            if start == -1:\n                start = i\n            end = i\n    if start == -1:\n        return 0\n    return end - start + 1\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N log N)"
+  },
+  {
+    "id": "TYR-115",
+    "name": "dutch_flag_sort",
+    "category": "array-transform",
+    "difficulty": "easy",
+    "description": "Sort an array containing only 0, 1, and 2.",
+    "original_code": "def dutch_flag_sort(nums):\n    result = []\n    for v in range(3):\n        for i in range(len(nums)):\n            if nums[i] == v:\n                result.append(v)\n    return result\n",
+    "original_complexity": "O(N)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-116",
+    "name": "container_with_most_water",
+    "category": "competition",
+    "difficulty": "medium",
+    "description": "Max area between two lines (heights as array).",
+    "original_code": "def container_with_most_water(nums):\n    best = 0\n    n = len(nums)\n    for i in range(n):\n        for j in range(i + 1, n):\n            h = nums[i]\n            if nums[j] < h:\n                h = nums[j]\n            area = h * (j - i)\n            if area > best:\n                best = area\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-117",
+    "name": "best_time_buy_sell",
+    "category": "competition",
+    "difficulty": "easy",
+    "description": "Maximum profit from one buy-sell transaction.",
+    "original_code": "def best_time_buy_sell(nums):\n    best = 0\n    n = len(nums)\n    for i in range(n):\n        for j in range(i + 1, n):\n            profit = nums[j] - nums[i]\n            if profit > best:\n                best = profit\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-118",
+    "name": "trap_rainwater",
+    "category": "competition",
+    "difficulty": "medium",
+    "description": "Compute total trapped rainwater given elevation map.",
+    "original_code": "def trap_rainwater(nums):\n    total = 0\n    n = len(nums)\n    for i in range(1, n - 1):\n        left_max = 0\n        for j in range(i):\n            if nums[j] > left_max:\n                left_max = nums[j]\n        right_max = 0\n        for j in range(i + 1, n):\n            if nums[j] > right_max:\n                right_max = nums[j]\n        water_level = left_max\n        if right_max < water_level:\n            water_level = right_max\n        if water_level > nums[i]:\n            total += water_level - nums[i]\n    return total\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-119",
+    "name": "good_pairs_count",
+    "category": "competition",
+    "difficulty": "easy",
+    "description": "Count pairs (i<j) where nums[i] == nums[j].",
+    "original_code": "def good_pairs_count(nums):\n    count = 0\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            if nums[i] == nums[j]:\n                count += 1\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-120",
+    "name": "max_chunks_to_sort",
+    "category": "competition",
+    "difficulty": "medium",
+    "description": "Max number of partitions so that sorting each independently sorts the whole.",
+    "original_code": "def max_chunks_to_sort(nums):\n    n = len(nums)\n    chunks = 0\n    for i in range(n):\n        mx = 0\n        for j in range(i + 1):\n            if nums[j] > mx:\n                mx = nums[j]\n        if mx == i:\n            chunks += 1\n    return chunks\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-121",
+    "name": "find_peak_element_index",
+    "category": "competition",
+    "difficulty": "easy",
+    "description": "Return index of any element greater than its neighbours.",
+    "original_code": "def find_peak_element_index(nums):\n    n = len(nums)\n    if n == 1:\n        return 0\n    if nums[0] > nums[1]:\n        return 0\n    for i in range(1, n - 1):\n        if nums[i] > nums[i - 1] and nums[i] > nums[i + 1]:\n            return i\n    if nums[n - 1] > nums[n - 2]:\n        return n - 1\n    return 0\n",
+    "original_complexity": "O(N)",
+    "target_complexity": "O(log N)"
+  },
+  {
+    "id": "TYR-122",
+    "name": "best_sightseeing_pair",
+    "category": "competition",
+    "difficulty": "medium",
+    "description": "Max value of nums[i] + nums[j] + i - j for i < j.",
+    "original_code": "def best_sightseeing_pair(nums):\n    best = 0\n    n = len(nums)\n    for i in range(n):\n        for j in range(i + 1, n):\n            score = nums[i] + nums[j] + i - j\n            if score > best:\n                best = score\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-123",
+    "name": "max_turbulence_length",
+    "category": "competition",
+    "difficulty": "medium",
+    "description": "Length of longest turbulent subarray (alternating comparisons).",
+    "original_code": "def max_turbulence_length(nums):\n    n = len(nums)\n    if n < 2:\n        return n\n    best = 1\n    for i in range(n):\n        length = 1\n        for j in range(i + 1, n):\n            if length == 1:\n                if nums[j] != nums[j - 1]:\n                    length += 1\n                else:\n                    break\n            else:\n                prev_up = nums[j - 1] > nums[j - 2]\n                cur_up = nums[j] > nums[j - 1]\n                if nums[j] == nums[j - 1]:\n                    break\n                if prev_up != cur_up:\n                    length += 1\n                else:\n                    break\n        if length > best:\n            best = length\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-124",
+    "name": "count_arithmetic_subarrays",
+    "category": "competition",
+    "difficulty": "medium",
+    "description": "Count contiguous subarrays of length >= 3 that are arithmetic.",
+    "original_code": "def count_arithmetic_subarrays(nums):\n    count = 0\n    n = len(nums)\n    for i in range(n):\n        for j in range(i + 2, n):\n            is_ap = 1\n            d = nums[i + 1] - nums[i]\n            for k in range(i + 1, j + 1):\n                if nums[k] - nums[k - 1] != d:\n                    is_ap = 0\n                    break\n            count += is_ap\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-125",
+    "name": "max_width_ramp",
+    "category": "competition",
+    "difficulty": "medium",
+    "description": "Maximum j - i such that nums[i] <= nums[j].",
+    "original_code": "def max_width_ramp(nums):\n    best = 0\n    n = len(nums)\n    for i in range(n):\n        for j in range(i + 1, n):\n            if nums[i] <= nums[j]:\n                d = j - i\n                if d > best:\n                    best = d\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-126",
+    "name": "nums_smaller_than_current_sum",
+    "category": "competition",
+    "difficulty": "easy",
+    "description": "Sum of 'how many elements in the full array are smaller than nums[i]'.",
+    "original_code": "def nums_smaller_than_current_sum(nums):\n    total = 0\n    n = len(nums)\n    for i in range(n):\n        count = 0\n        for j in range(n):\n            if nums[j] < nums[i]:\n                count += 1\n        total += count\n    return total\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-127",
+    "name": "longest_harmonious_subsequence",
+    "category": "competition",
+    "difficulty": "medium",
+    "description": "Longest subsequence where max - min == 1.",
+    "original_code": "def longest_harmonious_subsequence(nums):\n    best = 0\n    n = len(nums)\n    for i in range(n):\n        count_same = 0\n        count_plus = 0\n        for j in range(n):\n            if nums[j] == nums[i]:\n                count_same += 1\n            elif nums[j] == nums[i] + 1:\n                count_plus += 1\n        if count_plus > 0:\n            total = count_same + count_plus\n            if total > best:\n                best = total\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-128",
+    "name": "three_sum_closest",
+    "category": "competition",
+    "difficulty": "medium",
+    "description": "Return the triplet sum closest to target.",
+    "original_code": "def three_sum_closest(nums, target):\n    n = len(nums)\n    if n < 3:\n        return 0\n    best = nums[0] + nums[1] + nums[2]\n    for i in range(n):\n        for j in range(i + 1, n):\n            for k in range(j + 1, n):\n                s = nums[i] + nums[j] + nums[k]\n                if abs(s - target) < abs(best - target):\n                    best = s\n    return best\n",
+    "original_complexity": "O(N^3)",
+    "target_complexity": "O(N^2)"
+  },
+  {
+    "id": "TYR-129",
+    "name": "max_sum_circular_subarray",
+    "category": "competition",
+    "difficulty": "medium",
+    "description": "Maximum subarray sum allowing wrap-around.",
+    "original_code": "def max_sum_circular_subarray(nums):\n    n = len(nums)\n    if n == 0:\n        return 0\n    best = nums[0]\n    for i in range(n):\n        cur = 0\n        for j in range(n):\n            cur += nums[(i + j) % n]\n            if cur > best:\n                best = cur\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-130",
+    "name": "minimum_increment_for_unique",
+    "category": "competition",
+    "difficulty": "medium",
+    "description": "Minimum total increments to make all elements unique.",
+    "original_code": "def minimum_increment_for_unique(nums):\n    n = len(nums)\n    arr = []\n    for v in nums:\n        arr.append(v)\n    for i in range(n):\n        for j in range(i + 1, n):\n            if arr[i] > arr[j]:\n                tmp = arr[i]\n                arr[i] = arr[j]\n                arr[j] = tmp\n    moves = 0\n    for i in range(1, n):\n        if arr[i] <= arr[i - 1]:\n            diff = arr[i - 1] - arr[i] + 1\n            arr[i] += diff\n            moves += diff\n    return moves\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N log N)"
+  },
+  {
+    "id": "TYR-131",
+    "name": "largest_perimeter_triangle",
+    "category": "competition",
+    "difficulty": "easy",
+    "description": "Largest perimeter of a triangle formed from any 3 elements, or 0.",
+    "original_code": "def largest_perimeter_triangle(nums):\n    n = len(nums)\n    best = 0\n    for i in range(n):\n        for j in range(i + 1, n):\n            for k in range(j + 1, n):\n                a = nums[i]\n                b = nums[j]\n                c = nums[k]\n                if a + b > c and a + c > b and b + c > a:\n                    p = a + b + c\n                    if p > best:\n                        best = p\n    return best\n",
+    "original_complexity": "O(N^3)",
+    "target_complexity": "O(N log N)"
+  },
+  {
+    "id": "TYR-132",
+    "name": "count_teams",
+    "category": "competition",
+    "difficulty": "medium",
+    "description": "Count triplets (i<j<k) that are strictly increasing or decreasing.",
+    "original_code": "def count_teams(nums):\n    count = 0\n    n = len(nums)\n    for i in range(n):\n        for j in range(i + 1, n):\n            for k in range(j + 1, n):\n                if nums[i] < nums[j] < nums[k]:\n                    count += 1\n                if nums[i] > nums[j] > nums[k]:\n                    count += 1\n    return count\n",
+    "original_complexity": "O(N^3)",
+    "target_complexity": "O(N^2)"
+  },
+  {
+    "id": "TYR-133",
+    "name": "max_score_after_split",
+    "category": "competition",
+    "difficulty": "easy",
+    "description": "Split array into two non-empty parts. Max (count_zeros_left + count_ones_right).",
+    "original_code": "def max_score_after_split(nums):\n    best = 0\n    n = len(nums)\n    for i in range(1, n):\n        zeros = 0\n        for j in range(i):\n            if nums[j] == 0:\n                zeros += 1\n        ones = 0\n        for j in range(i, n):\n            if nums[j] == 1:\n                ones += 1\n        score = zeros + ones\n        if score > best:\n            best = score\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-134",
+    "name": "count_special_positions",
+    "category": "competition",
+    "difficulty": "medium",
+    "description": "Count positions where nums[i] equals sum of all other elements.",
+    "original_code": "def count_special_positions(nums):\n    count = 0\n    n = len(nums)\n    for i in range(n):\n        rest_sum = 0\n        for j in range(n):\n            if j != i:\n                rest_sum += nums[j]\n        if nums[i] == rest_sum:\n            count += 1\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-135",
+    "name": "jump_game",
+    "category": "competition",
+    "difficulty": "medium",
+    "description": "Return 1 if you can reach the last index starting from 0.",
+    "original_code": "def jump_game(nums):\n    n = len(nums)\n    if n <= 1:\n        return 1\n    reachable = [0] * n\n    reachable[0] = 1\n    for i in range(n):\n        if reachable[i] == 0:\n            continue\n        for j in range(1, nums[i] + 1):\n            if i + j < n:\n                reachable[i + j] = 1\n    return reachable[n - 1]\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-136",
+    "name": "count_pairs_xor_k",
+    "category": "advanced",
+    "difficulty": "medium",
+    "description": "Count pairs (i<j) where nums[i] XOR nums[j] == k.",
+    "original_code": "def count_pairs_xor_k(nums, k):\n    count = 0\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            if (nums[i] ^ nums[j]) == k:\n                count += 1\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-137",
+    "name": "count_subarrays_exact_k_distinct",
+    "category": "advanced",
+    "difficulty": "medium",
+    "description": "Count subarrays with exactly k distinct elements.",
+    "original_code": "def count_subarrays_exact_k_distinct(nums, k):\n    count = 0\n    n = len(nums)\n    for i in range(n):\n        for j in range(i, n):\n            dist = 0\n            for m in range(i, j + 1):\n                is_f = 1\n                for p in range(i, m):\n                    if nums[p] == nums[m]:\n                        is_f = 0\n                dist += is_f\n            if dist == k:\n                count += 1\n    return count\n",
+    "original_complexity": "O(N^3)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-138",
+    "name": "longest_equal_subarray",
+    "category": "advanced",
+    "difficulty": "easy",
+    "description": "Return the length of the longest contiguous subarray with all same values.",
+    "original_code": "def longest_equal_subarray(nums):\n    if len(nums) == 0:\n        return 0\n    best = 1\n    n = len(nums)\n    for i in range(n):\n        length = 1\n        for j in range(i + 1, n):\n            if nums[j] == nums[i]:\n                length += 1\n            else:\n                break\n        if length > best:\n            best = length\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-139",
+    "name": "count_local_inversions",
+    "category": "advanced",
+    "difficulty": "easy",
+    "description": "Count positions where nums[i] > nums[i+1].",
+    "original_code": "def count_local_inversions(nums):\n    count = 0\n    for i in range(len(nums) - 1):\n        if nums[i] > nums[i + 1]:\n            count += 1\n    return count\n",
+    "original_complexity": "O(N)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-140",
+    "name": "largest_rectangle_histogram",
+    "category": "advanced",
+    "difficulty": "medium",
+    "description": "Largest rectangle area in a histogram.",
+    "original_code": "def largest_rectangle_histogram(nums):\n    best = 0\n    n = len(nums)\n    for i in range(n):\n        h = nums[i]\n        for j in range(i, n):\n            if nums[j] < h:\n                h = nums[j]\n            area = h * (j - i + 1)\n            if area > best:\n                best = area\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-141",
+    "name": "count_range_pairs",
+    "category": "advanced",
+    "difficulty": "medium",
+    "description": "Count pairs (i<j) with sum in [target, target + k].",
+    "original_code": "def count_range_pairs(nums, target, k):\n    count = 0\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            s = nums[i] + nums[j]\n            if s >= target and s <= target + k:\n                count += 1\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-142",
+    "name": "max_sum_after_removing_one",
+    "category": "advanced",
+    "difficulty": "medium",
+    "description": "Maximum subarray sum after removing at most one element.",
+    "original_code": "def max_sum_after_removing_one(nums):\n    n = len(nums)\n    if n == 0:\n        return 0\n    best = nums[0]\n    for i in range(n):\n        cur = 0\n        for j in range(n):\n            if j == i:\n                continue\n            cur += nums[j]\n            if cur > best:\n                best = cur\n        cur = 0\n    for i in range(n):\n        cur = 0\n        for j in range(i, n):\n            cur += nums[j]\n            if cur > best:\n                best = cur\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-143",
+    "name": "can_form_arithmetic_from_sequence",
+    "category": "advanced",
+    "difficulty": "medium",
+    "description": "Return 1 if the array can be rearranged into an arithmetic progression.",
+    "original_code": "def can_form_arithmetic_from_sequence(nums):\n    n = len(nums)\n    if n <= 2:\n        return 1\n    mn = nums[0]\n    mx = nums[0]\n    for i in range(n):\n        if nums[i] < mn:\n            mn = nums[i]\n        if nums[i] > mx:\n            mx = nums[i]\n    if (mx - mn) % (n - 1) != 0:\n        return 0\n    d = (mx - mn) // (n - 1)\n    for step in range(n):\n        target = mn + step * d\n        found = 0\n        for j in range(n):\n            if nums[j] == target:\n                found = 1\n                break\n        if found == 0:\n            return 0\n    return 1\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-144",
+    "name": "max_profit_two_transactions",
+    "category": "advanced",
+    "difficulty": "medium",
+    "description": "Maximum profit with at most two buy-sell transactions.",
+    "original_code": "def max_profit_two_transactions(nums):\n    n = len(nums)\n    if n < 2:\n        return 0\n    best = 0\n    for i in range(n):\n        for j in range(i + 1, n):\n            profit1 = nums[j] - nums[i]\n            if profit1 < 0:\n                profit1 = 0\n            profit2 = 0\n            for k in range(j + 1, n):\n                for l in range(k + 1, n):\n                    p = nums[l] - nums[k]\n                    if p > profit2:\n                        profit2 = p\n            total = profit1 + profit2\n            if total > best:\n                best = total\n    return best\n",
+    "original_complexity": "O(N^4)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-145",
+    "name": "count_valleys",
+    "category": "advanced",
+    "difficulty": "easy",
+    "description": "Count elements strictly less than both neighbours.",
+    "original_code": "def count_valleys(nums):\n    count = 0\n    for i in range(1, len(nums) - 1):\n        if nums[i] < nums[i - 1] and nums[i] < nums[i + 1]:\n            count += 1\n    return count\n",
+    "original_complexity": "O(N)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-146",
+    "name": "smallest_difference_pair_abs",
+    "category": "advanced",
+    "difficulty": "medium",
+    "description": "Return the minimum absolute difference between any two elements.",
+    "original_code": "def smallest_difference_pair_abs(nums):\n    if len(nums) < 2:\n        return 0\n    best = abs(nums[0] - nums[1])\n    n = len(nums)\n    for i in range(n):\n        for j in range(i + 1, n):\n            d = abs(nums[i] - nums[j])\n            if d < best:\n                best = d\n    return best\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N log N)"
+  },
+  {
+    "id": "TYR-147",
+    "name": "count_nice_pairs",
+    "category": "advanced",
+    "difficulty": "medium",
+    "description": "Count pairs (i<j) where (nums[i]-rev(nums[i])) == (nums[j]-rev(nums[j])).",
+    "original_code": "def count_nice_pairs(nums):\n    n = len(nums)\n    count = 0\n    diffs = []\n    for i in range(n):\n        x = nums[i]\n        rev = 0\n        tmp = x\n        while tmp > 0:\n            rev = rev * 10 + tmp % 10\n            tmp = tmp // 10\n        diffs.append(x - rev)\n    for i in range(n):\n        for j in range(i + 1, n):\n            if diffs[i] == diffs[j]:\n                count += 1\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-148",
+    "name": "partition_into_min_groups",
+    "category": "advanced",
+    "difficulty": "medium",
+    "description": "Minimum groups so that no group has two elements with diff <= 1.",
+    "original_code": "def partition_into_min_groups(nums):\n    n = len(nums)\n    arr = []\n    for v in nums:\n        arr.append(v)\n    for i in range(n):\n        for j in range(i + 1, n):\n            if arr[i] > arr[j]:\n                tmp = arr[i]\n                arr[i] = arr[j]\n                arr[j] = tmp\n    if n == 0:\n        return 0\n    max_freq = 0\n    for i in range(n):\n        count = 0\n        for j in range(n):\n            if arr[j] == arr[i]:\n                count += 1\n        if count > max_freq:\n            max_freq = count\n    return max_freq\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N log N)"
+  },
+  {
+    "id": "TYR-149",
+    "name": "count_subarrays_with_score_less_k",
+    "category": "advanced",
+    "difficulty": "medium",
+    "description": "Count subarrays where (sum * length) < k.",
+    "original_code": "def count_subarrays_with_score_less_k(nums, k):\n    count = 0\n    n = len(nums)\n    for i in range(n):\n        cur = 0\n        for j in range(i, n):\n            cur += nums[j]\n            length = j - i + 1\n            if cur * length < k:\n                count += 1\n            else:\n                break\n    return count\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  },
+  {
+    "id": "TYR-150",
+    "name": "fair_candy_swap_diff",
+    "category": "advanced",
+    "difficulty": "medium",
+    "description": "Find the swap sizes to equalize sums of two halves. Return difference, or 0.",
+    "original_code": "def fair_candy_swap_diff(nums):\n    mid = len(nums) // 2\n    sum_a = 0\n    for i in range(mid):\n        sum_a += nums[i]\n    sum_b = 0\n    for i in range(mid, len(nums)):\n        sum_b += nums[i]\n    for i in range(mid):\n        for j in range(mid, len(nums)):\n            new_a = sum_a - nums[i] + nums[j]\n            new_b = sum_b - nums[j] + nums[i]\n            if new_a == new_b:\n                return nums[j] - nums[i]\n    return 0\n",
+    "original_complexity": "O(N^2)",
+    "target_complexity": "O(N)"
+  }
+]

@@ -1,698 +1,307 @@
 """
-Tyr — Empirical Evaluation Benchmark
-=====================================
-Sends a curated set of O(N²) algorithmic problems to the local Tyr backend
-(/verify endpoint), records the verification verdict, wall-clock latency,
-and the AI-generated optimized code, then persists everything to CSV for
-use in a Formal Methods research paper.
+Tyr — Enterprise-Grade Benchmark Evaluator
+=============================================
+Drives ``tyr_benchmark_150.json`` through the CGSC pipeline (``POST /verify``)
+and emits a detailed CSV + CLI summary suitable for ICSE / PLDI paper tables.
 
-Usage:
-    python evaluate_dataset.py            # default: http://localhost:8000
-    python evaluate_dataset.py --url http://host:port
+Key Features
+~~~~~~~~~~~~
+* **Incremental CSV** — each result row is flushed immediately; safe to Ctrl-C.
+* **``tqdm`` progress bar** — real-time ETA, latency, pass-rate.
+* **Robust error handling** — one bad problem never crashes the run.
+* **Retry with back-off** — transient network / 503 failures are retried twice.
+* **Summary statistics** — category-level breakdown, verdict distribution,
+  mean / p50 / p95 latency, complexity-improvement rate.
 
-Requires:
-    pip install requests
+Usage
+~~~~~
+    # 1. Start the Tyr backend
+    uvicorn backend.main:app --host 0.0.0.0 --port 8000
+
+    # 2. Run the evaluator
+    python evaluate_dataset.py                         # defaults
+    python evaluate_dataset.py --url http://X:8000     # custom host
+    python evaluate_dataset.py --timeout 180           # per-problem timeout
+    python evaluate_dataset.py --out my_results.csv    # custom output path
+
+Requires
+~~~~~~~~
+    pip install requests tqdm
 """
-
 from __future__ import annotations
 
 import argparse
-import concurrent.futures
 import csv
-import os
+import json
+import statistics
 import sys
-import threading
 import time
 from pathlib import Path
+from typing import Any
 
-import requests
+try:
+    import requests
+except ImportError:
+    sys.exit("ERROR: `requests` is required.  pip install requests")
 
-# ---------------------------------------------------------------------------
-# Configuration
-# ---------------------------------------------------------------------------
+try:
+    from tqdm import tqdm
+except ImportError:
+    sys.exit("ERROR: `tqdm` is required.  pip install tqdm")
 
-DEFAULT_URL = "http://localhost:8000/verify"
-TIMEOUT_S = 60  # 60s per problem (LLM + CGSC + Z3)
-MAX_WORKERS = 6  # parallel problems in flight
 
-OUTPUT_DIR = Path(__file__).resolve().parent
-OUTPUT_CSV = OUTPUT_DIR / "paper_results.csv"
+# ═══════════════════════════════════════════════════════════════════════
+# Defaults
+# ═══════════════════════════════════════════════════════════════════════
 
-CSV_COLUMNS = [
-    "Problem_Name",
-    "Status",
-    "Time_Taken_ms",
-    "Correction_Rounds",
-    "Original_Complexity",
-    "Optimized_Complexity",
-    "Complexity_Improved",
-    "Original_Code",
-    "Refactored_Code",
+DEFAULT_BENCHMARK = Path(__file__).resolve().parent / "tyr_benchmark_150.json"
+DEFAULT_CSV_OUT   = Path(__file__).resolve().parent / "paper_results_150.csv"
+DEFAULT_API_URL   = "http://localhost:8000/verify"
+DEFAULT_TIMEOUT   = 120            # seconds per problem
+MAX_RETRIES       = 2              # retries on transient failure
+RETRY_BACKOFF     = 3              # seconds between retries
+
+CSV_FIELDS = [
+    "id",
+    "name",
+    "category",
+    "difficulty",
+    "original_complexity",
+    "target_complexity",
+    "verdict",
+    "optimized_complexity_time",
+    "complexity_improved",
+    "total_rounds",
+    "message",
+    "has_counterexample",
+    "latency_ms",
 ]
 
-# ---------------------------------------------------------------------------
-# Dataset — 30 genuine O(N²) brute-force solutions across algorithm categories
-#
-# Categories covered:
-#   - Searching & Counting (7)
-#   - Sorting & Ordering (5)
-#   - Array Manipulation (6)
-#   - Subarray / Subsequence (5)
-#   - Pair / Triplet Problems (4)
-#   - Mathematical / Numerical (3)
-# ---------------------------------------------------------------------------
 
-DATASET: list[dict[str, str]] = [
-    # ── Searching & Counting ───────────────────────────────────────────
-    {
-        "name": "Two Sum",
-        "original_code": (
-            "def two_sum(nums, target):\n"
-            "    n = len(nums)\n"
-            "    for i in range(n):\n"
-            "        for j in range(i + 1, n):\n"
-            "            if nums[i] + nums[j] == target:\n"
-            "                return i\n"
-            "    return -1\n"
-        ),
-    },
-    {
-        "name": "Contains Duplicate",
-        "original_code": (
-            "def contains_duplicate(nums):\n"
-            "    n = len(nums)\n"
-            "    for i in range(n):\n"
-            "        for j in range(i + 1, n):\n"
-            "            if nums[i] == nums[j]:\n"
-            "                return 1\n"
-            "    return 0\n"
-        ),
-    },
-    {
-        "name": "Majority Element",
-        "original_code": (
-            "def majority_element(nums):\n"
-            "    n = len(nums)\n"
-            "    for i in range(n):\n"
-            "        count = 0\n"
-            "        for j in range(n):\n"
-            "            if nums[j] == nums[i]:\n"
-            "                count = count + 1\n"
-            "        if count > n // 2:\n"
-            "            return nums[i]\n"
-            "    return -1\n"
-        ),
-    },
-    {
-        "name": "First Unique Character",
-        "original_code": (
-            "def first_unique(nums):\n"
-            "    n = len(nums)\n"
-            "    for i in range(n):\n"
-            "        count = 0\n"
-            "        for j in range(n):\n"
-            "            if nums[j] == nums[i]:\n"
-            "                count = count + 1\n"
-            "        if count == 1:\n"
-            "            return i\n"
-            "    return -1\n"
-        ),
-    },
-    {
-        "name": "Find Duplicates",
-        "original_code": (
-            "def find_duplicates(nums):\n"
-            "    result = []\n"
-            "    n = len(nums)\n"
-            "    for i in range(n):\n"
-            "        for j in range(i + 1, n):\n"
-            "            if nums[i] == nums[j]:\n"
-            "                if nums[i] not in result:\n"
-            "                    result.append(nums[i])\n"
-            "    return result\n"
-        ),
-    },
-    {
-        "name": "Count Element Frequency",
-        "original_code": (
-            "def count_frequency(nums):\n"
-            "    n = len(nums)\n"
-            "    max_count = 0\n"
-            "    for i in range(n):\n"
-            "        count = 0\n"
-            "        for j in range(n):\n"
-            "            if nums[j] == nums[i]:\n"
-            "                count = count + 1\n"
-            "        if count > max_count:\n"
-            "            max_count = count\n"
-            "    return max_count\n"
-        ),
-    },
-    {
-        "name": "Element Appears K Times",
-        "original_code": (
-            "def appears_k_times(nums, k):\n"
-            "    n = len(nums)\n"
-            "    for i in range(n):\n"
-            "        count = 0\n"
-            "        for j in range(n):\n"
-            "            if nums[j] == nums[i]:\n"
-            "                count = count + 1\n"
-            "        if count == k:\n"
-            "            return nums[i]\n"
-            "    return -1\n"
-        ),
-    },
-    # ── Sorting & Ordering ─────────────────────────────────────────────
-    {
-        "name": "Selection Sort Min Index",
-        "original_code": (
-            "def selection_sort_passes(nums):\n"
-            "    n = len(nums)\n"
-            "    total = 0\n"
-            "    for i in range(n):\n"
-            "        min_idx = i\n"
-            "        for j in range(i + 1, n):\n"
-            "            if nums[j] < nums[min_idx]:\n"
-            "                min_idx = j\n"
-            "        total = total + min_idx\n"
-            "    return total\n"
-        ),
-    },
-    {
-        "name": "Count Inversions",
-        "original_code": (
-            "def count_inversions(nums):\n"
-            "    n = len(nums)\n"
-            "    count = 0\n"
-            "    for i in range(n):\n"
-            "        for j in range(i + 1, n):\n"
-            "            if nums[i] > nums[j]:\n"
-            "                count = count + 1\n"
-            "    return count\n"
-        ),
-    },
-    {
-        "name": "Is Sorted Check",
-        "original_code": (
-            "def is_sorted(nums):\n"
-            "    n = len(nums)\n"
-            "    for i in range(n):\n"
-            "        for j in range(i + 1, n):\n"
-            "            if nums[i] > nums[j]:\n"
-            "                return 0\n"
-            "    return 1\n"
-        ),
-    },
-    {
-        "name": "Kth Smallest Element",
-        "original_code": (
-            "def kth_smallest(nums, k):\n"
-            "    n = len(nums)\n"
-            "    for i in range(n):\n"
-            "        count = 0\n"
-            "        for j in range(n):\n"
-            "            if nums[j] < nums[i]:\n"
-            "                count = count + 1\n"
-            "        if count == k:\n"
-            "            return nums[i]\n"
-            "    return -1\n"
-        ),
-    },
-    {
-        "name": "Second Largest",
-        "original_code": (
-            "def second_largest(nums):\n"
-            "    n = len(nums)\n"
-            "    largest = nums[0]\n"
-            "    for i in range(1, n):\n"
-            "        if nums[i] > largest:\n"
-            "            largest = nums[i]\n"
-            "    second = nums[0]\n"
-            "    for i in range(1, n):\n"
-            "        if nums[i] > second and nums[i] != largest:\n"
-            "            second = nums[i]\n"
-            "    return second\n"
-        ),
-    },
-    # ── Array Manipulation ─────────────────────────────────────────────
-    {
-        "name": "Move Zeroes Count",
-        "original_code": (
-            "def move_zeroes_swaps(nums):\n"
-            "    n = len(nums)\n"
-            "    swaps = 0\n"
-            "    for i in range(n):\n"
-            "        for j in range(i + 1, n):\n"
-            "            if nums[i] == 0 and nums[j] != 0:\n"
-            "                swaps = swaps + 1\n"
-            "    return swaps\n"
-        ),
-    },
-    {
-        "name": "Sum of All Pairs",
-        "original_code": (
-            "def sum_all_pairs(nums):\n"
-            "    n = len(nums)\n"
-            "    total = 0\n"
-            "    for i in range(n):\n"
-            "        for j in range(i + 1, n):\n"
-            "            total = total + nums[i] + nums[j]\n"
-            "    return total\n"
-        ),
-    },
-    {
-        "name": "Product Except Self Sum",
-        "original_code": (
-            "def product_except_self_sum(nums):\n"
-            "    n = len(nums)\n"
-            "    total = 0\n"
-            "    for i in range(n):\n"
-            "        product = 1\n"
-            "        for j in range(n):\n"
-            "            if j != i:\n"
-            "                product = product * nums[j]\n"
-            "        total = total + product\n"
-            "    return total\n"
-        ),
-    },
-    {
-        "name": "Running Sum Brute",
-        "original_code": (
-            "def running_sum_total(nums):\n"
-            "    n = len(nums)\n"
-            "    total = 0\n"
-            "    for i in range(n):\n"
-            "        prefix = 0\n"
-            "        for j in range(i + 1):\n"
-            "            prefix = prefix + nums[j]\n"
-            "        total = total + prefix\n"
-            "    return total\n"
-        ),
-    },
-    {
-        "name": "Max Difference",
-        "original_code": (
-            "def max_difference(nums):\n"
-            "    n = len(nums)\n"
-            "    max_diff = 0\n"
-            "    for i in range(n):\n"
-            "        for j in range(i + 1, n):\n"
-            "            diff = nums[j] - nums[i]\n"
-            "            if diff > max_diff:\n"
-            "                max_diff = diff\n"
-            "    return max_diff\n"
-        ),
-    },
-    {
-        "name": "Equilibrium Index",
-        "original_code": (
-            "def equilibrium_index(nums):\n"
-            "    n = len(nums)\n"
-            "    for i in range(n):\n"
-            "        left_sum = 0\n"
-            "        for j in range(i):\n"
-            "            left_sum = left_sum + nums[j]\n"
-            "        right_sum = 0\n"
-            "        for j in range(i + 1, n):\n"
-            "            right_sum = right_sum + nums[j]\n"
-            "        if left_sum == right_sum:\n"
-            "            return i\n"
-            "    return -1\n"
-        ),
-    },
-    # ── Subarray / Subsequence ─────────────────────────────────────────
-    {
-        "name": "Max Subarray Sum",
-        "original_code": (
-            "def max_subarray_sum(nums):\n"
-            "    n = len(nums)\n"
-            "    max_sum = nums[0]\n"
-            "    for i in range(n):\n"
-            "        current = 0\n"
-            "        for j in range(i, n):\n"
-            "            current = current + nums[j]\n"
-            "            if current > max_sum:\n"
-            "                max_sum = current\n"
-            "    return max_sum\n"
-        ),
-    },
-    {
-        "name": "Subarray Sum Equals K",
-        "original_code": (
-            "def subarray_sum_k(nums, k):\n"
-            "    n = len(nums)\n"
-            "    count = 0\n"
-            "    for i in range(n):\n"
-            "        total = 0\n"
-            "        for j in range(i, n):\n"
-            "            total = total + nums[j]\n"
-            "            if total == k:\n"
-            "                count = count + 1\n"
-            "    return count\n"
-        ),
-    },
-    {
-        "name": "Longest Increasing Subsequence Length",
-        "original_code": (
-            "def lis_length(nums):\n"
-            "    n = len(nums)\n"
-            "    max_len = 1\n"
-            "    for i in range(n):\n"
-            "        length = 1\n"
-            "        prev = nums[i]\n"
-            "        for j in range(i + 1, n):\n"
-            "            if nums[j] > prev:\n"
-            "                length = length + 1\n"
-            "                prev = nums[j]\n"
-            "        if length > max_len:\n"
-            "            max_len = length\n"
-            "    return max_len\n"
-        ),
-    },
-    {
-        "name": "Count Distinct Subarrays",
-        "original_code": (
-            "def count_distinct_subarrays(nums):\n"
-            "    n = len(nums)\n"
-            "    count = 0\n"
-            "    for i in range(n):\n"
-            "        seen = []\n"
-            "        all_distinct = 1\n"
-            "        for j in range(i, n):\n"
-            "            if nums[j] in seen:\n"
-            "                all_distinct = 0\n"
-            "            else:\n"
-            "                seen.append(nums[j])\n"
-            "            if all_distinct == 1:\n"
-            "                count = count + 1\n"
-            "    return count\n"
-        ),
-    },
-    {
-        "name": "Min Subarray Length",
-        "original_code": (
-            "def min_subarray_len(nums, target):\n"
-            "    n = len(nums)\n"
-            "    min_len = n + 1\n"
-            "    for i in range(n):\n"
-            "        total = 0\n"
-            "        for j in range(i, n):\n"
-            "            total = total + nums[j]\n"
-            "            if total >= target:\n"
-            "                length = j - i + 1\n"
-            "                if length < min_len:\n"
-            "                    min_len = length\n"
-            "                break\n"
-            "    if min_len == n + 1:\n"
-            "        return 0\n"
-            "    return min_len\n"
-        ),
-    },
-    # ── Pair / Triplet Problems ────────────────────────────────────────
-    {
-        "name": "Count Pairs With Sum",
-        "original_code": (
-            "def count_pairs_sum(nums, target):\n"
-            "    n = len(nums)\n"
-            "    count = 0\n"
-            "    for i in range(n):\n"
-            "        for j in range(i + 1, n):\n"
-            "            if nums[i] + nums[j] == target:\n"
-            "                count = count + 1\n"
-            "    return count\n"
-        ),
-    },
-    {
-        "name": "Three Sum Count",
-        "original_code": (
-            "def three_sum_count(nums, target):\n"
-            "    n = len(nums)\n"
-            "    count = 0\n"
-            "    for i in range(n):\n"
-            "        for j in range(i + 1, n):\n"
-            "            remaining = target - nums[i] - nums[j]\n"
-            "            for k in range(j + 1, n):\n"
-            "                if nums[k] == remaining:\n"
-            "                    count = count + 1\n"
-            "    return count\n"
-        ),
-    },
-    {
-        "name": "Closest Pair Sum",
-        "original_code": (
-            "def closest_pair_sum(nums, target):\n"
-            "    n = len(nums)\n"
-            "    best = nums[0] + nums[1]\n"
-            "    for i in range(n):\n"
-            "        for j in range(i + 1, n):\n"
-            "            s = nums[i] + nums[j]\n"
-            "            if abs(s - target) < abs(best - target):\n"
-            "                best = s\n"
-            "    return best\n"
-        ),
-    },
-    {
-        "name": "Max Product Pair",
-        "original_code": (
-            "def max_product_pair(nums):\n"
-            "    n = len(nums)\n"
-            "    max_prod = nums[0] * nums[1]\n"
-            "    for i in range(n):\n"
-            "        for j in range(i + 1, n):\n"
-            "            prod = nums[i] * nums[j]\n"
-            "            if prod > max_prod:\n"
-            "                max_prod = prod\n"
-            "    return max_prod\n"
-        ),
-    },
-    # ── Mathematical / Numerical ───────────────────────────────────────
-    {
-        "name": "Find Missing Number",
-        "original_code": (
-            "def find_missing(nums):\n"
-            "    n = len(nums)\n"
-            "    for i in range(n + 1):\n"
-            "        found = 0\n"
-            "        for j in range(n):\n"
-            "            if nums[j] == i:\n"
-            "                found = 1\n"
-            "        if found == 0:\n"
-            "            return i\n"
-            "    return -1\n"
-        ),
-    },
-    {
-        "name": "Single Number (XOR)",
-        "original_code": (
-            "def single_number(nums):\n"
-            "    n = len(nums)\n"
-            "    for i in range(n):\n"
-            "        count = 0\n"
-            "        for j in range(n):\n"
-            "            if nums[j] == nums[i]:\n"
-            "                count = count + 1\n"
-            "        if count == 1:\n"
-            "            return nums[i]\n"
-            "    return -1\n"
-        ),
-    },
-    {
-        "name": "Max Stock Profit",
-        "original_code": (
-            "def max_profit(prices):\n"
-            "    n = len(prices)\n"
-            "    max_p = 0\n"
-            "    for i in range(n):\n"
-            "        for j in range(i + 1, n):\n"
-            "            profit = prices[j] - prices[i]\n"
-            "            if profit > max_p:\n"
-            "                max_p = profit\n"
-            "    return max_p\n"
-        ),
-    },
-]
-
-# ---------------------------------------------------------------------------
+# ═══════════════════════════════════════════════════════════════════════
 # Helpers
-# ---------------------------------------------------------------------------
+# ═══════════════════════════════════════════════════════════════════════
 
-def _send_verify(url: str, code: str) -> tuple[dict, int]:
-    """
-    POST to /verify and return (response_json, elapsed_ms).
-
-    Raises on HTTP or connection errors.
-    """
+def _call_verify(api_url: str, code: str, timeout: int) -> dict[str, Any]:
+    """POST to /verify with retry logic.  Returns parsed JSON or error dict."""
     payload = {"code": code, "language": "python"}
-    t0 = time.perf_counter()
-    resp = requests.post(url, json=payload, timeout=TIMEOUT_S)
-    elapsed_ms = int((time.perf_counter() - t0) * 1000)
-    resp.raise_for_status()
-    return resp.json(), elapsed_ms
+    last_err: Exception | None = None
+
+    for attempt in range(1 + MAX_RETRIES):
+        try:
+            resp = requests.post(api_url, json=payload, timeout=timeout)
+            resp.raise_for_status()
+            return resp.json()
+        except requests.exceptions.Timeout:
+            return {"status": "TIMEOUT", "message": f"Request timed out ({timeout}s)"}
+        except requests.exceptions.ConnectionError as exc:
+            last_err = exc
+            if attempt < MAX_RETRIES:
+                time.sleep(RETRY_BACKOFF * (attempt + 1))
+                continue
+        except requests.exceptions.HTTPError as exc:
+            status_code = getattr(exc.response, "status_code", 0)
+            if status_code in (502, 503, 504) and attempt < MAX_RETRIES:
+                last_err = exc
+                time.sleep(RETRY_BACKOFF * (attempt + 1))
+                continue
+            return {
+                "status": "ERROR",
+                "message": f"HTTP {status_code}: {str(exc)[:200]}",
+            }
+        except Exception as exc:
+            return {"status": "ERROR", "message": str(exc)[:300]}
+
+    return {"status": "ERROR", "message": f"Exhausted retries: {last_err}"}
 
 
-def _sanitise(text: str) -> str:
-    """Collapse newlines for CSV readability."""
-    return text.replace("\r\n", "\n").strip()
+def _safe_get(d: dict, *keys: str, default: Any = "") -> Any:
+    """Safely traverse nested dict."""
+    cur: Any = d
+    for k in keys:
+        if isinstance(cur, dict):
+            cur = cur.get(k, default)
+        else:
+            return default
+    return cur
 
 
-def _write_csv(rows: list[dict[str, str]]) -> None:
-    """Write all accumulated rows to CSV (called after each problem)."""
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    with open(OUTPUT_CSV, "w", newline="", encoding="utf-8") as fh:
-        writer = csv.DictWriter(fh, fieldnames=CSV_COLUMNS)
+# ═══════════════════════════════════════════════════════════════════════
+# Main evaluator
+# ═══════════════════════════════════════════════════════════════════════
+
+def run(api_url: str, benchmark_path: Path, csv_out: Path, timeout: int) -> None:
+    # ── Load dataset ──────────────────────────────────────────────────
+    if not benchmark_path.exists():
+        sys.exit(f"ERROR: Benchmark file not found: {benchmark_path}\n"
+                 f"       Run  build_dataset.py  first.")
+
+    with open(benchmark_path, encoding="utf-8") as f:
+        problems: list[dict] = json.load(f)
+
+    n = len(problems)
+    print(f"\n{'═' * 64}")
+    print(f"  Tyr Benchmark Evaluator  —  {n} problems")
+    print(f"  API   : {api_url}")
+    print(f"  Output: {csv_out}")
+    print(f"  Timeout: {timeout}s per problem")
+    print(f"{'═' * 64}\n")
+
+    # ── Prepare CSV (truncate + write header) ─────────────────────────
+    csv_out.parent.mkdir(parents=True, exist_ok=True)
+    with open(csv_out, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=CSV_FIELDS, extrasaction="ignore")
         writer.writeheader()
-        writer.writerows(rows)
+
+    # ── Counters ──────────────────────────────────────────────────────
+    verdicts: dict[str, int] = {}
+    category_pass: dict[str, list[int]] = {}   # cat -> [1/0 per problem]
+    latencies: list[float] = []
+    improved_count = 0
+    total_assessed = 0
+
+    # ── Progress bar ──────────────────────────────────────────────────
+    bar = tqdm(problems, desc="Evaluating", unit="prob",
+               bar_format=("{l_bar}{bar}| {n_fmt}/{total_fmt} "
+                           "[{elapsed}<{remaining}, {rate_fmt}]"))
+
+    for problem in bar:
+        pid   = problem["id"]
+        name  = problem["name"]
+        cat   = problem["category"]
+        diff  = problem["difficulty"]
+        oc    = problem["original_complexity"]
+        tc    = problem["target_complexity"]
+        code  = problem["original_code"]
+
+        bar.set_postfix_str(f"{pid} {name[:22]}")
+
+        # ── Call API ──────────────────────────────────────────────────
+        t0 = time.perf_counter()
+        data = _call_verify(api_url, code, timeout)
+        latency_ms = (time.perf_counter() - t0) * 1000.0
+
+        verdict = data.get("status", "ERROR")
+        msg     = str(data.get("message", ""))[:250].replace("\n", " ")
+        has_cx  = bool(data.get("counterexample"))
+        rounds  = data.get("total_rounds", 0)
+
+        # Complexity
+        opt_time = _safe_get(data, "optimized_complexity", "time", default="N/A")
+        comp_imp = data.get("complexity_improved", None)
+        if comp_imp is True:
+            improved_count += 1
+        total_assessed += 1
+
+        # ── Build row ────────────────────────────────────────────────
+        row = {
+            "id":                      pid,
+            "name":                    name,
+            "category":                cat,
+            "difficulty":              diff,
+            "original_complexity":     oc,
+            "target_complexity":       tc,
+            "verdict":                 verdict,
+            "optimized_complexity_time": opt_time,
+            "complexity_improved":     comp_imp,
+            "total_rounds":            rounds,
+            "message":                 msg,
+            "has_counterexample":      has_cx,
+            "latency_ms":             f"{latency_ms:.1f}",
+        }
+
+        # ── Write row (append-mode, one-at-a-time) ───────────────────
+        with open(csv_out, "a", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=CSV_FIELDS, extrasaction="ignore")
+            writer.writerow(row)
+
+        # ── Bookkeeping ──────────────────────────────────────────────
+        verdicts[verdict] = verdicts.get(verdict, 0) + 1
+        latencies.append(latency_ms)
+
+        is_pass = 1 if verdict == "UNSAT" else 0
+        category_pass.setdefault(cat, []).append(is_pass)
+
+    bar.close()
+
+    # ══════════════════════════════════════════════════════════════════
+    # Summary
+    # ══════════════════════════════════════════════════════════════════
+    print(f"\n{'═' * 64}")
+    print("  BENCHMARK RESULTS — VERDICT DISTRIBUTION")
+    print(f"{'═' * 64}")
+    for v in ["UNSAT", "SAT", "WARNING", "TIMEOUT", "ERROR"]:
+        cnt = verdicts.get(v, 0)
+        pct = cnt / n * 100 if n else 0
+        bar_str = "█" * int(pct / 2)
+        print(f"  {v:8s}  {cnt:4d} / {n}  ({pct:5.1f}%)  {bar_str}")
+    total_pass = verdicts.get("UNSAT", 0)
+    print(f"\n  PASS RATE: {total_pass}/{n} = {total_pass / n * 100:.1f}%")
+
+    # Category breakdown
+    print(f"\n{'─' * 64}")
+    print("  CATEGORY BREAKDOWN")
+    print(f"{'─' * 64}")
+    print(f"  {'Category':<25s}  {'Pass':>4s} / {'Tot':>3s}  {'Rate':>6s}")
+    for cat in sorted(category_pass):
+        passes = sum(category_pass[cat])
+        total  = len(category_pass[cat])
+        rate   = passes / total * 100 if total else 0
+        print(f"  {cat:<25s}  {passes:4d} / {total:3d}  {rate:5.1f}%")
+
+    # Latency stats
+    if latencies:
+        sorted_lat = sorted(latencies)
+        p50 = sorted_lat[len(sorted_lat) // 2]
+        p95_idx = int(len(sorted_lat) * 0.95)
+        p95 = sorted_lat[min(p95_idx, len(sorted_lat) - 1)]
+        print(f"\n{'─' * 64}")
+        print("  LATENCY")
+        print(f"{'─' * 64}")
+        print(f"  Mean : {statistics.mean(latencies):>10.1f} ms")
+        print(f"  p50  : {p50:>10.1f} ms")
+        print(f"  p95  : {p95:>10.1f} ms")
+        print(f"  Min  : {min(latencies):>10.1f} ms")
+        print(f"  Max  : {max(latencies):>10.1f} ms")
+
+    # Complexity improvement
+    if total_assessed:
+        print(f"\n{'─' * 64}")
+        print("  COMPLEXITY IMPROVEMENT")
+        print(f"{'─' * 64}")
+        print(f"  Improved: {improved_count}/{total_assessed}"
+              f" ({improved_count / total_assessed * 100:.1f}%)")
+
+    print(f"\n{'═' * 64}")
+    print(f"  CSV saved → {csv_out}")
+    print(f"{'═' * 64}\n")
 
 
-# ---------------------------------------------------------------------------
-# Single-problem worker (runs in thread pool)
-# ---------------------------------------------------------------------------
-
-def _run_one(idx: int, total: int, problem: dict, url: str) -> dict[str, str]:
-    """Verify one problem and return a CSV row dict.  Thread-safe."""
-    name = problem["name"]
-    code = problem["original_code"]
-    tag = f"[{idx}/{total}]"
-
-    try:
-        data, elapsed_ms = _send_verify(url, code)
-    except requests.ConnectionError:
-        print(f"  {tag} {name} ... CONNECT_ERROR", flush=True)
-        return _error_row(name, code, "CONNECT_ERROR")
-    except requests.HTTPError as exc:
-        st = f"HTTP_{exc.response.status_code}"
-        print(f"  {tag} {name} ... {st}", flush=True)
-        return _error_row(name, code, st)
-    except Exception as exc:
-        print(f"  {tag} {name} ... ERROR ({exc})", flush=True)
-        return _error_row(name, code, "ERROR")
-
-    status = data.get("status", "UNKNOWN")
-    optimized = data.get("optimized_code", "")
-    rounds = data.get("total_rounds", 0)
-    orig_cx = data.get("original_complexity", {}) or {}
-    opt_cx = data.get("optimized_complexity", {}) or {}
-    cx_improved = data.get("complexity_improved")
-    orig_time = orig_cx.get("time", "")
-    opt_time = opt_cx.get("time", "")
-
-    label = f"[{status}]"
-    if cx_improved is True:
-        label += f" {orig_time}->{opt_time}"
-    print(f"  {tag} {name} ... {label} in {elapsed_ms}ms ({rounds}r)", flush=True)
-
-    return {
-        "Problem_Name": name,
-        "Status": status,
-        "Time_Taken_ms": str(elapsed_ms),
-        "Correction_Rounds": str(rounds),
-        "Original_Complexity": orig_time,
-        "Optimized_Complexity": opt_time,
-        "Complexity_Improved": str(cx_improved) if cx_improved is not None else "",
-        "Original_Code": _sanitise(code),
-        "Refactored_Code": _sanitise(optimized),
-    }
-
-
-def _error_row(name: str, code: str, status: str) -> dict[str, str]:
-    return {
-        "Problem_Name": name,
-        "Status": status,
-        "Time_Taken_ms": "0",
-        "Correction_Rounds": "0",
-        "Original_Complexity": "",
-        "Optimized_Complexity": "",
-        "Complexity_Improved": "",
-        "Original_Code": _sanitise(code),
-        "Refactored_Code": "",
-    }
-
-
-# ---------------------------------------------------------------------------
-# Main - parallel execution
-# ---------------------------------------------------------------------------
+# ═══════════════════════════════════════════════════════════════════════
+# CLI
+# ═══════════════════════════════════════════════════════════════════════
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Tyr Empirical Evaluation")
-    parser.add_argument(
-        "--url",
-        default=DEFAULT_URL,
-        help=f"Verify endpoint URL (default: {DEFAULT_URL})",
+    ap = argparse.ArgumentParser(
+        description="Tyr — Enterprise Benchmark Evaluator",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument(
-        "--workers",
-        type=int,
-        default=MAX_WORKERS,
-        help=f"Parallel workers (default: {MAX_WORKERS})",
+    ap.add_argument("--url",     default=DEFAULT_API_URL,
+                    help=f"Tyr /verify endpoint (default: {DEFAULT_API_URL})")
+    ap.add_argument("--bench",   default=str(DEFAULT_BENCHMARK),
+                    help="Path to benchmark JSON")
+    ap.add_argument("--out",     default=str(DEFAULT_CSV_OUT),
+                    help="Output CSV path")
+    ap.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT,
+                    help=f"Per-problem timeout in seconds (default: {DEFAULT_TIMEOUT})")
+    args = ap.parse_args()
+
+    run(
+        api_url=args.url,
+        benchmark_path=Path(args.bench),
+        csv_out=Path(args.out),
+        timeout=args.timeout,
     )
-    args = parser.parse_args()
-    url: str = args.url
-    workers: int = args.workers
-
-    print(f"\n{'=' * 60}")
-    print("  Tyr - Empirical Evaluation Benchmark (PARALLEL)")
-    print(f"  Endpoint : {url}")
-    print(f"  Problems : {len(DATASET)}")
-    print(f"  Workers  : {workers}")
-    print(f"  Output   : {OUTPUT_CSV}")
-    print(f"{'=' * 60}\n")
-
-    # Quick connectivity check
-    try:
-        requests.get(url.rsplit("/", 1)[0] + "/health", timeout=5)
-    except Exception:
-        print("[WARN] Could not reach /health - make sure the backend is running.\n")
-
-    total = len(DATASET)
-    results: list[dict[str, str] | None] = [None] * total
-    t_start = time.perf_counter()
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
-        future_to_idx: dict[concurrent.futures.Future, int] = {}
-        for i, problem in enumerate(DATASET):
-            fut = pool.submit(_run_one, i + 1, total, problem, url)
-            future_to_idx[fut] = i
-
-        done_count = 0
-        for fut in concurrent.futures.as_completed(future_to_idx):
-            idx = future_to_idx[fut]
-            try:
-                results[idx] = fut.result()
-            except Exception as exc:
-                name = DATASET[idx]["name"]
-                code = DATASET[idx]["original_code"]
-                print(f"  [{idx+1}/{total}] {name} ... WORKER_ERROR ({exc})", flush=True)
-                results[idx] = _error_row(name, code, "WORKER_ERROR")
-            done_count += 1
-
-            # Incremental CSV write with whatever we have so far
-            completed_rows = [r for r in results if r is not None]
-            _write_csv(completed_rows)
-
-    rows = [r for r in results if r is not None]
-    _write_csv(rows)  # final ordered write
-
-    elapsed_total = time.perf_counter() - t_start
-    print(f"\n{'=' * 60}")
-    print(f"Results saved to {OUTPUT_CSV}")
-    print(f"  Total wall-clock : {elapsed_total:.1f}s")
-
-    # Summary table
-    unsat = sum(1 for r in rows if r["Status"] == "UNSAT")
-    sat = sum(1 for r in rows if r["Status"] == "SAT")
-    warn = sum(1 for r in rows if r["Status"] == "WARNING")
-    errs = len(rows) - unsat - sat - warn
-    avg_ms = (
-        int(sum(int(r["Time_Taken_ms"]) for r in rows) / len(rows))
-        if rows else 0
-    )
-    print(f"  UNSAT (proven equivalent) : {unsat}/{len(rows)}")
-    print(f"  SAT   (semantics differ)  : {sat}/{len(rows)}")
-    print(f"  WARNING (empirical only)  : {warn}/{len(rows)}")
-    print(f"  ERROR / other             : {errs}/{len(rows)}")
-    print(f"  Avg latency               : {avg_ms}ms")
-    print(f"{'=' * 60}\n")
 
 
 if __name__ == "__main__":
