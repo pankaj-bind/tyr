@@ -2,21 +2,20 @@
 # Tyr — Root .gitignore
 # =============================================
 
-# ----- Research Paper folder (ignore all) ----
-Research Paper/
+# ----- Python bytecode / caches -------------
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
 
-# ----- Python backend -----------------------
-backend/__pycache__/
-backend/*.pyc
-backend/*.pyo
-backend/.env
-backend/test_verifier.py
+# ----- Environment / secrets ----------------
+.env
+.venv/
 
 # ----- VS Code Extension --------------------
-VS Code Extension/out/
-VS Code Extension/node_modules/
-VS Code Extension/.env
-VS Code Extension/*.vsix
+vscode-extension/out/
+vscode-extension/node_modules/
+vscode-extension/*.vsix
 
 # ----- IDE / OS ------------------------------
 .vscode/

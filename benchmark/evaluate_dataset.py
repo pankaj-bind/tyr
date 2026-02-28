@@ -56,7 +56,7 @@ except ImportError:
 
 DEFAULT_BENCHMARK = Path(__file__).resolve().parent / "tyr_benchmark_150.json"
 _PROJECT_ROOT     = Path(__file__).resolve().parent.parent
-DEFAULT_CSV_OUT   = _PROJECT_ROOT / "Research Paper" / "data" / "paper_results_150.csv"
+DEFAULT_CSV_OUT   = _PROJECT_ROOT / "Research_Paper" / "data" / "paper_results_150.csv"
 DEFAULT_API_URL   = "http://localhost:8000/verify"
 DEFAULT_TIMEOUT   = 600            # seconds per problem (server may sleep 100s+ on 429)
 MAX_RETRIES       = 4              # retries on transient / rate-limit failures
@@ -180,12 +180,17 @@ def run(api_url: str, benchmark_path: Path, csv_out: Path, timeout: int) -> None
     print(f"\n{'═' * 64}")
     print(f"  Tyr Benchmark Evaluator  —  {n} problems")
     print(f"  API   : {api_url}")
-    print(f"  Output: {csv_out}")
+    print(f"  Output: {csv_out.absolute()}")
     print(f"  Timeout: {timeout}s per problem")
     print(f"{'═' * 64}\n")
 
-    # ── Prepare CSV (truncate + write header) ─────────────────────────
+    # ── Nuke stale CSV — zero tolerance for ghost rows ────────────────
     csv_out.parent.mkdir(parents=True, exist_ok=True)
+    if csv_out.exists():
+        csv_out.unlink()
+        print(f"  ✓ Deleted stale CSV: {csv_out.name}")
+
+    # ── Write fresh header ────────────────────────────────────────────
     with open(csv_out, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=CSV_FIELDS, extrasaction="ignore")
         writer.writeheader()

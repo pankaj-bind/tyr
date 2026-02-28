@@ -50,8 +50,8 @@ except ImportError:
 # ═══════════════════════════════════════════════════════════════════════
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_CSV   = _PROJECT_ROOT / "Research Paper" / "data" / "paper_results_150.csv"
-FIG_DIR       = _PROJECT_ROOT / "Research Paper" / "figures"
+DEFAULT_CSV   = _PROJECT_ROOT / "Research_Paper" / "data" / "paper_results_150.csv"
+FIG_DIR       = _PROJECT_ROOT / "Research_Paper" / "figures"
 
 
 # ═══════════════════════════════════════════════════════════════════════
