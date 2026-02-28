@@ -58,10 +58,10 @@ DEFAULT_BENCHMARK = Path(__file__).resolve().parent / "tyr_benchmark_150.json"
 _PROJECT_ROOT     = Path(__file__).resolve().parent.parent
 DEFAULT_CSV_OUT   = _PROJECT_ROOT / "Research Paper" / "data" / "paper_results_150.csv"
 DEFAULT_API_URL   = "http://localhost:8000/verify"
-DEFAULT_TIMEOUT   = 120            # seconds per problem
+DEFAULT_TIMEOUT   = 600            # seconds per problem (server may sleep 100s+ on 429)
 MAX_RETRIES       = 4              # retries on transient / rate-limit failures
 RETRY_BACKOFF     = 5              # base seconds between retries
-INTER_REQUEST_DELAY = 4            # seconds between problems (free-tier throttle)
+INTER_REQUEST_DELAY = 12           # seconds between problems (~5 req/min free-tier cap)
 
 CSV_FIELDS = [
     "id",
