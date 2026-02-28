@@ -110,6 +110,11 @@ def _call_verify(api_url: str, code: str, timeout: int) -> dict[str, Any]:
                 "status": "ERROR",
                 "message": f"HTTP {status_code}: {str(exc)[:200]}",
             }
+        except (json.JSONDecodeError, ValueError) as exc:
+            return {
+                "status": "ERROR",
+                "message": f"Invalid JSON in API response: {str(exc)[:200]}",
+            }
         except Exception as exc:
             return {"status": "ERROR", "message": str(exc)[:300]}
 
@@ -167,31 +172,49 @@ def run(api_url: str, benchmark_path: Path, csv_out: Path, timeout: int) -> None
                            "[{elapsed}<{remaining}, {rate_fmt}]"))
 
     for problem in bar:
-        pid   = problem["id"]
-        name  = problem["name"]
-        cat   = problem["category"]
-        diff  = problem["difficulty"]
-        oc    = problem["original_complexity"]
-        tc    = problem["target_complexity"]
-        code  = problem["original_code"]
+        # ── Safe field extraction (tolerates malformed entries) ────────
+        pid  = problem.get("id", f"TYR-???")
+        name = problem.get("name", "unknown")
+        cat  = problem.get("category", "unknown")
+        diff = problem.get("difficulty", "unknown")
+        oc   = problem.get("original_complexity", "N/A")
+        tc   = problem.get("target_complexity", "N/A")
+        code = problem.get("original_code", "")
 
         bar.set_postfix_str(f"{pid} {name[:22]}")
 
-        # ── Call API ──────────────────────────────────────────────────
-        t0 = time.perf_counter()
-        data = _call_verify(api_url, code, timeout)
-        latency_ms = (time.perf_counter() - t0) * 1000.0
+        try:
+            if not code.strip():
+                raise ValueError("Empty or missing original_code")
 
-        verdict = data.get("status", "ERROR")
-        msg     = str(data.get("message", ""))[:250].replace("\n", " ")
-        has_cx  = bool(data.get("counterexample"))
-        rounds  = data.get("total_rounds", 0)
+            # ── Call API ──────────────────────────────────────────────
+            t0 = time.perf_counter()
+            data = _call_verify(api_url, code, timeout)
+            latency_ms = (time.perf_counter() - t0) * 1000.0
 
-        # Complexity
-        opt_time = _safe_get(data, "optimized_complexity", "time", default="N/A")
-        comp_imp = data.get("complexity_improved", None)
-        if comp_imp is True:
-            improved_count += 1
+            verdict = data.get("status", "ERROR")
+            msg     = str(data.get("message", ""))[:250].replace("\n", " ")
+            has_cx  = bool(data.get("counterexample"))
+            rounds  = data.get("total_rounds", 0)
+
+            # Complexity
+            opt_time = _safe_get(data, "optimized_complexity", "time",
+                                 default="N/A")
+            comp_imp = data.get("complexity_improved", None)
+            if comp_imp is True:
+                improved_count += 1
+
+        except Exception as exc:
+            # ── Impenetrable guard: log ERROR, never crash ────────────
+            latency_ms = 0.0
+            verdict    = "ERROR"
+            msg        = (f"Script exception: {type(exc).__name__}: "
+                          f"{str(exc)[:200]}")
+            has_cx     = False
+            rounds     = 0
+            opt_time   = "N/A"
+            comp_imp   = None
+
         total_assessed += 1
 
         # ── Build row ────────────────────────────────────────────────
@@ -212,9 +235,14 @@ def run(api_url: str, benchmark_path: Path, csv_out: Path, timeout: int) -> None
         }
 
         # ── Write row (append-mode, one-at-a-time) ───────────────────
-        with open(csv_out, "a", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=CSV_FIELDS, extrasaction="ignore")
-            writer.writerow(row)
+        try:
+            with open(csv_out, "a", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=CSV_FIELDS,
+                                        extrasaction="ignore")
+                writer.writerow(row)
+        except Exception as write_exc:
+            print(f"\n  WARNING: CSV write failed for {pid}: {write_exc}",
+                  file=sys.stderr)
 
         # ── Bookkeeping ──────────────────────────────────────────────
         verdicts[verdict] = verdicts.get(verdict, 0) + 1
