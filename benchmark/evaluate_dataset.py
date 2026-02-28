@@ -55,7 +55,8 @@ except ImportError:
 # ═══════════════════════════════════════════════════════════════════════
 
 DEFAULT_BENCHMARK = Path(__file__).resolve().parent / "tyr_benchmark_150.json"
-DEFAULT_CSV_OUT   = Path(__file__).resolve().parent / "paper_results_150.csv"
+_PROJECT_ROOT     = Path(__file__).resolve().parent.parent
+DEFAULT_CSV_OUT   = _PROJECT_ROOT / "Research Paper" / "data" / "paper_results_150.csv"
 DEFAULT_API_URL   = "http://localhost:8000/verify"
 DEFAULT_TIMEOUT   = 120            # seconds per problem
 MAX_RETRIES       = 2              # retries on transient failure

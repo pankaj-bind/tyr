@@ -19,6 +19,7 @@ from symbolic.types import (
 )
 # Mixin imports – each provides a block of _exec_* / _eval_* methods.
 from symbolic.expressions import ExpressionEvaluator
+from symbolic.comprehensions import ComprehensionEvaluator
 from symbolic.statements import StatementExecutor
 from symbolic.loops import LoopExecutor
 from symbolic.builtins import BuiltinDispatcher
@@ -29,6 +30,7 @@ logger = logging.getLogger("tyr.symbolic.translator")
 
 class ASTToZ3Translator(
     ExpressionEvaluator,
+    ComprehensionEvaluator,
     StatementExecutor,
     LoopExecutor,
     BuiltinDispatcher,
