@@ -29,7 +29,7 @@ GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
 GROQ_API_URL: str = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODEL: str = "llama-3.3-70b-versatile"
 REQUEST_TIMEOUT: int = 120  # seconds
-MAX_RETRIES: int = 2  # retry on transient failures
+MAX_RETRIES: int = 5  # aggressive retry budget for Groq free-tier rate limits
 
 logger = logging.getLogger("tyr.llm")
 
@@ -182,7 +182,15 @@ def _call_groq(
     temperature: float = 0.0,
     max_tokens: int = 4096,
 ) -> str:
-    """Low-level Groq API call with retry logic for transient failures."""
+    """
+    Low-level Groq API call with **hardcore** retry logic.
+
+    Rate-limit strategy (Groq free tier):
+      - HTTP 429  → sleep  20 × attempt  (up to 100 s on attempt 5)
+      - HTTP 5xx  → sleep   5 × attempt
+      - Timeout / connection error → sleep 5 × attempt
+    All transient failures are retried up to MAX_RETRIES times before raising.
+    """
     import time as _time
 
     headers = {
@@ -200,10 +208,14 @@ def _call_groq(
         "max_tokens": max_tokens,
     }
 
+    total_attempts = MAX_RETRIES + 1          # e.g. 6 total with MAX_RETRIES=5
     last_exc: Exception | None = None
 
-    for attempt in range(1, MAX_RETRIES + 2):  # 1-indexed, up to MAX_RETRIES+1
-        logger.info("Calling Groq API (model=%s, attempt %d) …", GROQ_MODEL, attempt)
+    for attempt in range(1, total_attempts + 1):   # 1-indexed
+        logger.info(
+            "Groq API call  model=%s  attempt %d/%d",
+            GROQ_MODEL, attempt, total_attempts,
+        )
         try:
             response = requests.post(
                 GROQ_API_URL,
@@ -212,41 +224,83 @@ def _call_groq(
                 timeout=REQUEST_TIMEOUT,
             )
 
+            # ── Success ───────────────────────────────────────────
             if response.status_code == 200:
                 data = response.json()
                 try:
                     return data["choices"][0]["message"]["content"]
                 except (KeyError, IndexError) as exc:
-                    raise RuntimeError(f"Unexpected Groq API response: {data}") from exc
+                    raise RuntimeError(
+                        f"Unexpected Groq API response structure: {data}"
+                    ) from exc
 
-            # Retry on 5xx / 429 (rate limit)
-            if response.status_code in (429, 500, 502, 503, 504):
+            # ── 429 Rate Limit — long cooldown ────────────────────
+            if response.status_code == 429:
+                wait = 20 * attempt
                 logger.warning(
-                    "Groq API returned %d on attempt %d — retrying…",
-                    response.status_code, attempt,
+                    "RATE LIMITED (429) on attempt %d/%d — "
+                    "sleeping %d s before retry …",
+                    attempt, total_attempts, wait,
                 )
-                last_exc = RuntimeError(f"HTTP {response.status_code}: {response.text}")
-                _time.sleep(2 * attempt)  # exponential-ish backoff
-                continue
+                last_exc = RuntimeError(
+                    f"HTTP 429 Rate Limited: {response.text[:300]}"
+                )
+                if attempt < total_attempts:
+                    _time.sleep(wait)
+                    continue
+                break                           # exhausted
 
-            # Non-retryable HTTP error
-            raise RuntimeError(f"Groq API returned HTTP {response.status_code}: {response.text}")
+            # ── 5xx Server Error — moderate cooldown ──────────────
+            if response.status_code in (500, 502, 503, 504):
+                wait = 5 * attempt
+                logger.warning(
+                    "Server error (%d) on attempt %d/%d — "
+                    "sleeping %d s before retry …",
+                    response.status_code, attempt, total_attempts, wait,
+                )
+                last_exc = RuntimeError(
+                    f"HTTP {response.status_code}: {response.text[:300]}"
+                )
+                if attempt < total_attempts:
+                    _time.sleep(wait)
+                    continue
+                break
+
+            # ── Non-retryable HTTP error (4xx except 429) ─────────
+            raise RuntimeError(
+                f"Groq API returned HTTP {response.status_code}: "
+                f"{response.text[:300]}"
+            )
 
         except requests.exceptions.Timeout:
-            logger.warning("Groq API timed out on attempt %d/%d", attempt, MAX_RETRIES + 1)
-            last_exc = RuntimeError(f"Groq API timed out after {REQUEST_TIMEOUT}s")
-            if attempt <= MAX_RETRIES:
-                _time.sleep(2 * attempt)
+            wait = 5 * attempt
+            logger.warning(
+                "Groq API timed out on attempt %d/%d — "
+                "sleeping %d s …",
+                attempt, total_attempts, wait,
+            )
+            last_exc = RuntimeError(
+                f"Groq API timed out after {REQUEST_TIMEOUT}s"
+            )
+            if attempt < total_attempts:
+                _time.sleep(wait)
                 continue
 
         except requests.exceptions.ConnectionError as exc:
-            logger.warning("Connection error on attempt %d: %s", attempt, exc)
+            wait = 5 * attempt
+            logger.warning(
+                "Connection error on attempt %d/%d: %s — "
+                "sleeping %d s …",
+                attempt, total_attempts, exc, wait,
+            )
             last_exc = RuntimeError(f"Connection error: {exc}")
-            if attempt <= MAX_RETRIES:
-                _time.sleep(2 * attempt)
+            if attempt < total_attempts:
+                _time.sleep(wait)
                 continue
 
-    raise last_exc or RuntimeError("Groq API call failed after all retries")
+    raise last_exc or RuntimeError(
+        "Groq API call failed after all retries"
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -59,8 +59,9 @@ _PROJECT_ROOT     = Path(__file__).resolve().parent.parent
 DEFAULT_CSV_OUT   = _PROJECT_ROOT / "Research Paper" / "data" / "paper_results_150.csv"
 DEFAULT_API_URL   = "http://localhost:8000/verify"
 DEFAULT_TIMEOUT   = 120            # seconds per problem
-MAX_RETRIES       = 2              # retries on transient failure
-RETRY_BACKOFF     = 3              # seconds between retries
+MAX_RETRIES       = 4              # retries on transient / rate-limit failures
+RETRY_BACKOFF     = 5              # base seconds between retries
+INTER_REQUEST_DELAY = 4            # seconds between problems (free-tier throttle)
 
 CSV_FIELDS = [
     "id",
@@ -84,31 +85,61 @@ CSV_FIELDS = [
 # ═══════════════════════════════════════════════════════════════════════
 
 def _call_verify(api_url: str, code: str, timeout: int) -> dict[str, Any]:
-    """POST to /verify with retry logic.  Returns parsed JSON or error dict."""
+    """POST to /verify with retry logic.  Returns parsed JSON or error dict.
+
+    Handles 429 (rate limit) with aggressive back-off so the benchmark
+    never crashes due to Groq free-tier throttling.
+    """
     payload = {"code": code, "language": "python"}
     last_err: Exception | None = None
 
     for attempt in range(1 + MAX_RETRIES):
         try:
             resp = requests.post(api_url, json=payload, timeout=timeout)
+
+            # ── Rate-limited by backend / Groq ───────────────────
+            if resp.status_code == 429:
+                wait = 20 * (attempt + 1)
+                print(f"\n  ⚠ 429 Rate Limited — sleeping {wait}s "
+                      f"(attempt {attempt + 1}/{1 + MAX_RETRIES})",
+                      file=sys.stderr)
+                last_err = Exception(f"HTTP 429 rate limited")
+                time.sleep(wait)
+                continue
+
+            # ── Server errors (often Groq 429 surfacing as 502) ────
+            if resp.status_code in (500, 502, 503, 504):
+                wait = RETRY_BACKOFF * (attempt + 1)
+                print(f"\n  ⚠ HTTP {resp.status_code} — sleeping {wait}s "
+                      f"(attempt {attempt + 1}/{1 + MAX_RETRIES})",
+                      file=sys.stderr)
+                last_err = Exception(
+                    f"HTTP {resp.status_code}: {resp.text[:200]}")
+                if attempt < MAX_RETRIES:
+                    time.sleep(wait)
+                    continue
+                return {
+                    "status": "ERROR",
+                    "message": f"HTTP {resp.status_code} after "
+                               f"{MAX_RETRIES} retries",
+                }
+
             resp.raise_for_status()
             return resp.json()
+
         except requests.exceptions.Timeout:
-            return {"status": "TIMEOUT", "message": f"Request timed out ({timeout}s)"}
+            return {"status": "TIMEOUT",
+                    "message": f"Request timed out ({timeout}s)"}
         except requests.exceptions.ConnectionError as exc:
             last_err = exc
             if attempt < MAX_RETRIES:
                 time.sleep(RETRY_BACKOFF * (attempt + 1))
                 continue
         except requests.exceptions.HTTPError as exc:
-            status_code = getattr(exc.response, "status_code", 0)
-            if status_code in (502, 503, 504) and attempt < MAX_RETRIES:
-                last_err = exc
-                time.sleep(RETRY_BACKOFF * (attempt + 1))
-                continue
             return {
                 "status": "ERROR",
-                "message": f"HTTP {status_code}: {str(exc)[:200]}",
+                "message": f"HTTP {getattr(exc.response, 'status_code', '?')}: "
+                           f"{str(exc)[:200]}",
             }
         except (json.JSONDecodeError, ValueError) as exc:
             return {
@@ -250,6 +281,9 @@ def run(api_url: str, benchmark_path: Path, csv_out: Path, timeout: int) -> None
 
         is_pass = 1 if verdict == "UNSAT" else 0
         category_pass.setdefault(cat, []).append(is_pass)
+
+        # ── Client-side throttle (~15 req/min for free tier) ─────────
+        time.sleep(INTER_REQUEST_DELAY)
 
     bar.close()
 
