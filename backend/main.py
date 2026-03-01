@@ -322,6 +322,82 @@ def _check_complexity_improved(orig_time: str, opt_time: str) -> bool | None:
     return opt_rank < orig_rank
 
 
+class VerifyPairRequest(BaseModel):
+    """Payload for direct pair verification — skips LLM optimization."""
+    original_code: str = Field(..., min_length=1)
+    optimized_code: str = Field(..., min_length=1)
+    language: str = Field(default="python")
+
+
+@app.post("/verify-pair", response_model=VerifyResponse)
+async def verify_pair(req: VerifyPairRequest) -> VerifyResponse:
+    """
+    Verify a pre-existing (original, optimized) code pair.
+    Runs ONLY equivalence verification + complexity analysis —
+    does NOT call the LLM to generate optimized code.
+    Used by Stage 2 benchmarking to verify LLM-generated code.
+    """
+    t0 = time.perf_counter()
+    logger.info(
+        "━━━ /verify-pair request  |  orig=%d chars  |  opt=%d chars ━━━",
+        len(req.original_code), len(req.optimized_code),
+    )
+
+    # ── Equivalence verification ──────────────────────────────────────
+    try:
+        verification = verify_equivalence(req.original_code, req.optimized_code)
+    except Exception as exc:
+        logger.exception("Verification engine error")
+        verification = {
+            "status": "ERROR",
+            "message": f"Verification engine error: {exc}",
+            "counterexample": None,
+        }
+
+    status = verification.get("status", "ERROR")
+    logger.info("verify-pair verdict: %s", status)
+
+    # ── Complexity analysis ───────────────────────────────────────────
+    original_cx = ComplexityInfo()
+    optimized_cx = ComplexityInfo()
+    try:
+        cx_orig = analyze_complexity(req.original_code, language=req.language)
+        original_cx = ComplexityInfo(**cx_orig)
+    except Exception:
+        logger.warning("Original complexity analysis failed", exc_info=True)
+    try:
+        cx_opt = analyze_complexity(req.optimized_code, language=req.language)
+        optimized_cx = ComplexityInfo(**cx_opt)
+    except Exception:
+        logger.warning("Optimized complexity analysis failed", exc_info=True)
+
+    complexity_improved = _check_complexity_improved(
+        original_cx.time, optimized_cx.time
+    )
+
+    elapsed = int((time.perf_counter() - t0) * 1000)
+    logger.info("━━━ verify-pair done in %dms — %s ━━━", elapsed, status)
+
+    return VerifyResponse(
+        original_code=req.original_code,
+        optimized_code=req.optimized_code,
+        status=status,
+        message=verification.get("message", "Unknown error"),
+        counterexample=verification.get("counterexample"),
+        correction_rounds=[],
+        total_rounds=0,
+        original_complexity=original_cx,
+        optimized_complexity=optimized_cx,
+        complexity_improved=complexity_improved,
+        elapsed_ms=elapsed,
+        verification_bounds={
+            "max_list_length": MAX_BMC_LENGTH,
+            "max_symbolic_range": MAX_SYMBOLIC_RANGE,
+            "max_loop_unroll": MAX_LOOP_UNROLL,
+        },
+    )
+
+
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok", "engine": ENGINE_VERSION}
