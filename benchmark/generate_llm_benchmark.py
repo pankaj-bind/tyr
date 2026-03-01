@@ -33,11 +33,12 @@ CSV_COLUMNS = [
     "difficulty",
     "original_complexity",
     "target_complexity",
-    "verdict",                  # Stage 2 placeholder
+    "generated_code_complexity",
+    "verdict",
     "original_code",
     "generated_code",
-    "optimized_complexity_time", # Stage 2 placeholder
-    "complexity_improved",      # Stage 2 placeholder
+    "optimized_complexity_time",
+    "complexity_improved",
     "latency_ms",
     "prompt_tokens",
     "reasoning_tokens",
@@ -213,6 +214,161 @@ def _syntax_check(code: str) -> bool:
         return True
     except SyntaxError:
         return False
+
+
+# ══════════════════════ COMPLEXITY ESTIMATOR ══════════════════════
+_COMPLEXITY_RANK: dict[str, int] = {
+    "1": 0,
+    "logn": 1,
+    "sqrtn": 2,
+    "n": 3,
+    "nlogn": 4,
+    "n^2": 5,
+    "n^3": 6,
+    "2^n": 7,
+    "n!": 8,
+}
+
+
+def _normalize_complexity(s: str) -> str | None:
+    """Normalize a Big-O string to a canonical form for ranking."""
+    s = s.strip().lower()
+    m = re.match(r"o\((.+)\)", s)
+    if not m:
+        return None
+    inner = m.group(1).strip()
+    inner = re.sub(r"\s+", "", inner)
+    inner = inner.replace("²", "^2").replace("³", "^3")
+    inner = inner.replace("**", "^")
+    inner = inner.replace("*", "")
+    inner = re.sub(r"log\(n\)", "logn", inner)
+    inner = re.sub(r"sqrt\(n\)", "sqrtn", inner)
+    return inner
+
+
+def _compare_complexity(original: str, generated: str) -> str:
+    """Compare two Big-O strings.
+
+    Returns:
+        "True"  — generated is strictly better (lower rank)
+        "False" — generated is strictly worse  (higher rank)
+        "Same"  — identical complexity
+    """
+    orig_n = _normalize_complexity(original)
+    gen_n = _normalize_complexity(generated)
+    if orig_n is None or gen_n is None:
+        return "Same"  # can't determine → assume no change
+    orig_r = _COMPLEXITY_RANK.get(orig_n)
+    gen_r = _COMPLEXITY_RANK.get(gen_n)
+    if orig_r is None or gen_r is None:
+        if orig_n == gen_n:
+            return "Same"
+        return "Same"  # unknown ranking → safe default
+    if gen_r < orig_r:
+        return "True"
+    if gen_r > orig_r:
+        return "False"
+    return "Same"
+
+
+def estimate_complexity(code: str) -> str:
+    """Heuristic AST-based time-complexity estimation.
+
+    Analyses loop nesting depth, recursive calls, and built-in
+    calls like sorted()/sort() to produce a Big-O estimate.
+    """
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        return "N/A"
+
+    func_names: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef):
+            func_names.add(node.name)
+
+    max_depth = 0
+    has_sort = False
+    has_recursion = False
+    has_log_pattern = False
+
+    class _LoopVisitor(ast.NodeVisitor):
+        def __init__(self) -> None:
+            self.depth = 0
+
+        def _enter_loop(self, node: ast.AST) -> None:
+            nonlocal max_depth, has_log_pattern
+            self.depth += 1
+            if self.depth > max_depth:
+                max_depth = self.depth
+            # Detect log-pattern: while-loop with halving (i //= 2, i >>= 1)
+            if isinstance(node, ast.While):
+                for child in ast.walk(node):
+                    if isinstance(child, ast.AugAssign):
+                        if isinstance(child.op, (ast.FloorDiv, ast.RShift)):
+                            has_log_pattern = True
+            self.generic_visit(node)
+            self.depth -= 1
+
+        def visit_For(self, node: ast.For) -> None:
+            self._enter_loop(node)
+
+        def visit_While(self, node: ast.While) -> None:
+            self._enter_loop(node)
+
+        def visit_ListComp(self, node: ast.ListComp) -> None:
+            nonlocal max_depth
+            self.depth += len(node.generators)
+            if self.depth > max_depth:
+                max_depth = self.depth
+            self.generic_visit(node)
+            self.depth -= len(node.generators)
+
+        def visit_SetComp(self, node: ast.SetComp) -> None:
+            self.visit_ListComp(node)  # type: ignore[arg-type]
+
+        def visit_DictComp(self, node: ast.DictComp) -> None:
+            self.visit_ListComp(node)  # type: ignore[arg-type]
+
+        def visit_Call(self, node: ast.Call) -> None:
+            nonlocal has_sort, has_recursion
+            fname = ""
+            if isinstance(node.func, ast.Name):
+                fname = node.func.id
+            elif isinstance(node.func, ast.Attribute):
+                fname = node.func.attr
+            if fname in ("sorted", "sort"):
+                has_sort = True
+            if fname in func_names:
+                has_recursion = True
+            self.generic_visit(node)
+
+    _LoopVisitor().visit(tree)
+
+    # Heuristic decision tree
+    if has_recursion:
+        # Recursive + loops → exponential (conservative)
+        if max_depth >= 1:
+            return "O(2^n)"
+        return "O(2^n)"
+
+    if max_depth == 0 and not has_sort:
+        if has_log_pattern:
+            return "O(log n)"
+        return "O(1)"
+
+    if has_sort:
+        # sorted() inside a loop → O(n^2 log n) ≈ O(n^2)
+        if max_depth >= 1:
+            return "O(n^2)"
+        return "O(n log n)"
+
+    if has_log_pattern:
+        # log loop nested inside linear → O(n log n)
+        return "O(n log n)"
+
+    depth_map = {1: "O(n)", 2: "O(n^2)", 3: "O(n^3)"}
+    return depth_map.get(max_depth, f"O(n^{max_depth})")
 
 
 # ══════════════════════ TOKEN EXTRACTION ══════════════════════════
@@ -698,11 +854,24 @@ def main() -> None:
                 latencies.append(latency_ms)
                 ok_count += 1
 
+                # ── Complexity estimation & verdict ──────────────
+                gen_cx = estimate_complexity(generated_code)
+                orig_cx = problem.get("original_complexity", "")
+                if gen_cx != "N/A" and orig_cx:
+                    verdict_val = _compare_complexity(orig_cx, gen_cx)
+                else:
+                    verdict_val = "Same"
+
         except Exception as exc:
             api_status = "ERROR"
             error_detail = str(exc)[:500]
             tqdm.write(f"  ✖  {pid} ({name}): {exc}")
             error_count += 1
+
+        # Defaults for error / syntax-error paths
+        if api_status != "OK":
+            gen_cx = "N/A"
+            verdict_val = ""
 
         row = {
             "id":                       pid,
@@ -711,11 +880,12 @@ def main() -> None:
             "difficulty":               problem.get("difficulty", ""),
             "original_complexity":      problem.get("original_complexity", ""),
             "target_complexity":        problem.get("target_complexity", ""),
-            "verdict":                  "",   # Stage 2 fills this
+            "generated_code_complexity": gen_cx,
+            "verdict":                  verdict_val,
             "original_code":            problem.get("original_code", ""),
             "generated_code":           generated_code,
-            "optimized_complexity_time": "",  # Stage 2 fills this
-            "complexity_improved":      "",   # Stage 2 fills this
+            "optimized_complexity_time": gen_cx if gen_cx != "N/A" else "",
+            "complexity_improved":      verdict_val,
             "latency_ms":               f"{latency_ms:.1f}",
             "prompt_tokens":            prompt_tokens,
             "reasoning_tokens":         reasoning_tokens,
