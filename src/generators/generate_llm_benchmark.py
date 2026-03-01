@@ -2,18 +2,25 @@
 """
 Tyr — Unified Stage 1: LLM Code Generation
 ============================================
-Single entry-point for ALL providers. Routes to the correct SDK via
-``--provider`` and enforces zero-discrimination between models at every
-layer: prompt, temperature policy, latency measurement, cleaning, and
-CSV schema.
+Single entry-point for ALL providers.  Supports two benchmark suites:
 
-Supported providers
-~~~~~~~~~~~~~~~~~~~
-    github    OpenAI SDK → https://models.inference.ai.azure.com (GitHub PAT)
-    openai    OpenAI SDK → https://api.openai.com/v1
-    deepseek  OpenAI SDK → https://api.deepseek.com
-    grok      OpenAI SDK → https://api.x.ai/v1
-    gemini    google-genai SDK → Google AI
+PART 1 — System 1 (Standard) Benchmarks
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    gpt-4.1                        OpenAI Prior Gen
+    DeepSeek-V3-0324               Open-Weight Standard SOTA
+    Meta-Llama-3.1-405B-Instruct   Heavy Compute Open-Source
+    Codestral-2501                 Coding-Specific Baseline
+    grok-3                         xAI Standard Heavyweight
+    gemini-2.5-pro                 Google Standard
+
+PART 2 — System 2 (Reasoning) Titans
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    gpt-5                          OpenAI Reasoning Baseline
+    o3                             OpenAI SOTA Reasoning
+    o4-mini                        OpenAI Lightweight Reasoning
+    DeepSeek-R1-0528               Open-Weight Reasoning SOTA
+    MAI-DS-R1                      Microsoft Post-Trained R1
+    gemini-2.5-flash               Google Fast Reasoning
 
 Stage 1 output schema  (data/raw/<provider>_<model>.csv)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -25,14 +32,21 @@ Stage 1 output schema  (data/raw/<provider>_<model>.csv)
 
 Usage
 ~~~~~
+    # Single model
     python src/generators/generate_llm_benchmark.py \\
-        --provider github --model gpt-4o --api-key ghp_XXX
+        --provider github --model gpt-4.1 --api-key ghp_XXX
 
-    python src/generators/generate_llm_benchmark.py \\
-        --provider gemini --model gemini-2.5-flash --api-key AIzaSy...
+    # Run entire System 1 suite (keys from .env)
+    python src/generators/generate_llm_benchmark.py --suite system1
 
-    python src/generators/generate_llm_benchmark.py \\
-        --provider deepseek --model deepseek-reasoner --api-key sk-...
+    # Run entire System 2 suite
+    python src/generators/generate_llm_benchmark.py --suite system2
+
+    # Run ALL 12 models
+    python src/generators/generate_llm_benchmark.py --suite all
+
+    # List registered models + key availability
+    python src/generators/generate_llm_benchmark.py --list-models
 """
 from __future__ import annotations
 
@@ -65,41 +79,129 @@ except ImportError:
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# Constants
+# Provider Configuration
 # ═══════════════════════════════════════════════════════════════════════
 
 _PROVIDER_BASES: dict[str, str] = {
     "github":   "https://models.inference.ai.azure.com",
     "openai":   "https://api.openai.com/v1",
     "deepseek": "https://api.deepseek.com",
-    "grok":     "https://api.x.ai/v1",
 }
 
 _ENV_KEY_MAP: dict[str, list[str]] = {
     "github":   ["GITHUB_TOKEN", "GITHUB_PAT"],
     "openai":   ["OPENAI_API_KEY"],
     "deepseek": ["DEEPSEEK_API_KEY"],
-    "grok":     ["GROK_API_KEY", "XAI_API_KEY"],
     "gemini":   ["GEMINI_API_KEY", "Gemini_API_KEY"],
 }
 
-# Models that reject temperature / top_p / presence_penalty / n
-# These use reasoning_effort instead.
+
+# ═══════════════════════════════════════════════════════════════════════
+# Model Registry — all benchmark models with provider & suite routing
+# ═══════════════════════════════════════════════════════════════════════
+
+MODEL_REGISTRY: dict[str, dict] = {
+    # ── PART 1: System 1 (Standard) Benchmarks ────────────────────
+    # Pure autoregressive / instruction-tuned — no chain-of-thought
+    # reasoning. Use temperature=0.0.
+    "gpt-4.1": {
+        "provider": "github",
+        "suite":    "system1",
+        "label":    "GPT-4.1 (OpenAI Prior Gen)",
+    },
+    "DeepSeek-V3-0324": {
+        "provider": "github",
+        "suite":    "system1",
+        "label":    "DeepSeek-V3-0324 (Open-Weight Standard SOTA)",
+    },
+    "Meta-Llama-3.1-405B-Instruct": {
+        "provider": "github",
+        "suite":    "system1",
+        "label":    "Meta-Llama-3.1-405B (Heavy Compute Open-Source)",
+    },
+    "Codestral-2501": {
+        "provider": "github",
+        "suite":    "system1",
+        "label":    "Codestral 25.01 (Coding-Specific Baseline)",
+    },
+    "grok-3": {
+        "provider": "github",
+        "suite":    "system1",
+        "label":    "Grok 3 (xAI Standard Heavyweight)",
+    },
+    "gemini-2.5-pro": {
+        "provider": "gemini",
+        "suite":    "system1",
+        "label":    "Gemini 2.5 Pro (Google Standard)",
+    },
+
+    # ── PART 2: System 2 (Reasoning) Titans ───────────────────────
+    # Chain-of-thought / reasoning-effort models. Reject temperature;
+    # use reasoning_effort="high" or thinking_budget.
+    "gpt-5": {
+        "provider": "github",
+        "suite":    "system2",
+        "label":    "GPT-5 (OpenAI Reasoning Baseline)",
+    },
+    "o3": {
+        "provider": "github",
+        "suite":    "system2",
+        "label":    "o3 (OpenAI SOTA Reasoning)",
+    },
+    "o4-mini": {
+        "provider": "github",
+        "suite":    "system2",
+        "label":    "o4-mini (OpenAI Lightweight Reasoning)",
+    },
+    "DeepSeek-R1-0528": {
+        "provider": "github",
+        "suite":    "system2",
+        "label":    "DeepSeek-R1-0528 (Open-Weight Reasoning SOTA)",
+    },
+    "MAI-DS-R1": {
+        "provider": "github",
+        "suite":    "system2",
+        "label":    "MAI-DS-R1 (Microsoft Post-Trained R1)",
+    },
+    "gemini-2.5-flash": {
+        "provider":        "gemini",
+        "suite":           "system2",
+        "label":           "Gemini 2.5 Flash (Google Fast Reasoning)",
+        "thinking_budget": 8192,
+    },
+}
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Reasoning-model set  (API-level: rejects temperature, uses
+# reasoning_effort).  Independent of System 1 / System 2 categorization.
+# ═══════════════════════════════════════════════════════════════════════
+
 _REASONING_MODELS: frozenset[str] = frozenset({
+    # OpenAI o-series
     "o1", "o1-mini", "o1-preview",
     "o3", "o3-mini",
     "o4-mini",
+    # GPT-5 unified — rejects temperature via OpenAI API
     "gpt-5",
-    "deepseek-reasoner",
-    "deepseek-r1",
-    "DeepSeek-R1-0528",
+    # DeepSeek reasoning family
+    "deepseek-reasoner", "deepseek-r1", "DeepSeek-R1-0528",
+    # Microsoft post-trained R1 — same API constraints as DeepSeek-R1
+    "MAI-DS-R1",
+    # NOTE: grok-3 is standard (System 1) — accepts temperature normally.
+    # NOTE: Gemini thinking is controlled via thinking_budget, not this set.
 })
 
-DEFAULT_DATASET = _PROJECT_ROOT / "dataset" / "tyr_benchmark_150.json"
+
+# ═══════════════════════════════════════════════════════════════════════
+# Constants
+# ═══════════════════════════════════════════════════════════════════════
+
+DEFAULT_DATASET  = _PROJECT_ROOT / "dataset" / "tyr_benchmark_150.json"
 DEFAULT_DATA_DIR = _PROJECT_ROOT / "data" / "raw"
 
-# Stage 1 CSV schema — deliberately excludes verdict/optimized_complexity
-# (those are owned by Stage 2).
+# Stage 1 CSV schema — deliberately excludes verdict / optimized_complexity
+# (those are owned exclusively by Stage 2).
 CSV_COLUMNS: list[str] = [
     "id",
     "name",
@@ -125,15 +227,9 @@ PROMPT_TEMPLATE = (
     "Do not provide explanations.\n\nNaive Code:\n{original_code}"
 )
 
-# Exponential: 2^1=2s, 2^2=4s, 2^3=8s
+# Exponential backoff: 2^1=2s, 2^2=4s, 2^3=8s
 MAX_RETRIES  = 3
 BACKOFF_BASE = 2
-
-# Unified tqdm bar format — IDENTICAL for every provider/model.
-_BAR_FMT = (
-    "  [{model}] {l_bar}{bar}| {n_fmt}/{total_fmt} "
-    "[{elapsed}<{remaining}]"
-)
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -281,11 +377,14 @@ def _call_gemini(
     """Google Gemini call via google-genai SDK."""
     from google.genai import types
 
-    config_kwargs: dict = {"temperature": 0.0}
+    config_kwargs: dict = {}
     if thinking_budget is not None:
         config_kwargs["thinking_config"] = types.ThinkingConfig(
             thinking_budget=thinking_budget,
         )
+    else:
+        config_kwargs["temperature"] = 0.0
+
     config = types.GenerateContentConfig(**config_kwargs)
 
     # ── LATENCY ISOLATION ──────────────────────────────────────────
@@ -428,6 +527,58 @@ def _pct(data: list[float], p: float) -> float:
 
 
 # ═══════════════════════════════════════════════════════════════════════
+# Suite helpers
+# ═══════════════════════════════════════════════════════════════════════
+
+def _get_suite_models(suite: str) -> dict[str, dict]:
+    """Return models matching the given suite filter."""
+    if suite == "all":
+        return dict(MODEL_REGISTRY)
+    return {k: v for k, v in MODEL_REGISTRY.items() if v["suite"] == suite}
+
+
+def _resolve_api_key(provider: str, cli_key: str | None = None) -> str | None:
+    """Resolve API key from CLI → .env. Returns None if not found."""
+    if cli_key:
+        return cli_key
+    for env in _ENV_KEY_MAP.get(provider, []):
+        val = os.getenv(env)
+        if val:
+            return val
+    return None
+
+
+def list_models() -> None:
+    """Print all registered models with key availability."""
+    print(f"\n{'═' * 80}")
+    print("  Tyr — Registered Benchmark Models")
+    print(f"{'═' * 80}")
+
+    for suite_name, suite_label in [
+        ("system1", "PART 1: System 1 (Standard) Benchmarks"),
+        ("system2", "PART 2: System 2 (Reasoning) Titans"),
+    ]:
+        models = _get_suite_models(suite_name)
+        print(f"\n  {suite_label}")
+        print(f"  {'─' * 74}")
+        for i, (model_id, info) in enumerate(models.items(), 1):
+            has_key = _resolve_api_key(info["provider"]) is not None
+            key_icon = "✔" if has_key else "✖"
+            reasoning = model_id in _REASONING_MODELS
+            thinking  = info.get("thinking_budget") is not None
+            mode = "THINK" if thinking else ("REASON" if reasoning else "STD")
+            print(
+                f"    {i}. {model_id:<35s}  "
+                f"[{info['provider']:<8s}]  "
+                f"Key: {key_icon}  "
+                f"Mode: {mode:<6s}  "
+                f"{info['label']}"
+            )
+
+    print(f"\n{'═' * 80}\n")
+
+
+# ═══════════════════════════════════════════════════════════════════════
 # CLI
 # ═══════════════════════════════════════════════════════════════════════
 
@@ -436,24 +587,35 @@ def parse_args() -> argparse.Namespace:
         description="Tyr Stage 1 — Unified LLM Code Generation Benchmark",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
-            "Examples:\n"
-            "  --provider github   --model gpt-4o          --api-key ghp_XXX\n"
-            "  --provider github   --model o3-mini         --api-key ghp_XXX\n"
-            "  --provider gemini   --model gemini-2.5-flash --api-key AIzaSy...\n"
-            "  --provider deepseek --model deepseek-reasoner --api-key sk-...\n"
-            "  --provider grok     --model grok-3          --api-key xai-...\n"
+            "Single model:\n"
+            "  --provider github --model gpt-4.1 --api-key ghp_XXX\n\n"
+            "Suite mode (runs all models in a suite automatically):\n"
+            "  --suite system1          (6 standard models)\n"
+            "  --suite system2          (6 reasoning models)\n"
+            "  --suite all              (all 12 models)\n\n"
+            "List registered models:\n"
+            "  --list-models\n"
         ),
+    )
+    mode = ap.add_mutually_exclusive_group()
+    mode.add_argument(
+        "--suite",
+        choices=["system1", "system2", "all"],
+        help="Run all models in a benchmark suite.",
+    )
+    mode.add_argument(
+        "--list-models",
+        action="store_true",
+        help="List all registered benchmark models and exit.",
     )
     ap.add_argument(
         "--provider",
-        required=True,
-        choices=["github", "openai", "gemini", "deepseek", "grok"],
-        help="LLM provider.",
+        choices=["github", "openai", "gemini", "deepseek"],
+        help="LLM provider (required for single-model mode).",
     )
     ap.add_argument(
         "--model",
-        required=True,
-        help="Model identifier (must match the provider's API).",
+        help="Model identifier (required for single-model mode).",
     )
     ap.add_argument(
         "--api-key",
@@ -471,7 +633,7 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=None,
         dest="thinking_budget",
-        help="Thinking token budget for Gemini 2.5 models (optional).",
+        help="Thinking token budget for Gemini models (optional).",
     )
     ap.add_argument(
         "--dataset",
@@ -487,58 +649,54 @@ def parse_args() -> argparse.Namespace:
     return ap.parse_args()
 
 
-def _resolve_api_key(provider: str, cli_key: str | None) -> str:
-    if cli_key:
-        return cli_key
-    for env in _ENV_KEY_MAP.get(provider, []):
-        val = os.getenv(env)
-        if val:
-            return val
-    sys.exit(
-        f"ERROR: No API key for provider '{provider}'. "
-        "Pass --api-key or set a key in backend/.env."
-    )
-
-
 # ═══════════════════════════════════════════════════════════════════════
-# Main
+# Single-model benchmark runner
 # ═══════════════════════════════════════════════════════════════════════
 
-def main() -> None:
-    args     = parse_args()
-    provider = args.provider
-    model    = args.model
-    api_key  = _resolve_api_key(provider, args.api_key)
+def run_single_benchmark(
+    provider: str,
+    model: str,
+    api_key: str,
+    dataset: list[dict],
+    data_dir: Path,
+    delay: float,
+    thinking_budget: int | None = None,
+) -> dict:
+    """Run the full 150-problem benchmark for one model.
+
+    Returns a summary dict with ok/error/syntax counts and output path.
+    """
     is_reasoning = model in _REASONING_MODELS or model.lower() in {
         m.lower() for m in _REASONING_MODELS
     }
 
-    # ── Load dataset ────────────────────────────────────────────────
-    with open(args.dataset, "r", encoding="utf-8") as fh:
-        dataset: list[dict] = json.load(fh)
-
     # ── Build client ONCE before any timing begins ─────────────────
     client = build_client(provider, api_key)
 
-    # ── CSV
-    csv_path = _output_csv_path(provider, model, Path(args.output_dir))
+    # ── CSV setup ──────────────────────────────────────────────────
+    csv_path = _output_csv_path(provider, model, data_dir)
     _ensure_header(csv_path)
     processed = _load_processed_ids(csv_path)
 
-    # ── Banner ──────────────────────────────────────────────────────
+    # ── Resolve suite label from registry ──────────────────────────
+    reg = MODEL_REGISTRY.get(model, {})
+    suite_tag = reg.get("suite", "custom").upper()
+
+    # ── Banner ─────────────────────────────────────────────────────
     print(
         f"\n{'═' * 72}\n"
-        f"  Tyr Stage 1 — Unified LLM Benchmark\n"
+        f"  Tyr Stage 1 — {suite_tag} Benchmark\n"
         f"  Provider  : {provider.upper()}\n"
         f"  Model     : {model}\n"
         f"  Reasoning : {'YES (temperature stripped)' if is_reasoning else 'NO (temperature=0.0)'}\n"
+        f"  Thinking  : {f'{thinking_budget} tokens' if thinking_budget else 'OFF'}\n"
         f"  Problems  : {len(dataset)}  ({len(processed)} already done)\n"
-        f"  Delay     : {args.delay}s\n"
+        f"  Delay     : {delay}s\n"
         f"  Output    : {csv_path}\n"
         f"{'═' * 72}\n"
     )
 
-    # ── Counters ────────────────────────────────────────────────────
+    # ── Counters ───────────────────────────────────────────────────
     ok = err = skipped = syntax_errs = 0
     latencies: list[float] = []
     t_start = time.time()
@@ -558,8 +716,6 @@ def main() -> None:
         pid  = problem["id"]
         name = problem["name"]
 
-        # Uniform postfix: ID | latency | status
-        # (updated after each problem so every model shows identical fields)
         bar.set_postfix(
             id=pid,
             lat=f"{latencies[-1]:.0f}ms" if latencies else "—",
@@ -576,26 +732,26 @@ def main() -> None:
             original_code=problem["original_code"],
         )
 
-        generated_code = ""
-        api_status     = "OK"
-        error_detail   = ""
-        latency_ms     = 0.0
-        prompt_tokens  = 0
+        generated_code   = ""
+        api_status       = "OK"
+        error_detail     = ""
+        latency_ms       = 0.0
+        prompt_tokens    = 0
         reasoning_tokens = 0
-        total_tokens   = 0
+        total_tokens     = 0
 
-        # ── Step 1: API call (with backoff) ────────────────────────
+        # ── API call (with backoff) ────────────────────────────────
         try:
             if provider == "gemini":
                 fn = lambda: _call_gemini(         # noqa: E731
-                    client, model, prompt, args.thinking_budget,
+                    client, model, prompt, thinking_budget,
                 )
             else:
                 fn = lambda: _call_openai_compat(  # noqa: E731
                     client, model, prompt, is_reasoning,
                 )
 
-            result = _call_with_backoff(fn, label=f"{pid}")
+            result = _call_with_backoff(fn, label=pid)
 
             latency_ms       = result["latency_ms"]
             prompt_tokens    = result["prompt_tokens"]
@@ -620,7 +776,7 @@ def main() -> None:
             )
             err += 1
 
-        # ── Step 2: Write row immediately — crash-safe ─────────────
+        # ── Write row immediately — crash-safe ─────────────────────
         _append_row(csv_path, {
             "id":                   pid,
             "name":                 name,
@@ -639,11 +795,11 @@ def main() -> None:
             "error_detail":         error_detail,
         })
 
-        time.sleep(args.delay)
+        time.sleep(delay)
 
     bar.close()
 
-    # ── Summary ─────────────────────────────────────────────────────
+    # ── Summary ────────────────────────────────────────────────────
     elapsed = time.time() - t_start
     m_e, s_e = divmod(int(elapsed), 60)
     h_e, m_e = divmod(m_e, 60)
@@ -666,6 +822,155 @@ def main() -> None:
         f"{'─' * 72}\n"
         f"  Output  →  {csv_path}\n"
         f"{'═' * 72}\n"
+    )
+
+    return {
+        "model": model,
+        "provider": provider,
+        "suite": reg.get("suite", "custom"),
+        "ok": ok,
+        "errors": err,
+        "syntax_errs": syntax_errs,
+        "skipped": skipped,
+        "elapsed_s": elapsed,
+        "csv_path": str(csv_path),
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Main
+# ═══════════════════════════════════════════════════════════════════════
+
+def main() -> None:
+    args = parse_args()
+
+    # ── List models and exit ───────────────────────────────────────
+    if args.list_models:
+        list_models()
+        return
+
+    # ── Load dataset (once) ────────────────────────────────────────
+    with open(args.dataset, "r", encoding="utf-8") as fh:
+        dataset: list[dict] = json.load(fh)
+
+    data_dir = Path(args.output_dir)
+
+    # ── Suite mode: batch-run all models in the suite ──────────────
+    if args.suite:
+        models = _get_suite_models(args.suite)
+        suite_label = {
+            "system1": "System 1 (Standard)",
+            "system2": "System 2 (Reasoning)",
+            "all":     "All Models (System 1 + System 2)",
+        }[args.suite]
+
+        print(
+            f"\n{'█' * 72}\n"
+            f"  Tyr — Suite Benchmark: {suite_label}\n"
+            f"  Models : {len(models)}\n"
+            f"  Dataset: {len(dataset)} problems\n"
+            f"{'█' * 72}\n"
+        )
+
+        results: list[dict] = []
+        skipped_models: list[str] = []
+
+        for i, (model_id, info) in enumerate(models.items(), 1):
+            provider = info["provider"]
+            api_key  = _resolve_api_key(provider, args.api_key)
+
+            if not api_key:
+                print(
+                    f"\n  ⚠  [{i}/{len(models)}] SKIP {model_id} — "
+                    f"no API key for provider '{provider}'"
+                )
+                skipped_models.append(model_id)
+                continue
+
+            print(
+                f"\n  ▶  [{i}/{len(models)}] Starting {model_id} "
+                f"({info['label']})"
+            )
+
+            thinking = info.get("thinking_budget") or args.thinking_budget
+            summary = run_single_benchmark(
+                provider=provider,
+                model=model_id,
+                api_key=api_key,
+                dataset=dataset,
+                data_dir=data_dir,
+                delay=args.delay,
+                thinking_budget=thinking,
+            )
+            results.append(summary)
+
+        # ── Final suite summary ────────────────────────────────────
+        total_ok  = sum(r["ok"] for r in results)
+        total_err = sum(r["errors"] for r in results)
+        total_syn = sum(r["syntax_errs"] for r in results)
+        total_elapsed = sum(r["elapsed_s"] for r in results)
+        h, rem = divmod(int(total_elapsed), 3600)
+        m, s   = divmod(rem, 60)
+
+        print(f"\n{'█' * 72}")
+        print(f"  SUITE COMPLETE — {suite_label}")
+        print(f"{'─' * 72}")
+        for r in results:
+            print(
+                f"    {r['model']:<35s}  OK={r['ok']:<4d} "
+                f"ERR={r['errors']:<3d} "
+                f"SYN={r['syntax_errs']:<3d}  "
+                f"→  {r['csv_path']}"
+            )
+        if skipped_models:
+            print(f"{'─' * 72}")
+            print(f"    Skipped (missing keys): {', '.join(skipped_models)}")
+        print(f"{'─' * 72}")
+        print(
+            f"    Totals   OK={total_ok}  ERR={total_err}  "
+            f"SYNTAX={total_syn}  "
+            f"Wall={h:02d}h {m:02d}m {s:02d}s"
+        )
+        print(f"{'█' * 72}\n")
+        return
+
+    # ── Single model mode ──────────────────────────────────────────
+    if not args.model:
+        sys.exit(
+            "ERROR: --model is required for single-model mode.\n"
+            "       Use --suite system1|system2|all for batch mode.\n"
+            "       Use --list-models to see available models."
+        )
+
+    # Auto-resolve provider from registry if not specified
+    if not args.provider:
+        if args.model in MODEL_REGISTRY:
+            args.provider = MODEL_REGISTRY[args.model]["provider"]
+        else:
+            sys.exit(
+                f"ERROR: --provider is required for model '{args.model}' "
+                f"(not found in registry)."
+            )
+
+    api_key = _resolve_api_key(args.provider, args.api_key)
+    if not api_key:
+        sys.exit(
+            f"ERROR: No API key for provider '{args.provider}'. "
+            "Pass --api-key or set a key in backend/.env."
+        )
+
+    # If model is in registry, auto-apply thinking_budget when not set via CLI
+    reg = MODEL_REGISTRY.get(args.model, {})
+    thinking = args.thinking_budget or reg.get("thinking_budget")
+
+    run_single_benchmark(
+        provider=args.provider,
+        model=args.model,
+        api_key=api_key,
+        dataset=dataset,
+        data_dir=data_dir,
+        delay=args.delay,
+        thinking_budget=thinking,
     )
 
 

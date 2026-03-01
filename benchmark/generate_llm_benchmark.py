@@ -47,21 +47,41 @@ CSV_COLUMNS = [
     "error_detail",
 ]
 
+# ─────────────────────────── MODEL REGISTRY ─────────────────────────
+# All benchmark models with provider & suite routing.
+MODEL_REGISTRY: dict[str, dict] = {
+    # ── PART 1: System 1 (Standard) Benchmarks ────────────────────
+    "gpt-5":                        {"provider": "github", "suite": "system1", "label": "GPT-5 (OpenAI Baseline)"},
+    "gpt-4.1":                      {"provider": "github", "suite": "system1", "label": "GPT-4.1 (OpenAI Prior Gen)"},
+    "DeepSeek-V3-0324":             {"provider": "github", "suite": "system1", "label": "DeepSeek-V3-0324 (Open-Weight Standard SOTA)"},
+    "Meta-Llama-3.1-405B-Instruct": {"provider": "github", "suite": "system1", "label": "Meta-Llama-3.1-405B (Heavy Compute Open-Source)"},
+    "Codestral-2501":               {"provider": "github", "suite": "system1", "label": "Codestral 25.01 (Coding-Specific Baseline)"},
+    "gemini-2.5-pro":               {"provider": "gemini", "suite": "system1", "label": "Gemini 2.5 Pro (Google Standard)"},
+    # ── PART 2: System 2 (Reasoning) Titans ───────────────────────
+    "o3":                           {"provider": "github", "suite": "system2", "label": "o3 (OpenAI SOTA Reasoning)"},
+    "o4-mini":                      {"provider": "github", "suite": "system2", "label": "o4-mini (OpenAI Lightweight Reasoning)"},
+    "DeepSeek-R1-0528":             {"provider": "github", "suite": "system2", "label": "DeepSeek-R1-0528 (Open-Weight Reasoning SOTA)"},
+    "MAI-DS-R1":                    {"provider": "github", "suite": "system2", "label": "MAI-DS-R1 (Microsoft Post-Trained R1)"},
+    "grok-3":                       {"provider": "grok",   "suite": "system2", "label": "Grok 3 (xAI Heavyweight Reasoning)"},
+    "gemini-2.5-flash":             {"provider": "gemini", "suite": "system2", "label": "Gemini 2.5 Flash (Google Fast Reasoning)", "thinking_budget": 8192},
+}
+
 # ─────────────────────────── REASONING MODEL REGISTRY ───────────────
 # Models that REJECT temperature / top_p / presence_penalty / n
+# (API-level concern, independent of System 1/System 2 categorization)
 REASONING_MODELS = frozenset({
-    "gpt-5",
+    "o1", "o1-mini", "o1-preview",
     "o3", "o3-mini",
     "o4-mini",
-    "o1", "o1-mini", "o1-preview",
-    "deepseek-reasoner",
-    "deepseek-r1",
-    "DeepSeek-R1-0528",
-    "grok-3",
+    "gpt-5",
+    "deepseek-reasoner", "deepseek-r1", "DeepSeek-R1-0528",
+    "MAI-DS-R1",
+    # NOTE: grok-3 is standard (System 1) — accepts temperature normally.
+    # NOTE: Gemini thinking is controlled via thinking_budget.
 })
 
 # Models using OpenAI-compatible SDK (not Gemini)
-OPENAI_COMPAT_PROVIDERS = frozenset({"openai", "deepseek", "llama", "grok", "github"})
+OPENAI_COMPAT_PROVIDERS = frozenset({"openai", "deepseek", "github"})
 
 GITHUB_MODELS_BASE_URL = "https://models.inference.ai.azure.com"
 
@@ -559,8 +579,6 @@ def _call_openai_compat(
         client_kwargs["base_url"] = GITHUB_MODELS_BASE_URL
     elif provider == "deepseek":
         client_kwargs["base_url"] = "https://api.deepseek.com"
-    elif provider == "grok":
-        client_kwargs["base_url"] = "https://api.x.ai/v1"
 
     client = openai.OpenAI(**client_kwargs)
 
@@ -704,7 +722,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--provider",
         required=True,
-        choices=["openai", "gemini", "deepseek", "llama", "grok", "github"],
+        choices=["openai", "gemini", "deepseek", "github"],
         help="LLM provider (github = GitHub Models endpoint).",
     )
     parser.add_argument(
@@ -745,10 +763,8 @@ def resolve_api_key(args: argparse.Namespace) -> str:
         return args.api_key
     key_map = {
         "gemini":   ["Gemini_API_KEY", "GEMINI_API_KEY"],
-        "llama":    ["GROQ_API_KEY"],
-        "deepseek": ["DEEPSEEK_API_KEY", "GROQ_API_KEY"],
+        "deepseek": ["DEEPSEEK_API_KEY"],
         "openai":   ["OPENAI_API_KEY"],
-        "grok":     ["GROK_API_KEY", "XAI_API_KEY"],
         "github":   ["GITHUB_TOKEN", "GITHUB_PAT"],
     }
     for env_var in key_map.get(args.provider, []):
