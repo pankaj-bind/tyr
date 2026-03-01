@@ -28,16 +28,23 @@ load_dotenv(PROJECT_ROOT / "backend" / ".env")
 GITHUB_MODELS_BASE_URL = "https://models.inference.ai.azure.com"
 
 CSV_COLUMNS = [
-    "problem_id",
-    "problem_name",
+    "id",
+    "name",
+    "category",
     "difficulty",
+    "original_complexity",
     "target_complexity",
-    "model_name",
+    "verdict",
     "original_code",
     "generated_code",
+    "optimized_complexity_time",
+    "complexity_improved",
     "latency_ms",
+    "prompt_tokens",
+    "reasoning_tokens",
     "total_tokens",
     "api_status",
+    "error_detail",
 ]
 
 PROMPT_TEMPLATE = (
@@ -84,6 +91,7 @@ SUMMARY_TPL = """
 ║  Avg Latency (ms)    : {avg_latency:<48s}║
 ║  p50 Latency (ms)    : {p50_latency:<48s}║
 ║  p95 Latency (ms)    : {p95_latency:<48s}║
+║  Avg Reasoning Tok   : {avg_reasoning:<48s}║
 ║  Output CSV          : {csv_out:<48s} ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 """
@@ -137,12 +145,22 @@ class KeyPool:
 
 # ══════════════════════ OUTPUT CLEANING ════════════════════════════
 def clean_llm_output(raw: str) -> str:
-    """Strip markdown code fences and trailing conversational text."""
-    pattern = r"```(?:python|py)?\s*\n(.*?)```"
-    match = re.search(pattern, raw, re.DOTALL)
-    code = match.group(1) if match else raw
+    """Aggressively strip markdown fences, XML tags, <think> blocks,
+    and trailing conversational text. Returns pure Python code."""
+    text = raw
 
-    lines = code.split("\n")
+    # 1. Remove <think>...</think> reasoning blocks
+    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
+
+    # 2. Remove any XML-style tags (<response>, <code>, <answer>, etc.)
+    text = re.sub(r"</?[a-zA-Z][a-zA-Z0-9_-]*(?:\s[^>]*)?>" , "", text)
+
+    # 3. Extract from code fence if present
+    fence_match = re.search(r"```(?:python|py)?\s*\n(.*?)```", text, re.DOTALL)
+    if fence_match:
+        text = fence_match.group(1)
+
+    lines = text.split("\n")
     cleaned: list[str] = []
     for line in lines:
         stripped = line.strip()
@@ -152,7 +170,8 @@ def clean_llm_output(raw: str) -> str:
             if re.match(
                 r"^(This|Note|The above|Here |I |Let me|Explanation|"
                 r"Output|In this|Time complexity|Space complexity|"
-                r"Example|Alternative|We can)",
+                r"Example|Alternative|We can|The key|The function|"
+                r"The algorithm|Complexity|##|###|\*\*)",
                 stripped,
             ):
                 break
@@ -177,12 +196,12 @@ def call_gpt5(
     model: str,
     key_pool: KeyPool,
     prompt: str,
-) -> tuple[str, float, int]:
+) -> dict:
     """
     Call GPT-5 via GitHub Models with reasoning_effort="high".
     No temperature/top_p/n — unsupported in reasoning mode.
 
-    Returns (text, latency_ms, total_tokens).
+    Returns dict with: text, latency_ms, prompt_tokens, reasoning_tokens, total_tokens.
     """
     import openai
 
@@ -204,11 +223,26 @@ def call_gpt5(
             latency_ms = (time.perf_counter() - t0) * 1000.0
 
             text = response.choices[0].message.content or ""
+            prompt_tokens = -1
+            reasoning_tokens = -1
             total_tokens = -1
             if response.usage:
+                prompt_tokens = response.usage.prompt_tokens or -1
                 total_tokens = response.usage.total_tokens or -1
+                # GPT-5 reasoning_tokens in completion_tokens_details
+                details = getattr(response.usage, "completion_tokens_details", None)
+                if details:
+                    rt = getattr(details, "reasoning_tokens", None)
+                    if rt is not None:
+                        reasoning_tokens = int(rt)
 
-            return text, latency_ms, total_tokens
+            return {
+                "text": text,
+                "latency_ms": latency_ms,
+                "prompt_tokens": prompt_tokens,
+                "reasoning_tokens": reasoning_tokens,
+                "total_tokens": total_tokens,
+            }
 
         except Exception as exc:
             last_exc = exc
@@ -273,8 +307,8 @@ def load_processed_ids(csv_path: str) -> set[str]:
     with open(csv_path, "r", newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            pid = row.get("problem_id", "")
-            if pid:
+            pid = row.get("id", "")
+            if pid and row.get("generated_code", "").strip():
                 processed.add(pid)
     return processed
 
@@ -359,7 +393,7 @@ def main() -> None:
     # ── CSV path ────────────────────────────────────────────────────
     data_dir = PROJECT_ROOT / "Research_Paper" / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
-    csv_out = str(data_dir / f"{sanitize_filename(args.model)}_raw_results.csv")
+    csv_out = str(data_dir / "llm_results.csv")
 
     ensure_csv_header(csv_out)
     processed_ids = load_processed_ids(csv_out)
@@ -372,6 +406,7 @@ def main() -> None:
     syntax_err_count = 0
     skipped_count = len(processed_ids)
     latencies: list[float] = []
+    reasoning_counts: list[int] = []
     t_start = time.time()
 
     # ── Progress bar ────────────────────────────────────────────────
@@ -393,19 +428,33 @@ def main() -> None:
 
         generated_code = ""
         api_status = "OK"
+        error_detail = ""
         latency_ms = 0.0
+        prompt_tokens = -1
+        reasoning_tokens = -1
         total_tokens = -1
 
         try:
-            raw_output, latency_ms, total_tokens = call_gpt5(
+            result = call_gpt5(
                 model=args.model,
                 key_pool=key_pool,
                 prompt=prompt,
             )
-            generated_code = clean_llm_output(raw_output)
+
+            raw_text = result["text"]
+            latency_ms = result["latency_ms"]
+            prompt_tokens = result.get("prompt_tokens", -1)
+            reasoning_tokens = result.get("reasoning_tokens", -1)
+            total_tokens = result.get("total_tokens", -1)
+
+            generated_code = clean_llm_output(raw_text)
+
+            if reasoning_tokens > 0:
+                reasoning_counts.append(reasoning_tokens)
 
             if generated_code and not _syntax_check(generated_code):
                 api_status = "SYNTAX_ERROR"
+                error_detail = "ast.parse() failed on generated code"
                 syntax_err_count += 1
             else:
                 latencies.append(latency_ms)
@@ -413,20 +462,28 @@ def main() -> None:
 
         except Exception as exc:
             api_status = "ERROR"
+            error_detail = str(exc)[:500]
             tqdm.write(f"  ✖  {pid} ({name}): {exc}")
             error_count += 1
 
         row = {
-            "problem_id": pid,
-            "problem_name": name,
-            "difficulty": problem.get("difficulty", ""),
-            "target_complexity": problem.get("target_complexity", ""),
-            "model_name": args.model,
-            "original_code": problem.get("original_code", ""),
-            "generated_code": generated_code,
-            "latency_ms": f"{latency_ms:.1f}",
-            "total_tokens": total_tokens,
-            "api_status": api_status,
+            "id":                       pid,
+            "name":                     name,
+            "category":                 problem.get("category", ""),
+            "difficulty":               problem.get("difficulty", ""),
+            "original_complexity":      problem.get("original_complexity", ""),
+            "target_complexity":        problem.get("target_complexity", ""),
+            "verdict":                  "",   # Stage 2 fills this
+            "original_code":            problem.get("original_code", ""),
+            "generated_code":           generated_code,
+            "optimized_complexity_time": "",  # Stage 2 fills this
+            "complexity_improved":      "",   # Stage 2 fills this
+            "latency_ms":               f"{latency_ms:.1f}",
+            "prompt_tokens":            prompt_tokens,
+            "reasoning_tokens":         reasoning_tokens,
+            "total_tokens":             total_tokens,
+            "api_status":               api_status,
+            "error_detail":             error_detail,
         }
         append_row(csv_out, row)
 
@@ -443,6 +500,10 @@ def main() -> None:
     avg_lat = f"{sum(latencies) / len(latencies):.1f}" if latencies else "N/A"
     p50_lat = f"{percentile(latencies, 50):.1f}" if latencies else "N/A"
     p95_lat = f"{percentile(latencies, 95):.1f}" if latencies else "N/A"
+    avg_rsn = (
+        f"{sum(reasoning_counts) / len(reasoning_counts):.0f}"
+        if reasoning_counts else "N/A"
+    )
 
     csv_display = csv_out
     try:
@@ -462,6 +523,7 @@ def main() -> None:
         avg_latency=avg_lat,
         p50_latency=p50_lat,
         p95_latency=p95_lat,
+        avg_reasoning=avg_rsn,
         csv_out=csv_display,
     ))
 
