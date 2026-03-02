@@ -27,7 +27,8 @@ Stage 1 output schema  (data/raw/<provider>_<model>.csv)
     id, name, model_name, category, difficulty,
     original_complexity, target_complexity,
     original_code, generated_code,
-    latency_ms, prompt_tokens, reasoning_tokens, total_tokens,
+    latency_ms, prompt_tokens, reasoning_tokens,
+    completion_tokens, total_tokens,
     api_status, error_detail
 
 Usage
@@ -47,6 +48,17 @@ Usage
 
     # List registered models + key availability
     python src/generators/generate_llm_benchmark.py --list-models
+
+Token Pool (rate-limit rotation)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    Set GITHUB_TOKENS in .env with comma-separated PATs from different
+    accounts.  On RateLimitError the engine auto-rotates to the next
+    token and rebuilds the client — zero downtime.
+
+        GITHUB_TOKENS=ghp_account1,ghp_account2,ghp_account3
+
+    Total retry budget = MAX_RETRIES × pool_size, so 3 tokens give
+    you 9 attempts before final failure.
 """
 from __future__ import annotations
 
@@ -70,6 +82,8 @@ for _p in (_PROJECT_ROOT, _PROJECT_ROOT / "backend"):
         sys.path.insert(0, str(_p))
 
 from dotenv import load_dotenv
+# Root .env takes priority; backend/.env is the fallback.
+load_dotenv(_PROJECT_ROOT / ".env")
 load_dotenv(_PROJECT_ROOT / "backend" / ".env")
 
 try:
@@ -93,6 +107,14 @@ _ENV_KEY_MAP: dict[str, list[str]] = {
     "openai":   ["OPENAI_API_KEY"],
     "deepseek": ["DEEPSEEK_API_KEY"],
     "gemini":   ["GEMINI_API_KEY", "Gemini_API_KEY"],
+}
+
+# Multi-token env vars (comma-separated pools for rate-limit rotation)
+_ENV_POOL_MAP: dict[str, str] = {
+    "github":   "GITHUB_TOKENS",
+    "openai":   "OPENAI_API_KEYS",
+    "deepseek": "DEEPSEEK_API_KEYS",
+    "gemini":   "GEMINI_API_KEYS",
 }
 
 
@@ -215,6 +237,7 @@ CSV_COLUMNS: list[str] = [
     "latency_ms",
     "prompt_tokens",
     "reasoning_tokens",
+    "completion_tokens",
     "total_tokens",
     "api_status",
     "error_detail",
@@ -230,6 +253,170 @@ PROMPT_TEMPLATE = (
 # Exponential backoff: 2^1=2s, 2^2=4s, 2^3=8s
 MAX_RETRIES  = 3
 BACKOFF_BASE = 2
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Token Pool — automatic round-robin rotation on RateLimitError
+# ═══════════════════════════════════════════════════════════════════════
+
+class TokenPool:
+    """Round-robin token rotation with automatic client rebuild.
+
+    When a RateLimitError is detected, call ``rotate()`` to advance to
+    the next token and rebuild the SDK client — zero downtime, zero
+    manual intervention.
+
+    Usage::
+
+        pool = TokenPool(provider, keys=["ghp_aaa", "ghp_bbb"])
+        client = pool.client
+        ...
+        # on RateLimitError:
+        pool.rotate()
+        client = pool.client   # new client with next token
+    """
+
+    def __init__(self, provider: str, keys: list[str]) -> None:
+        if not keys:
+            raise ValueError(f"TokenPool: no keys supplied for {provider}")
+        self.provider = provider
+        self._keys = list(dict.fromkeys(keys))  # deduplicate, preserve order
+        self._idx = 0
+        self._client = build_client(provider, self.current_key)
+        self._rotations = 0
+
+    @property
+    def current_key(self) -> str:
+        return self._keys[self._idx]
+
+    @property
+    def client(self):
+        return self._client
+
+    @property
+    def pool_size(self) -> int:
+        return len(self._keys)
+
+    @property
+    def rotations(self) -> int:
+        return self._rotations
+
+    def rotate(self) -> str:
+        """Advance to the next token and rebuild the client.
+
+        Returns the new key (masked for logging).
+        """
+        old_idx = self._idx
+        self._idx = (self._idx + 1) % len(self._keys)
+        self._client = build_client(self.provider, self.current_key)
+        self._rotations += 1
+        masked = self.current_key[:8] + "…" + self.current_key[-4:]
+        tqdm.write(
+            f"    🔄  Token rotated: slot {old_idx + 1} → "
+            f"{self._idx + 1}/{len(self._keys)}  "
+            f"(key: {masked})"
+        )
+        return self.current_key
+
+    def __repr__(self) -> str:
+        return (
+            f"TokenPool(provider={self.provider!r}, "
+            f"pool_size={len(self._keys)}, "
+            f"current_slot={self._idx + 1})"
+        )
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# ASCII Art Banner
+# ═══════════════════════════════════════════════════════════════════════
+
+_BANNER_ART: tuple[str, ...] = (
+    "████████╗██╗   ██╗███████╗     ██████╗ ███████╗███╗   ██╗ ██████╗██╗  ██╗███╗   ███╗ █████╗ ██████╗ ██╗  ██╗",
+    "╚══██╔══╝╚██╗ ██╔╝██╔════╝    ██╔══██╗██╔════╝████╗  ██║██╔════╝██║  ██║████╗ ████║██╔══██╗██╔══██╗██║ ██╔╝",
+    "   ██║    ╚████╔╝ █████╗      ██████╔╝█████╗  ██╔██╗ ██║██║     ███████║██╔████╔██║███████║██████╔╝█████╔╝ ",
+    "   ██║     ╚██╔╝  ██╔══╝      ██╔══██╗██╔══╝  ██║╚██╗██║██║     ██╔══██║██║╚██╔╝██║██╔══██║██╔══██╗██╔═██╗ ",
+    "   ██║      ██║   ███████╗    ██████╔╝███████╗██║ ╚████║╚██████╗██║  ██║██║ ╚═╝ ██║██║  ██║██║  ██║██║  ██╗",
+    "   ╚═╝      ╚═╝   ╚══════╝    ╚═════╝ ╚══════╝╚═╝  ╚═══╝ ╚═════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝",
+)
+
+
+def _print_banner(
+    *,
+    provider: str,
+    model: str,
+    suite_tag: str,
+    n_problems: int,
+    n_done: int,
+    delay: float,
+    is_reasoning: bool,
+    thinking_budget: int | None,
+    csv_path: Path | str,
+) -> None:
+    """Print the TYR BENCHMARK ASCII art banner with run details."""
+    # Compute inner width to fit all content
+    art_widths  = [len("   " + a) for a in _BANNER_ART]
+    info_widths = [
+        len(f"   UNIFIED LLM BENCHMARK ENGINE  │  Stage 1  │  {n_problems} problems"),
+        len(f"   Output   : {csv_path}"),
+    ]
+    inner = max(*art_widths, *info_widths) + 3
+    inner = max(inner, 78)  # minimum 78 chars
+
+    def row(text: str = "") -> str:
+        return "║" + (f"   {text}" if text else "").ljust(inner) + "║"
+
+    top = "╔" + "═" * inner + "╗"
+    bot = "╚" + "═" * inner + "╝"
+    sep = "║" + "─" * inner + "║"
+
+    reasoning_str = "YES (no temperature)" if is_reasoning else "NO (temp=0.0)"
+    thinking_str  = f"{thinking_budget} tokens" if thinking_budget else "OFF"
+
+    lines = [
+        "",
+        top,
+        row(),
+        *(row(a) for a in _BANNER_ART),
+        row(),
+        sep,
+        row(f"UNIFIED LLM BENCHMARK ENGINE  │  Stage 1  │  {n_problems} problems"),
+        sep,
+        row(f"Provider : {provider.upper():<12s}  Model    : {model}"),
+        row(f"Suite    : {suite_tag.upper():<12s}  Delay    : {delay:.1f}s"),
+        row(f"Reasoning: {reasoning_str:<20s}  Thinking : {thinking_str}"),
+        row(f"Progress : {n_done}/{n_problems} done"),
+        row(f"Output   : {csv_path}"),
+        row(),
+        bot,
+        "",
+    ]
+    print("\n".join(lines))
+
+
+def _print_art_header(title: str) -> None:
+    """Print a lighter banner with just the ASCII art and a title line."""
+    art_widths = [len("   " + a) for a in _BANNER_ART]
+    inner = max(*art_widths, len(f"   {title}")) + 3
+    inner = max(inner, 78)
+
+    def row(text: str = "") -> str:
+        return "║" + (f"   {text}" if text else "").ljust(inner) + "║"
+
+    top = "╔" + "═" * inner + "╗"
+    bot = "╚" + "═" * inner + "╝"
+    sep = "║" + "─" * inner + "║"
+
+    lines = [
+        "",
+        top,
+        row(),
+        *(row(a) for a in _BANNER_ART),
+        row(),
+        sep,
+        row(title),
+        bot,
+    ]
+    print("\n".join(lines))
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -344,9 +531,10 @@ def _call_openai_compat(
     if rc and not text:
         text = rc  # fallback if content is empty but reasoning_content has code
 
-    pt = rt = tt = 0
+    pt = rt = ct = tt = 0
     if response.usage:
         pt = response.usage.prompt_tokens or 0
+        ct = response.usage.completion_tokens or 0
         tt = response.usage.total_tokens or 0
         details = getattr(response.usage, "completion_tokens_details", None)
         if details:
@@ -364,6 +552,7 @@ def _call_openai_compat(
         "latency_ms": latency_ms,
         "prompt_tokens": pt,
         "reasoning_tokens": rt,
+        "completion_tokens": ct,
         "total_tokens": tt,
     }
 
@@ -413,6 +602,7 @@ def _call_gemini(
         "latency_ms": latency_ms,
         "prompt_tokens": pt,
         "reasoning_tokens": rt,
+        "completion_tokens": ct,
         "total_tokens": tt,
     }
 
@@ -421,31 +611,85 @@ def _call_gemini(
 # Retry wrapper  (provider-agnostic)
 # ═══════════════════════════════════════════════════════════════════════
 
+def _is_rate_limit(exc: Exception) -> bool:
+    """Return True if the exception is a rate-limit error."""
+    try:
+        import openai as _oa
+        if isinstance(exc, _oa.RateLimitError):
+            return True
+    except ImportError:
+        pass
+    msg = str(exc).lower()
+    return any(t in msg for t in ("429", "rate", "quota", "resourceexhausted"))
+
+
+def _is_auth_error(exc: Exception) -> bool:
+    """Return True if the exception is an authentication/credentials error."""
+    try:
+        import openai as _oa
+        if isinstance(exc, _oa.AuthenticationError):
+            return True
+    except ImportError:
+        pass
+    msg = str(exc).lower()
+    return any(t in msg for t in ("401", "unauthorized", "bad credentials"))
+
+
 def _call_with_backoff(
-    fn,        # zero-arg callable that returns the result dict
+    fn_factory,   # callable(client) -> result dict
+    pool: TokenPool,
     label: str,
 ) -> dict:
     """
-    Execute ``fn()`` with exponential backoff on transient failures.
-    ``fn`` must be a closure that captures the client and prompt.
+    Execute ``fn_factory(pool.client)`` with exponential backoff.
+
+    On RateLimitError, rotates to the next token in the pool before
+    retrying — burning through ALL available tokens before giving up.
+
+    Total attempts = MAX_RETRIES × pool_size, ensuring every token is
+    tried before the final failure.
     """
+    max_total = MAX_RETRIES * pool.pool_size
     last_exc: Exception | None = None
-    for attempt in range(1, MAX_RETRIES + 1):
+
+    for attempt in range(1, max_total + 1):
         try:
-            return fn()
+            return fn_factory(pool.client)
         except Exception as exc:
             last_exc = exc
-            if _is_retriable(exc) and attempt < MAX_RETRIES:
-                wait = BACKOFF_BASE ** attempt
+
+            # Auth error (401 / bad credentials) → rotate immediately
+            if _is_auth_error(exc) and pool.pool_size > 1 and attempt < max_total:
+                tqdm.write(
+                    f"    🔑  {label} auth error on token slot "
+                    f"{pool._idx + 1}/{pool.pool_size}, rotating … "
+                    f"[{type(exc).__name__}]"
+                )
+                pool.rotate()
+                time.sleep(0.3)
+                continue
+
+            if _is_retriable(exc) and attempt < max_total:
+                wait = BACKOFF_BASE ** min(attempt, 4)  # cap at 16s
+
+                # Rate-limit specifically → rotate token first
+                if _is_rate_limit(exc) and pool.pool_size > 1:
+                    pool.rotate()
+                    wait = 0.5   # minimal delay after rotation
+
                 tqdm.write(
                     f"    ⚠  {label} transient error "
-                    f"(attempt {attempt}/{MAX_RETRIES}), "
-                    f"retrying in {wait}s … [{type(exc).__name__}]"
+                    f"(attempt {attempt}/{max_total}), "
+                    f"retrying in {wait:.1f}s … "
+                    f"[{type(exc).__name__}]"
                 )
                 time.sleep(wait)
                 continue
             raise
-    raise RuntimeError(f"API failed after {MAX_RETRIES} attempts: {last_exc}")
+    raise RuntimeError(
+        f"API failed after {max_total} attempts "
+        f"(across {pool.pool_size} tokens): {last_exc}"
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -537,22 +781,60 @@ def _get_suite_models(suite: str) -> dict[str, dict]:
     return {k: v for k, v in MODEL_REGISTRY.items() if v["suite"] == suite}
 
 
+def _split_keys(raw: str) -> list[str]:
+    """Split a possibly comma-separated value into individual keys."""
+    return [k.strip() for k in raw.split(",") if k.strip()]
+
+
 def _resolve_api_key(provider: str, cli_key: str | None = None) -> str | None:
-    """Resolve API key from CLI → .env. Returns None if not found."""
+    """Resolve a single API key from CLI → .env. Returns None if not found."""
     if cli_key:
-        return cli_key
+        return cli_key.split(",")[0].strip()  # first key only
     for env in _ENV_KEY_MAP.get(provider, []):
-        val = os.getenv(env)
+        val = os.getenv(env, "").strip()
         if val:
-            return val
+            return val.split(",")[0].strip()  # first key only
     return None
+
+
+def _resolve_all_keys(provider: str, cli_key: str | None = None) -> list[str]:
+    """Resolve ALL available keys for a provider.
+
+    Priority order:
+        1. CLI --api-key  (always slot 0; may be comma-separated)
+        2. GITHUB_TOKENS / OPENAI_API_KEYS / … (comma-separated pool)
+        3. GITHUB_TOKEN / OPENAI_API_KEY / … (also auto-split on commas)
+
+    Returns a de-duplicated list of non-empty keys.
+    """
+    keys: list[str] = []
+
+    # CLI key is always first (may itself be comma-separated)
+    if cli_key:
+        keys.extend(_split_keys(cli_key))
+
+    # Pool env var (comma-separated)
+    pool_env = _ENV_POOL_MAP.get(provider)
+    if pool_env:
+        keys.extend(_split_keys(os.getenv(pool_env, "")))
+
+    # Single-key env vars (also auto-split on commas for resilience)
+    for env in _ENV_KEY_MAP.get(provider, []):
+        keys.extend(_split_keys(os.getenv(env, "")))
+
+    # Deduplicate while preserving order
+    seen: set[str] = set()
+    unique: list[str] = []
+    for k in keys:
+        if k not in seen:
+            seen.add(k)
+            unique.append(k)
+    return unique
 
 
 def list_models() -> None:
     """Print all registered models with key availability."""
-    print(f"\n{'═' * 80}")
-    print("  Tyr — Registered Benchmark Models")
-    print(f"{'═' * 80}")
+    _print_art_header("Tyr — Registered Benchmark Models")
 
     for suite_name, suite_label in [
         ("system1", "PART 1: System 1 (Standard) Benchmarks"),
@@ -656,13 +938,16 @@ def parse_args() -> argparse.Namespace:
 def run_single_benchmark(
     provider: str,
     model: str,
-    api_key: str,
+    api_keys: list[str] | str,
     dataset: list[dict],
     data_dir: Path,
     delay: float,
     thinking_budget: int | None = None,
 ) -> dict:
-    """Run the full 150-problem benchmark for one model.
+    """Run the full benchmark for one model.
+
+    ``api_keys`` can be a single key (str) or a list of keys for
+    round-robin rotation on RateLimitError.
 
     Returns a summary dict with ok/error/syntax counts and output path.
     """
@@ -670,8 +955,10 @@ def run_single_benchmark(
         m.lower() for m in _REASONING_MODELS
     }
 
-    # ── Build client ONCE before any timing begins ─────────────────
-    client = build_client(provider, api_key)
+    # ── Build token pool (supports 1-N keys) ───────────────────────
+    if isinstance(api_keys, str):
+        api_keys = [api_keys]
+    pool = TokenPool(provider, api_keys)
 
     # ── CSV setup ──────────────────────────────────────────────────
     csv_path = _output_csv_path(provider, model, data_dir)
@@ -683,18 +970,22 @@ def run_single_benchmark(
     suite_tag = reg.get("suite", "custom").upper()
 
     # ── Banner ─────────────────────────────────────────────────────
-    print(
-        f"\n{'═' * 72}\n"
-        f"  Tyr Stage 1 — {suite_tag} Benchmark\n"
-        f"  Provider  : {provider.upper()}\n"
-        f"  Model     : {model}\n"
-        f"  Reasoning : {'YES (temperature stripped)' if is_reasoning else 'NO (temperature=0.0)'}\n"
-        f"  Thinking  : {f'{thinking_budget} tokens' if thinking_budget else 'OFF'}\n"
-        f"  Problems  : {len(dataset)}  ({len(processed)} already done)\n"
-        f"  Delay     : {delay}s\n"
-        f"  Output    : {csv_path}\n"
-        f"{'═' * 72}\n"
+    _print_banner(
+        provider=provider,
+        model=model,
+        suite_tag=suite_tag,
+        n_problems=len(dataset),
+        n_done=len(processed),
+        delay=delay,
+        is_reasoning=is_reasoning,
+        thinking_budget=thinking_budget,
+        csv_path=csv_path,
     )
+    if pool.pool_size > 1:
+        print(
+            f"  🔑  Token pool: {pool.pool_size} keys loaded "
+            f"(auto-rotation on RateLimitError)"
+        )
 
     # ── Counters ───────────────────────────────────────────────────
     ok = err = skipped = syntax_errs = 0
@@ -735,28 +1026,30 @@ def run_single_benchmark(
         generated_code   = ""
         api_status       = "OK"
         error_detail     = ""
-        latency_ms       = 0.0
-        prompt_tokens    = 0
-        reasoning_tokens = 0
-        total_tokens     = 0
+        latency_ms         = 0.0
+        prompt_tokens      = 0
+        reasoning_tokens   = 0
+        completion_tokens  = 0
+        total_tokens       = 0
 
-        # ── API call (with backoff) ────────────────────────────────
+        # ── API call (with backoff + token rotation) ───────────────
         try:
             if provider == "gemini":
-                fn = lambda: _call_gemini(         # noqa: E731
-                    client, model, prompt, thinking_budget,
+                fn_factory = lambda c: _call_gemini(         # noqa: E731
+                    c, model, prompt, thinking_budget,
                 )
             else:
-                fn = lambda: _call_openai_compat(  # noqa: E731
-                    client, model, prompt, is_reasoning,
+                fn_factory = lambda c: _call_openai_compat(  # noqa: E731
+                    c, model, prompt, is_reasoning,
                 )
 
-            result = _call_with_backoff(fn, label=pid)
+            result = _call_with_backoff(fn_factory, pool, label=pid)
 
-            latency_ms       = result["latency_ms"]
-            prompt_tokens    = result["prompt_tokens"]
-            reasoning_tokens = result["reasoning_tokens"]
-            total_tokens     = result["total_tokens"]
+            latency_ms         = result["latency_ms"]
+            prompt_tokens      = result["prompt_tokens"]
+            reasoning_tokens   = result["reasoning_tokens"]
+            completion_tokens  = result["completion_tokens"]
+            total_tokens       = result["total_tokens"]
             generated_code   = clean_llm_output(result["text"])
 
             if not generated_code or not _syntax_ok(generated_code):
@@ -790,6 +1083,7 @@ def run_single_benchmark(
             "latency_ms":           f"{latency_ms:.2f}",
             "prompt_tokens":        prompt_tokens,
             "reasoning_tokens":     reasoning_tokens,
+            "completion_tokens":    completion_tokens,
             "total_tokens":         total_tokens,
             "api_status":           api_status,
             "error_detail":         error_detail,
@@ -807,6 +1101,11 @@ def run_single_benchmark(
     avg = f"{sum(latencies)/len(latencies):.1f}" if latencies else "N/A"
     p50 = f"{_pct(latencies, 50):.1f}" if latencies else "N/A"
     p95 = f"{_pct(latencies, 95):.1f}" if latencies else "N/A"
+    rot_str = (
+        f"  Token rotations : {pool.rotations}  "
+        f"(across {pool.pool_size} keys)\n"
+        if pool.pool_size > 1 else ""
+    )
 
     print(
         f"\n{'═' * 72}\n"
@@ -816,6 +1115,7 @@ def run_single_benchmark(
         f"  Syntax errors : {syntax_errs}\n"
         f"  API errors    : {err}\n"
         f"  Skipped       : {skipped}\n"
+        f"{rot_str}"
         f"{'─' * 72}\n"
         f"  Latency (API-only)  avg={avg}ms  p50={p50}ms  p95={p95}ms\n"
         f"  Wall clock          {h_e:02d}h {m_e:02d}m {s_e:02d}s\n"
@@ -838,6 +1138,202 @@ def run_single_benchmark(
 
 
 # ═══════════════════════════════════════════════════════════════════════
+# Interactive model picker  (shown when run with no arguments)
+# ═══════════════════════════════════════════════════════════════════════
+
+def _read_key() -> str:
+    """Read a single keypress. Returns 'UP', 'DOWN', 'ENTER', 'Q', etc."""
+    if sys.platform == "win32":
+        import msvcrt
+        ch = msvcrt.getwch()
+        if ch in ("\x00", "\xe0"):          # special key prefix on Windows
+            ch2 = msvcrt.getwch()
+            return {"H": "UP", "P": "DOWN"}.get(ch2, "")
+        if ch == "\r":
+            return "ENTER"
+        if ch == "\x1b":                    # Escape
+            return "Q"
+        if ch == "\x03":                    # Ctrl-C
+            raise KeyboardInterrupt
+        return ch.upper()
+    else:
+        import tty, termios
+        fd = sys.stdin.fileno()
+        old = termios.tcgetattr(fd)
+        try:
+            tty.setraw(fd)
+            ch = sys.stdin.read(1)
+            if ch == "\x1b":
+                seq = sys.stdin.read(2)
+                return {"[A": "UP", "[B": "DOWN"}.get(seq, "")
+            if ch in ("\r", "\n"):
+                return "ENTER"
+            if ch == "\x03":
+                raise KeyboardInterrupt
+            return ch.upper()
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old)
+
+
+def _get_terminal_width() -> int:
+    """Get the current terminal width, default 120."""
+    try:
+        return os.get_terminal_size().columns
+    except (OSError, ValueError):
+        return 120
+
+
+def _clear_screen() -> None:
+    """Clear the entire terminal screen reliably across platforms."""
+    if sys.platform == "win32":
+        os.system("cls")
+    else:
+        sys.stdout.write("\033[2J\033[H")
+        sys.stdout.flush()
+
+
+def _interactive_model_picker() -> str | None:
+    """Arrow-key driven interactive menu to pick a model or suite."""
+
+    # ── Build menu items ───────────────────────────────────────────
+    # Each item: (label_plain, value, is_header, disabled)
+    items: list[dict] = []
+    all_models = list(MODEL_REGISTRY.items())
+    s1 = [(m, i) for m, i in all_models if i["suite"] == "system1"]
+    s2 = [(m, i) for m, i in all_models if i["suite"] == "system2"]
+
+    def _model_line(mid: str, info: dict) -> tuple[str, bool]:
+        has_key = _resolve_api_key(info["provider"]) is not None
+        icon = "\u2714" if has_key else "\u2716"
+        thinking = info.get("thinking_budget") is not None
+        reasoning = mid in _REASONING_MODELS
+        mode = "THINK" if thinking else ("REASON" if reasoning else "STD")
+        label = (
+            f"{mid:<35s}  [{info['provider']:<8s}]  "
+            f"Key: {icon}  Mode: {mode:<6s}  {info['label']}"
+        )
+        return label, has_key
+
+    # System 1 header + models
+    items.append({"label": "SYSTEM 1 \u2500 Standard Benchmarks", "value": None,
+                  "is_header": True, "disabled": True})
+    for mid, info in s1:
+        label, has_key = _model_line(mid, info)
+        items.append({"label": label, "value": mid,
+                      "is_header": False, "disabled": not has_key})
+
+    # System 2 header + models
+    items.append({"label": "SYSTEM 2 \u2500 Reasoning Titans", "value": None,
+                  "is_header": True, "disabled": True})
+    for mid, info in s2:
+        label, has_key = _model_line(mid, info)
+        items.append({"label": label, "value": mid,
+                      "is_header": False, "disabled": not has_key})
+
+    # Suite shortcuts header + options
+    items.append({"label": "SUITE SHORTCUTS", "value": None,
+                  "is_header": True, "disabled": True})
+    items.append({"label": "Run ALL System 1 models (standard)",
+                  "value": "__SUITE__S1", "is_header": False, "disabled": False})
+    items.append({"label": "Run ALL System 2 models (reasoning)",
+                  "value": "__SUITE__S2", "is_header": False, "disabled": False})
+    items.append({"label": "Run ALL 12 models",
+                  "value": "__SUITE__ALL", "is_header": False, "disabled": False})
+    items.append({"label": "Quit",
+                  "value": "__QUIT__", "is_header": False, "disabled": False})
+
+    # Selectable indices (skip headers and disabled items)
+    selectable = [i for i, it in enumerate(items) if not it["disabled"]]
+    cursor_idx = 0  # index into `selectable`
+
+    def _draw() -> None:
+        """Full-screen redraw: clear screen, print banner + menu."""
+        _clear_screen()
+
+        # Print compact banner
+        _print_art_header("Select a Model to Benchmark")
+
+        tw = _get_terminal_width()
+        cur = selectable[cursor_idx]
+
+        for i, it in enumerate(items):
+            if it["is_header"]:
+                print()
+                print(f"  \033[1;36m{it['label']}\033[0m")
+                print(f"  {'─' * min(74, tw - 4)}")
+                continue
+
+            is_cur = (i == cur)
+            marker = " \u25b8 " if is_cur else "   "
+
+            # Truncate line to terminal width to prevent wrapping
+            raw_line = f"  {marker}{it['label']}"
+            if len(raw_line) > tw - 1:
+                raw_line = raw_line[: tw - 4] + "..."
+
+            if it["disabled"]:
+                print(f"\033[90m{raw_line}  (no key)\033[0m")
+            elif is_cur:
+                print(f"\033[1;33m{raw_line}\033[0m")
+            else:
+                print(raw_line)
+
+        print()
+        print(f"  \033[2m\u2191/\u2193 Navigate  \u2022  Enter Select  \u2022  Q/Esc Quit\033[0m")
+
+    # ── Initial draw ───────────────────────────────────────────────
+    # Hide cursor during interaction
+    sys.stdout.write("\033[?25l")
+    sys.stdout.flush()
+
+    try:
+        _draw()
+
+        while True:
+            key = _read_key()
+            if key == "UP":
+                cursor_idx = (cursor_idx - 1) % len(selectable)
+                _draw()
+            elif key == "DOWN":
+                cursor_idx = (cursor_idx + 1) % len(selectable)
+                _draw()
+            elif key == "ENTER":
+                break
+            elif key == "Q":
+                # Show cursor, clear, print quit
+                sys.stdout.write("\033[?25h")
+                sys.stdout.flush()
+                print("\n  Bye!")
+                return None
+
+    except (KeyboardInterrupt, EOFError):
+        sys.stdout.write("\033[?25h")
+        sys.stdout.flush()
+        print("\n  Aborted.")
+        return None
+
+    # ── Show cursor again ──────────────────────────────────────────
+    sys.stdout.write("\033[?25h")
+    sys.stdout.flush()
+
+    selected_item = items[selectable[cursor_idx]]
+    value = selected_item["value"]
+
+    if value == "__QUIT__":
+        print("\n  Bye!")
+        return None
+
+    if value and value.startswith("__SUITE__"):
+        print(f"\n  \u2714 Selected: {selected_item['label']}\n")
+        return value
+
+    # Single model
+    info = MODEL_REGISTRY[value]
+    print(f"\n  \u2714 Selected: {value}  ({info['label']})\n")
+    return value
+
+
+# ═══════════════════════════════════════════════════════════════════════
 # Main
 # ═══════════════════════════════════════════════════════════════════════
 
@@ -848,6 +1344,18 @@ def main() -> None:
     if args.list_models:
         list_models()
         return
+
+    # ── Interactive picker when no flags provided ──────────────────
+    if not args.model and not args.suite:
+        pick = _interactive_model_picker()
+        if not pick:
+            return
+        # Handle suite shortcuts from interactive menu
+        if pick.startswith("__SUITE__"):
+            suite_map = {"S1": "system1", "S2": "system2", "ALL": "all"}
+            args.suite = suite_map[pick.split("__")[-1]]
+        else:
+            args.model = pick
 
     # ── Load dataset (once) ────────────────────────────────────────
     with open(args.dataset, "r", encoding="utf-8") as fh:
@@ -864,12 +1372,9 @@ def main() -> None:
             "all":     "All Models (System 1 + System 2)",
         }[args.suite]
 
-        print(
-            f"\n{'█' * 72}\n"
-            f"  Tyr — Suite Benchmark: {suite_label}\n"
-            f"  Models : {len(models)}\n"
-            f"  Dataset: {len(dataset)} problems\n"
-            f"{'█' * 72}\n"
+        _print_art_header(
+            f"Suite Benchmark: {suite_label}  │  "
+            f"{len(models)} models  │  {len(dataset)} problems"
         )
 
         results: list[dict] = []
@@ -877,9 +1382,9 @@ def main() -> None:
 
         for i, (model_id, info) in enumerate(models.items(), 1):
             provider = info["provider"]
-            api_key  = _resolve_api_key(provider, args.api_key)
+            all_keys = _resolve_all_keys(provider, args.api_key)
 
-            if not api_key:
+            if not all_keys:
                 print(
                     f"\n  ⚠  [{i}/{len(models)}] SKIP {model_id} — "
                     f"no API key for provider '{provider}'"
@@ -887,16 +1392,20 @@ def main() -> None:
                 skipped_models.append(model_id)
                 continue
 
+            key_info = (
+                f" ({len(all_keys)} keys in pool)"
+                if len(all_keys) > 1 else ""
+            )
             print(
                 f"\n  ▶  [{i}/{len(models)}] Starting {model_id} "
-                f"({info['label']})"
+                f"({info['label']}){key_info}"
             )
 
             thinking = info.get("thinking_budget") or args.thinking_budget
             summary = run_single_benchmark(
                 provider=provider,
                 model=model_id,
-                api_key=api_key,
+                api_keys=all_keys,
                 dataset=dataset,
                 data_dir=data_dir,
                 delay=args.delay,
@@ -935,12 +1444,6 @@ def main() -> None:
         return
 
     # ── Single model mode ──────────────────────────────────────────
-    if not args.model:
-        sys.exit(
-            "ERROR: --model is required for single-model mode.\n"
-            "       Use --suite system1|system2|all for batch mode.\n"
-            "       Use --list-models to see available models."
-        )
 
     # Auto-resolve provider from registry if not specified
     if not args.provider:
@@ -952,12 +1455,15 @@ def main() -> None:
                 f"(not found in registry)."
             )
 
-    api_key = _resolve_api_key(args.provider, args.api_key)
-    if not api_key:
+    all_keys = _resolve_all_keys(args.provider, args.api_key)
+    if not all_keys:
         sys.exit(
             f"ERROR: No API key for provider '{args.provider}'. "
             "Pass --api-key or set a key in backend/.env."
         )
+
+    if len(all_keys) > 1:
+        print(f"  🔑  Token pool: {len(all_keys)} keys loaded for {args.provider}")
 
     # If model is in registry, auto-apply thinking_budget when not set via CLI
     reg = MODEL_REGISTRY.get(args.model, {})
@@ -966,7 +1472,7 @@ def main() -> None:
     run_single_benchmark(
         provider=args.provider,
         model=args.model,
-        api_key=api_key,
+        api_keys=all_keys,
         dataset=dataset,
         data_dir=data_dir,
         delay=args.delay,
