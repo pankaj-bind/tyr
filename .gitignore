@@ -14,6 +14,8 @@ __pycache__/
 
 # ----- Research Paper (generated artifacts) -
 Research_Paper/
+data/
+dataset/
 
 # ----- VS Code Extension --------------------
 vscode-extension/out/
