@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <p align="center">
   <h1 align="center">Tyr</h1>
   <p align="center">
@@ -227,3 +228,6 @@ If you use Tyr in your research, please cite:
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+=======
+
+>>>>>>> ad619e509f2da79aee51cb06f016001a2bfab973
