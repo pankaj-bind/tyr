@@ -1,212 +1,229 @@
-## Flow of solution
-<img width="1549" height="862" alt="image" src="https://github.com/user-attachments/assets/6e1e0b9c-e3cc-4f45-85f6-c7187fb7bb44" />
+<p align="center">
+  <h1 align="center">Tyr</h1>
+  <p align="center">
+    <strong>A Hybrid Formal Verification Framework for LLM-Generated Code Optimizations</strong>
+  </p>
+  <p align="center">
+    <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white" alt="Python 3.12+"></a>
+    <a href="https://github.com/Z3Prover/z3"><img src="https://img.shields.io/badge/Z3_Solver-4.13-blue?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCI+PHRleHQgeD0iNCIgeT0iMTgiIGZvbnQtc2l6ZT0iMTYiIGZpbGw9IndoaXRlIj7iiIA8L3RleHQ+PC9zdmc+" alt="Z3 Solver"></a>
+    <a href="https://marketplace.visualstudio.com/"><img src="https://img.shields.io/badge/VS_Code-Extension-007ACC?logo=visualstudiocode&logoColor=white" alt="VS Code Extension"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="MIT License"></a>
+  </p>
+</p>
 
+---
 
+> **When an LLM says it "optimized" your code, did it preserve correctness?**
+>
+> Tyr answers that question with mathematical proof. It combines Bounded Model Checking via the Z3 theorem prover with a concrete execution fallback to catch semantic hallucinations in LLM-generated code -- before they reach production.
 
-### Manual Calculation
+## Key Findings
 
-To understand what the tools are doing, you can also calculate the metrics manually. The CK suite includes the following six metrics:
+Across **2,750 experiments** (11 frontier models x 250 problems), Tyr formally caught **557 semantic hallucinations** -- cases where models returned code that looked correct but silently changed behavior:
 
-#### 1. Weighted Methods per Class (WMC)
-* **What it measures:** The complexity of a class.
-* **How to calculate:** It's the sum of the complexities of all methods within that class. In its simplest form, each method is given a complexity of 1, so the WMC is just the **total number of methods** in the class. A high WMC can indicate that a class has too many responsibilities.
+| Model | Hallucinations Caught (SAT) | Failure Rate |
+|:------|:---------------------------:|:------------:|
+| Meta-Llama-3.1-405B-Instruct | 88 / 250 | **35.2%** |
+| Grok-3 | 67 / 250 | 26.8% |
+| Codestral-2501 | 58 / 250 | 23.2% |
+| DeepSeek-V3-0324 | 53 / 250 | 21.2% |
+| o4-mini | 52 / 250 | 20.8% |
+| o3 | 47 / 250 | 18.8% |
+| GPT-4.1 | 46 / 250 | 18.4% |
+| DeepSeek-R1-0528 | 42 / 250 | 16.8% |
+| Gemini-2.5-Flash | 41 / 250 | 16.4% |
+| Gemini-2.5-Pro | 37 / 250 | 14.8% |
+| **GPT-5** | **26 / 250** | **10.4%** |
 
-#### 2. Depth of Inheritance Tree (DIT)
-* **What it measures:** How far down a class is in the inheritance hierarchy.
-* **How to calculate:** It's the length of the path from the class to the root class in the inheritance tree. A root class has a DIT of 0. Deeper trees can lead to greater design complexity, but also promote more code reuse.
+Even GPT-5, the best-performing model, still produced semantically incorrect "optimizations" in 1 out of every 10 problems.
 
-#### 3. Number of Children (NOC)
-* **What it measures:** The number of immediate subclasses of a class.
-* **How to calculate:** Simply **count the number of classes** that directly inherit from the class in question. A high NOC can indicate a well-reused abstraction, but it can also mean that an abstraction is being misused.
+## How It Works
 
-#### 4. Coupling Between Object classes (CBO)
-* **What it measures:** The degree of coupling a class has with other classes.
-* **How to calculate:** It's a **count of the other classes** to which a class is coupled. A class is coupled to another if it uses the methods or instance variables of that other class. High coupling is undesirable as it complicates modification and testing.
+Tyr operates as a two-stage verification pipeline:
 
-#### 5. Response For a Class (RFC)
-* **What it measures:** The potential number of methods that can be executed in response to a message received by an object of that class.
-* **How to calculate:** It's the **number of methods in the class** plus the **number of remote methods** directly called by the methods of that class. A high RFC suggests high complexity and can make a class difficult to test.
+```mermaid
+flowchart TD
+    A["Original Code\n(O(N^2) brute-force)"] --> B["LLM Optimization\n(11 frontier models)"]
+    B --> C["AST Parsing &\nParameter Type Inference"]
+    C --> D["Z3 Symbolic Execution\n(Bounded Model Checking)"]
+    D --> E{Z3 Result?}
+    E -- "UNSAT" --> F["Formally Proven Equivalent"]
+    E -- "SAT" --> G["Counterexample Found\n(Hallucination Caught)"]
+    E -- "UNKNOWN / Timeout" --> H["Concrete Execution Fallback\n(Empirical Test Suite)"]
+    H --> I{Divergence?}
+    I -- "Yes" --> G
+    I -- "No" --> J["WARNING\n(Empirically Equivalent)"]
 
-#### 6. Lack of Cohesion in Methods (LCOM)
-* **What it measures:** The degree to which methods within a class are related to each other.
-* **How to calculate:** This is the most complex metric with several variations. The original idea is to look at pairs of methods in a class. If two methods use at least one common instance variable, they are considered cohesive. LCOM is a count of the pairs of methods that are **not cohesive** minus the pairs that are. A high LCOM value indicates the class is trying to do too many different things and should probably be split.
-
-### General Thresholds for CK Metrics
-
-Here are some commonly cited upper-bound thresholds. If a class exceeds these values, it's a "red flag" that warrants an investigation.
-
-| Metric | Threshold (Upper Bound) | What it Might Indicate if Exceeded |
-| :--- | :--- | :--- |
-| **WMC** | > 20 | The class is too complex and may have too many responsibilities (violates SRP). |
-| **DIT** | > 5 | The inheritance hierarchy is getting too deep, which can make it hard to understand and maintain. |
-| **NOC** | > 7 | The base class is becoming fragile. A change to it could impact a large number of subclasses. |
-| **CBO** | > 14 | The class is highly coupled to other classes, making it difficult to change or reuse independently. |
-| **RFC** | > 50 | The class has a complex interaction with other parts of the system, making it difficult to test and debug. |
-| **LCOM** | > 1 (for LCOM4) or Low Cohesion | The class lacks a clear, single purpose and should likely be split into smaller, more cohesive classes. |
-
-
-### Bad Code Example (High Metrics)
-
-This code features a `MegaManager` class that handles users, products, and notifications, leading to low cohesion and high complexity. It also has a very deep inheritance chain for `Level5Manager`.
-
-
-```cpp
-// ---- (Other classes this manager is coupled to) ----
-#include <iostream>
-#include <vector>
-#include <string>
-
-class Database { public: void connect() {} };
-class Emailer { public: void send(std::string msg) {} };
-class Logger { public: void log(std::string msg) {} };
-class User { public: std::string name; };
-class Product { public: std::string sku; };
-
-
-// ---- (Deep Inheritance Chain) ----
-class Entity { public: int id; };
-class Person : public Entity { public: std::string name; };
-class Employee : public Person { public: int employeeId; };
-class Manager : public Employee { public: int reportCount; };
-class Level5Manager : public Manager { public: void approveMegaProject() {} }; // DIT is high
-
-
-// ---- (The "God Class") ----
-class MegaManager {
-private:
-    Database db;
-    Emailer mailer;
-    Logger logger;
-    std::vector<User> users;
-    std::vector<Product> products;
-
-public:
-    // User Management Methods
-    void addUser(User u) {
-        db.connect();
-        users.push_back(u);
-        logger.log("User added");
-    }
-    void removeUser(int userId) {
-        logger.log("User removed");
-    }
-
-    // Product Management Methods
-    void addProduct(Product p) {
-        db.connect();
-        products.push_back(p);
-        logger.log("Product added");
-    }
-    void updateProductStock(int productId) {
-        logger.log("Stock updated");
-    }
-
-    // Notification Methods
-    void notifyAdmin(std::string message) {
-        mailer.send(message);
-    }
-};
+    style F fill:#27ae60,color:#fff
+    style G fill:#e74c3c,color:#fff
+    style J fill:#f39c12,color:#fff
 ```
 
------
+**Stage 1 -- Symbolic Verification (Z3 BMC):**
+The original and LLM-generated functions are translated into Z3 constraints via AST-level symbolic execution. Z3 searches for any input within the bounded domain (arrays up to 5 elements, integers in bounded ranges) where the two functions produce different outputs.
 
-### Refactored Code Example (Low Metrics)
+**Stage 2 -- Concrete Fallback:**
+When Z3 returns `UNKNOWN` (timeout, unsupported constructs), Tyr falls back to empirical testing with curated edge-case inputs -- boundary values, empty lists, single-element arrays, and random samples.
 
-This version breaks up the `MegaManager` into smaller, cohesive classes (`UserManager`, `ProductManager`, `NotificationService`). The deep inheritance is replaced with a flatter structure and composition.
+**Counterexample-Guided Self-Correction (CGSC):**
+When used interactively (via the API or VS Code extension), Tyr feeds discovered counterexamples back to the LLM, allowing up to 3 correction rounds before reporting a final verdict.
 
-```cpp
-#include <iostream>
-#include <vector>
-#include <string>
+## Repository Structure
 
-// ---- (Dependencies remain the same) ----
-class Database { public: void connect() {} };
-class Emailer { public: void send(std::string msg) {} };
-class Logger { public: void log(std::string msg) {} };
-
-
-// ---- (Flatter Inheritance and Composition) ----
-class Person {
-public:
-    int id;
-    std::string name;
-};
-
-enum Role { Staff, Manager, SeniorManager };
-
-class Employee { // No deep inheritance
-public:
-    Person profile;
-    int employeeId;
-    Role role;
-    void approveProject() {
-        if (role >= Manager) { /* logic */ }
-    }
-};
-
-
-// ---- ("God Class" is broken into smaller, focused classes) ----
-class UserManager {
-private:
-    Database& db;
-    Logger& logger;
-    std::vector<User> users;
-
-public:
-    UserManager(Database& d, Logger& l) : db(d), logger(l) {}
-    void addUser(User u) {
-        db.connect();
-        users.push_back(u);
-        logger.log("User added");
-    }
-    void removeUser(int userId) {
-        logger.log("User removed");
-    }
-};
-
-class ProductManager {
-private:
-    Database& db;
-    Logger& logger;
-    std::vector<Product> products;
-
-public:
-    ProductManager(Database& d, Logger& l) : db(d), logger(l) {}
-    void addProduct(Product p) {
-        db.connect();
-        products.push_back(p);
-        logger.log("Product added");
-    }
-    void updateProductStock(int productId) {
-        logger.log("Stock updated");
-    }
-};
-
-class NotificationService {
-private:
-    Emailer& mailer;
-public:
-    NotificationService(Emailer& e) : mailer(e) {}
-    void notifyAdmin(std::string message) {
-        mailer.send(message);
-    }
-};
+```
+tyr/
+|-- backend/                        # Core verification engine
+|   |-- main.py                     #   FastAPI server + CGSC loop
+|   |-- config.py                   #   BMC bounds, timeouts, sentinels
+|   |-- llm_service.py              #   LLM API integration (Groq)
+|   |-- symbolic/                   #   AST-to-Z3 translator
+|   |-- verifier/                   #   Equivalence checker + concrete fallback
+|   `-- tests/                      #   Regression test suite
+|
+|-- src/
+|   |-- generators/                 # Stage 1: LLM code generation
+|   |   `-- generate_llm_benchmark.py
+|   `-- evaluators/                 # Stage 2: Formal verification
+|       `-- verify_llm_results.py
+|
+|-- scripts/
+|   `-- build_dataset.py            # Generates tyr_benchmark_250.json
+|
+|-- data/
+|   |-- benchmarks/                 # 250 hand-curated O(N^2) problems
+|   |   `-- tyr_benchmark_250.json
+|   |-- raw/                        # Stage 1 output (11 CSVs)
+|   `-- verified/                   # Stage 2 output (11 CSVs) + analysis tools
+|       |-- *.csv                   #   Verified results per model
+|       |-- analyze_metrics.py      #   Per-model summary statistics
+|       |-- generate_graphs.py      #   Publication-ready comparison chart
+|       `-- find_bug.py             #   SAT case inspector
+|
+`-- vscode-extension/               # VS Code integration with WebView UI
+    `-- src/extension.ts
 ```
 
------
+## Quick Start
 
-### Comparison Table
+### 1. Clone and install
 
-This table shows the dramatic improvement in the key metrics after refactoring.
+```bash
+git clone https://github.com/<your-username>/tyr.git
+cd tyr
+```
 
-| Metric | "Bad" Code (Class) | Value | "Good" Code (Class) | Value | Improvement |
-| :--- | :--- | :--- | :--- | :--- |:--- |
-| **WMC** | `MegaManager` | **5** | `UserManager` | 2 | **Reduced complexity** |
-| | | | `ProductManager` | 2 | |
-| **DIT** | `Level5Manager` | **5** | `Employee` | **1** | **Flattened hierarchy** (via Composition) |
-| **CBO** | `MegaManager` | **5** | `UserManager` | 2 | **Reduced coupling** |
-| | | | `ProductManager` | 2 | |
-| | | | `NotificationService` | 1 | |
-| **RFC** | `MegaManager` | **\~8** | `UserManager` | \~4 | **Smaller, testable units** |
-| | | | `ProductManager` | \~4 | |
-| **LCOM** | `MegaManager` | **High** | `UserManager` | **Low** | **Increased cohesion** (Single Responsibility) |
+Create and activate a virtual environment:
+
+```powershell
+# Windows (PowerShell) — use the official Python installer, NOT MSYS2/MinGW
+python -m venv .venv
+.\.venv\bin\Activate.ps1
+```
+
+```bash
+# macOS / Linux
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+Install dependencies:
+
+```bash
+pip install -r backend/requirements.txt
+pip install tqdm python-dotenv openai google-genai pandas matplotlib numpy
+```
+
+> **Windows users:** If `z3-solver` or `numpy` fails to build, you are likely using MSYS2/MinGW Python instead of the [official CPython installer](https://www.python.org/downloads/). Verify with `python -c "import sys; print(sys.executable)"` -- it should show `AppData\Local\Programs\Python\`, not `msys64\`.
+
+### 2. Configure API keys
+
+Create a `.env` file in the project root:
+
+```env
+# GitHub Models (powers 9 of 11 benchmark models via Azure AI Inference)
+GITHUB_TOKEN=your-github-pat-here
+
+# Google Gemini (for gemini-2.5-pro, gemini-2.5-flash)
+GEMINI_API_KEY=your-gemini-key-here
+```
+
+### 3. Run the verification engine
+
+```bash
+# Start the Tyr backend server
+cd backend
+uvicorn main:app --host 0.0.0.0 --port 8000
+```
+
+```bash
+# Verify a single code pair via the API
+curl -X POST http://localhost:8000/verify \
+  -H "Content-Type: application/json" \
+  -d '{"code": "def two_sum(nums, t):\n  for i in range(len(nums)):\n    for j in range(i+1,len(nums)):\n      if nums[i]+nums[j]==t: return 1\n  return 0"}'
+```
+
+### 4. Reproduce the benchmark
+
+```bash
+# Stage 1: Generate LLM solutions (all 11 models)
+python src/generators/generate_llm_benchmark.py --suite all
+
+# Stage 2: Verify all results with Tyr
+python src/evaluators/verify_llm_results.py --all
+
+# Analyze results
+cd data/verified && python analyze_metrics.py
+```
+
+## Detailed Guides
+
+| Guide | Description |
+|:------|:------------|
+| [Benchmark Pipeline](docs/BENCHMARK_GENERATION.md) | Running Stage 1 (LLM generation) and Stage 2 (formal verification) |
+| [Analysis & Graphs](docs/GRAPH_GENERATION.md) | Reproducing charts and statistics from verified results |
+
+## Verification Bounds
+
+Tyr uses Bounded Model Checking, which means verification is exhaustive **within defined bounds**:
+
+| Parameter | Default | Description |
+|:----------|:-------:|:------------|
+| `MAX_BMC_LENGTH` | 5 | Maximum list length in symbolic domain |
+| `MAX_SYMBOLIC_RANGE` | 10 | Maximum `range()` iterations in for-loops |
+| `MAX_LOOP_UNROLL` | 30 | Maximum while-loop unroll depth |
+| `Z3_TIMEOUT_MS` | 10,000 | Z3 solver timeout (milliseconds) |
+| `CONCRETE_EXEC_TIMEOUT_S` | 5 | Per-function execution timeout in fallback |
+| `MAX_CORRECTION_ROUNDS` | 3 | CGSC self-correction attempts |
+
+These can be overridden via environment variables (e.g., `TYR_MAX_BMC_LENGTH=8`).
+
+## VS Code Extension
+
+The Tyr VS Code extension provides one-click verification from your editor:
+
+1. Select a Python function in the editor
+2. Right-click and choose **Tyr: Optimize & Verify**
+3. View the result in a rich WebView panel with:
+   - Side-by-side diff of original vs. optimized code
+   - Formal verification verdict with counterexample details
+   - Big-O complexity comparison
+   - Full CGSC audit trail
+
+Requires the Tyr backend running locally (`uvicorn main:app --port 8000`).
+
+## Citation
+
+If you use Tyr in your research, please cite:
+
+```bibtex
+@misc{tyr2025,
+  title   = {Tyr: A Hybrid Formal Verification Framework for LLM-Generated Code Optimizations},
+  author  = {Pankaj Kumar Bind},
+  year    = {2025},
+  url     = {https://github.com/<your-username>/tyr}
+}
+```
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.

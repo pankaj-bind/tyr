@@ -19,7 +19,6 @@ PART 2 — System 2 (Reasoning) Titans
     o3                             OpenAI SOTA Reasoning
     o4-mini                        OpenAI Lightweight Reasoning
     DeepSeek-R1-0528               Open-Weight Reasoning SOTA
-    MAI-DS-R1                      Microsoft Post-Trained R1
     gemini-2.5-flash               Google Fast Reasoning
 
 Stage 1 output schema  (data/raw/<provider>_<model>.csv)
@@ -43,22 +42,16 @@ Usage
     # Run entire System 2 suite
     python src/generators/generate_llm_benchmark.py --suite system2
 
-    # Run ALL 12 models
+    # Run ALL 11 models
     python src/generators/generate_llm_benchmark.py --suite all
 
     # List registered models + key availability
     python src/generators/generate_llm_benchmark.py --list-models
 
-Token Pool (rate-limit rotation)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    Set GITHUB_TOKENS in .env with comma-separated PATs from different
-    accounts.  On RateLimitError the engine auto-rotates to the next
-    token and rebuilds the client — zero downtime.
-
-        GITHUB_TOKENS=ghp_account1,ghp_account2,ghp_account3
-
-    Total retry budget = MAX_RETRIES × pool_size, so 3 tokens give
-    you 9 attempts before final failure.
+Authentication
+~~~~~~~~~~~~~~
+    Pass your API key via --api-key or set the corresponding env var
+    in .env (e.g. GITHUB_TOKEN, OPENAI_API_KEY, GEMINI_API_KEY).
 """
 from __future__ import annotations
 
@@ -109,13 +102,6 @@ _ENV_KEY_MAP: dict[str, list[str]] = {
     "gemini":   ["GEMINI_API_KEY", "Gemini_API_KEY"],
 }
 
-# Multi-token env vars (comma-separated pools for rate-limit rotation)
-_ENV_POOL_MAP: dict[str, str] = {
-    "github":   "GITHUB_TOKENS",
-    "openai":   "OPENAI_API_KEYS",
-    "deepseek": "DEEPSEEK_API_KEYS",
-    "gemini":   "GEMINI_API_KEYS",
-}
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -152,9 +138,16 @@ MODEL_REGISTRY: dict[str, dict] = {
         "label":    "Grok 3 (xAI Standard Heavyweight)",
     },
     "gemini-2.5-pro": {
-        "provider": "gemini",
-        "suite":    "system1",
-        "label":    "Gemini 2.5 Pro (Google Standard)",
+        "provider":        "gemini",
+        "suite":           "system1",
+        "label":           "Gemini 2.5 Pro (Google Standard)",
+        "thinking_budget": None,
+    },
+    "gemini-3.1-pro-preview": {
+        "provider":        "gemini",
+        "suite":           "system1",
+        "label":           "Gemini 3.1 Pro Preview (Google Next-Gen Standard)",
+        "thinking_budget": None,
     },
 
     # ── PART 2: System 2 (Reasoning) Titans ───────────────────────
@@ -180,15 +173,16 @@ MODEL_REGISTRY: dict[str, dict] = {
         "suite":    "system2",
         "label":    "DeepSeek-R1-0528 (Open-Weight Reasoning SOTA)",
     },
-    "MAI-DS-R1": {
-        "provider": "github",
-        "suite":    "system2",
-        "label":    "MAI-DS-R1 (Microsoft Post-Trained R1)",
-    },
     "gemini-2.5-flash": {
         "provider":        "gemini",
         "suite":           "system2",
         "label":           "Gemini 2.5 Flash (Google Fast Reasoning)",
+        "thinking_budget": 8192,
+    },
+    "gemini-3-flash-preview": {
+        "provider":        "gemini",
+        "suite":           "system2",
+        "label":           "Gemini 3.0 Flash Preview (Google Next-Gen Reasoning)",
         "thinking_budget": 8192,
     },
 }
@@ -208,10 +202,9 @@ _REASONING_MODELS: frozenset[str] = frozenset({
     "gpt-5",
     # DeepSeek reasoning family
     "deepseek-reasoner", "deepseek-r1", "DeepSeek-R1-0528",
-    # Microsoft post-trained R1 — same API constraints as DeepSeek-R1
-    "MAI-DS-R1",
     # NOTE: grok-3 is standard (System 1) — accepts temperature normally.
-    # NOTE: Gemini thinking is controlled via thinking_budget, not this set.
+    # NOTE: Gemini thinking (2.5-flash, 3-flash-preview) is controlled
+    #       via thinking_budget in MODEL_REGISTRY, not this set.
 })
 
 
@@ -219,7 +212,7 @@ _REASONING_MODELS: frozenset[str] = frozenset({
 # Constants
 # ═══════════════════════════════════════════════════════════════════════
 
-DEFAULT_DATASET  = _PROJECT_ROOT / "dataset" / "tyr_benchmark_150.json"
+DEFAULT_DATASET  = _PROJECT_ROOT / "data" / "benchmarks" / "tyr_benchmark_250.json"
 DEFAULT_DATA_DIR = _PROJECT_ROOT / "data" / "raw"
 
 # Stage 1 CSV schema — deliberately excludes verdict / optimized_complexity
@@ -255,83 +248,13 @@ MAX_RETRIES  = 3
 BACKOFF_BASE = 2
 
 
-# ═══════════════════════════════════════════════════════════════════════
-# Token Pool — automatic round-robin rotation on RateLimitError
-# ═══════════════════════════════════════════════════════════════════════
-
-class TokenPool:
-    """Round-robin token rotation with automatic client rebuild.
-
-    When a RateLimitError is detected, call ``rotate()`` to advance to
-    the next token and rebuild the SDK client — zero downtime, zero
-    manual intervention.
-
-    Usage::
-
-        pool = TokenPool(provider, keys=["ghp_aaa", "ghp_bbb"])
-        client = pool.client
-        ...
-        # on RateLimitError:
-        pool.rotate()
-        client = pool.client   # new client with next token
-    """
-
-    def __init__(self, provider: str, keys: list[str]) -> None:
-        if not keys:
-            raise ValueError(f"TokenPool: no keys supplied for {provider}")
-        self.provider = provider
-        self._keys = list(dict.fromkeys(keys))  # deduplicate, preserve order
-        self._idx = 0
-        self._client = build_client(provider, self.current_key)
-        self._rotations = 0
-
-    @property
-    def current_key(self) -> str:
-        return self._keys[self._idx]
-
-    @property
-    def client(self):
-        return self._client
-
-    @property
-    def pool_size(self) -> int:
-        return len(self._keys)
-
-    @property
-    def rotations(self) -> int:
-        return self._rotations
-
-    def rotate(self) -> str:
-        """Advance to the next token and rebuild the client.
-
-        Returns the new key (masked for logging).
-        """
-        old_idx = self._idx
-        self._idx = (self._idx + 1) % len(self._keys)
-        self._client = build_client(self.provider, self.current_key)
-        self._rotations += 1
-        masked = self.current_key[:8] + "…" + self.current_key[-4:]
-        tqdm.write(
-            f"    🔄  Token rotated: slot {old_idx + 1} → "
-            f"{self._idx + 1}/{len(self._keys)}  "
-            f"(key: {masked})"
-        )
-        return self.current_key
-
-    def __repr__(self) -> str:
-        return (
-            f"TokenPool(provider={self.provider!r}, "
-            f"pool_size={len(self._keys)}, "
-            f"current_slot={self._idx + 1})"
-        )
-
 
 # ═══════════════════════════════════════════════════════════════════════
 # ASCII Art Banner
 # ═══════════════════════════════════════════════════════════════════════
 
 _BANNER_ART: tuple[str, ...] = (
-    "████████╗██╗   ██╗██████╗      ██████╗ ███████╗███╗   ██╗ ██████╗██╗  ██╗███╗   ███╗ █████╗ ██████╗ ██╗  ██╗",
+    "████████╗██╗   ██╗██████╗     ██████╗ ███████╗███╗   ██╗ ██████╗██╗  ██╗███╗   ███╗ █████╗ ██████╗ ██╗  ██╗",
     "╚══██╔══╝╚██╗ ██╔╝██╔══██╗    ██╔══██╗██╔════╝████╗  ██║██╔════╝██║  ██║████╗ ████║██╔══██╗██╔══██╗██║ ██╔╝",
     "   ██║    ╚████╔╝ ██████╔╝    ██████╔╝█████╗  ██╔██╗ ██║██║     ███████║██╔████╔██║███████║██████╔╝█████╔╝ ",
     "   ██║     ╚██╔╝  ██╔══██╗    ██╔══██╗██╔══╝  ██║╚██╗██║██║     ██╔══██║██║╚██╔╝██║██╔══██║██╔══██╗██╔═██╗ ",
@@ -568,7 +491,11 @@ def _call_gemini(
     prompt: str,
     thinking_budget: int | None,
 ) -> dict:
-    """Google Gemini call via google-genai SDK."""
+    """Google Gemini call via google-genai SDK (Vertex AI endpoint).
+
+    For standard (System 1) models: ``temperature=0.0``, no thinking.
+    For reasoning (System 2) models: ``ThinkingConfig(thinking_budget=N)``.
+    """
     from google.genai import types
 
     config_kwargs: dict = {}
@@ -581,7 +508,7 @@ def _call_gemini(
 
     config = types.GenerateContentConfig(**config_kwargs)
 
-    # ── LATENCY ISOLATION ──────────────────────────────────────────
+    # ── LATENCY ISOLATION: timer wraps ONLY the network/inference call ──
     t0 = time.perf_counter()
     response = client.models.generate_content(
         model=model,
@@ -589,18 +516,24 @@ def _call_gemini(
         config=config,
     )
     latency_ms = (time.perf_counter() - t0) * 1000.0
-    # ── END TIMED SECTION ─────────────────────────────────────────
+    # ── END TIMED SECTION ───────────────────────────────────────────────
 
     text = response.text or ""
 
-    pt = rt = tt = 0
+    pt = ct = rt = tt = 0
     meta = getattr(response, "usage_metadata", None)
     if meta:
         pt = int(getattr(meta, "prompt_token_count", 0) or 0)
         ct = int(getattr(meta, "candidates_token_count", 0) or 0)
         tt_raw = getattr(meta, "total_token_count", None)
         tt = int(tt_raw) if tt_raw is not None else pt + ct
+
         rt = int(getattr(meta, "thinking_token_count", 0) or 0)
+
+        # MLOps FIX: Deduce invisible thinking tokens via algebra
+        hidden_reasoning = tt - (pt + ct)
+        if hidden_reasoning > 0 and rt == 0:
+            rt = hidden_reasoning
 
     return {
         "text": text,
@@ -616,75 +549,29 @@ def _call_gemini(
 # Retry wrapper  (provider-agnostic)
 # ═══════════════════════════════════════════════════════════════════════
 
-def _is_rate_limit(exc: Exception) -> bool:
-    """Return True if the exception is a rate-limit error."""
-    try:
-        import openai as _oa
-        if isinstance(exc, _oa.RateLimitError):
-            return True
-    except ImportError:
-        pass
-    msg = str(exc).lower()
-    return any(t in msg for t in ("429", "rate", "quota", "resourceexhausted"))
-
-
-def _is_auth_error(exc: Exception) -> bool:
-    """Return True if the exception is an authentication/credentials error."""
-    try:
-        import openai as _oa
-        if isinstance(exc, _oa.AuthenticationError):
-            return True
-    except ImportError:
-        pass
-    msg = str(exc).lower()
-    return any(t in msg for t in ("401", "unauthorized", "bad credentials"))
-
-
 def _call_with_backoff(
     fn_factory,   # callable(client) -> result dict
-    pool: TokenPool,
+    client,
     label: str,
 ) -> dict:
     """
-    Execute ``fn_factory(pool.client)`` with exponential backoff.
+    Execute ``fn_factory(client)`` with exponential backoff.
 
-    On RateLimitError, rotates to the next token in the pool before
-    retrying — burning through ALL available tokens before giving up.
-
-    Total attempts = MAX_RETRIES × pool_size, ensuring every token is
-    tried before the final failure.
+    Retries up to MAX_RETRIES on transient / rate-limit errors.
     """
-    max_total = MAX_RETRIES * pool.pool_size
     last_exc: Exception | None = None
 
-    for attempt in range(1, max_total + 1):
+    for attempt in range(1, MAX_RETRIES + 1):
         try:
-            return fn_factory(pool.client)
+            return fn_factory(client)
         except Exception as exc:
             last_exc = exc
 
-            # Auth error (401 / bad credentials) → rotate immediately
-            if _is_auth_error(exc) and pool.pool_size > 1 and attempt < max_total:
-                tqdm.write(
-                    f"    🔑  {label} auth error on token slot "
-                    f"{pool._idx + 1}/{pool.pool_size}, rotating … "
-                    f"[{type(exc).__name__}]"
-                )
-                pool.rotate()
-                time.sleep(0.3)
-                continue
-
-            if _is_retriable(exc) and attempt < max_total:
+            if _is_retriable(exc) and attempt < MAX_RETRIES:
                 wait = BACKOFF_BASE ** min(attempt, 4)  # cap at 16s
-
-                # Rate-limit specifically → rotate token first
-                if _is_rate_limit(exc) and pool.pool_size > 1:
-                    pool.rotate()
-                    wait = 0.5   # minimal delay after rotation
-
                 tqdm.write(
                     f"    ⚠  {label} transient error "
-                    f"(attempt {attempt}/{max_total}), "
+                    f"(attempt {attempt}/{MAX_RETRIES}), "
                     f"retrying in {wait:.1f}s … "
                     f"[{type(exc).__name__}]"
                 )
@@ -692,8 +579,7 @@ def _call_with_backoff(
                 continue
             raise
     raise RuntimeError(
-        f"API failed after {max_total} attempts "
-        f"(across {pool.pool_size} tokens): {last_exc}"
+        f"API failed after {MAX_RETRIES} attempts: {last_exc}"
     )
 
 
@@ -705,12 +591,45 @@ def build_client(provider: str, api_key: str):
     """
     Instantiate the SDK client exactly once before the benchmark loop.
     Cost: ~2-5ms per init. Must NOT occur inside the latency-timed block.
+
+    For the ``gemini`` provider the builder auto-discovers a GCP Service
+    Account JSON key inside ``src/generators/`` and initialises the
+    google-genai client in **Vertex AI** mode (enterprise endpoint).
     """
     if provider == "gemini":
         try:
             from google import genai
         except ImportError:
             sys.exit("ERROR: pip install google-genai")
+
+        # ── Auto-discover GCP Service Account JSON key ─────────────
+        generators_dir = Path(__file__).resolve().parent
+        json_files = sorted(generators_dir.glob("*.json"))
+
+        if json_files:
+            if len(json_files) > 1:
+                tqdm.write(
+                    f"    ⚠  Multiple JSON files found in {generators_dir}; "
+                    f"using first: {json_files[0].name}"
+                )
+            sa_path = json_files[0]
+            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(sa_path)
+
+            with open(sa_path, "r", encoding="utf-8") as fh:
+                sa_data = json.load(fh)
+            project_id = sa_data["project_id"]
+
+            tqdm.write(
+                f"    🔐  Vertex AI auth: project={project_id}, "
+                f"key={sa_path.name}"
+            )
+            return genai.Client(
+                vertexai=True,
+                project=project_id,
+                location="us-central1",
+            )
+
+        # Fallback: consumer API key if no JSON file is present
         return genai.Client(api_key=api_key)
     else:
         try:
@@ -786,55 +705,15 @@ def _get_suite_models(suite: str) -> dict[str, dict]:
     return {k: v for k, v in MODEL_REGISTRY.items() if v["suite"] == suite}
 
 
-def _split_keys(raw: str) -> list[str]:
-    """Split a possibly comma-separated value into individual keys."""
-    return [k.strip() for k in raw.split(",") if k.strip()]
-
-
 def _resolve_api_key(provider: str, cli_key: str | None = None) -> str | None:
     """Resolve a single API key from CLI → .env. Returns None if not found."""
     if cli_key:
-        return cli_key.split(",")[0].strip()  # first key only
+        return cli_key.strip()
     for env in _ENV_KEY_MAP.get(provider, []):
         val = os.getenv(env, "").strip()
         if val:
-            return val.split(",")[0].strip()  # first key only
+            return val
     return None
-
-
-def _resolve_all_keys(provider: str, cli_key: str | None = None) -> list[str]:
-    """Resolve ALL available keys for a provider.
-
-    Priority order:
-        1. CLI --api-key  (always slot 0; may be comma-separated)
-        2. GITHUB_TOKENS / OPENAI_API_KEYS / … (comma-separated pool)
-        3. GITHUB_TOKEN / OPENAI_API_KEY / … (also auto-split on commas)
-
-    Returns a de-duplicated list of non-empty keys.
-    """
-    keys: list[str] = []
-
-    # CLI key is always first (may itself be comma-separated)
-    if cli_key:
-        keys.extend(_split_keys(cli_key))
-
-    # Pool env var (comma-separated)
-    pool_env = _ENV_POOL_MAP.get(provider)
-    if pool_env:
-        keys.extend(_split_keys(os.getenv(pool_env, "")))
-
-    # Single-key env vars (also auto-split on commas for resilience)
-    for env in _ENV_KEY_MAP.get(provider, []):
-        keys.extend(_split_keys(os.getenv(env, "")))
-
-    # Deduplicate while preserving order
-    seen: set[str] = set()
-    unique: list[str] = []
-    for k in keys:
-        if k not in seen:
-            seen.add(k)
-            unique.append(k)
-    return unique
 
 
 def list_models() -> None:
@@ -878,8 +757,8 @@ def parse_args() -> argparse.Namespace:
             "  --provider github --model gpt-4.1 --api-key ghp_XXX\n\n"
             "Suite mode (runs all models in a suite automatically):\n"
             "  --suite system1          (6 standard models)\n"
-            "  --suite system2          (6 reasoning models)\n"
-            "  --suite all              (all 12 models)\n\n"
+            "  --suite system2          (5 reasoning models)\n"
+            "  --suite all              (all 11 models)\n\n"
             "List registered models:\n"
             "  --list-models\n"
         ),
@@ -925,7 +804,7 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument(
         "--dataset",
         default=str(DEFAULT_DATASET),
-        help="Path to benchmark JSON (default: dataset/tyr_benchmark_150.json).",
+        help="Path to benchmark JSON (default: data/benchmarks/tyr_benchmark_250.json).",
     )
     ap.add_argument(
         "--output-dir",
@@ -943,7 +822,7 @@ def parse_args() -> argparse.Namespace:
 def run_single_benchmark(
     provider: str,
     model: str,
-    api_keys: list[str] | str,
+    api_key: str,
     dataset: list[dict],
     data_dir: Path,
     delay: float,
@@ -951,19 +830,14 @@ def run_single_benchmark(
 ) -> dict:
     """Run the full benchmark for one model.
 
-    ``api_keys`` can be a single key (str) or a list of keys for
-    round-robin rotation on RateLimitError.
-
     Returns a summary dict with ok/error/syntax counts and output path.
     """
     is_reasoning = model in _REASONING_MODELS or model.lower() in {
         m.lower() for m in _REASONING_MODELS
     }
 
-    # ── Build token pool (supports 1-N keys) ───────────────────────
-    if isinstance(api_keys, str):
-        api_keys = [api_keys]
-    pool = TokenPool(provider, api_keys)
+    # ── Build SDK client (once, before the benchmark loop) ─────────
+    client = build_client(provider, api_key)
 
     # ── CSV setup ──────────────────────────────────────────────────
     csv_path = _output_csv_path(provider, model, data_dir)
@@ -986,11 +860,6 @@ def run_single_benchmark(
         thinking_budget=thinking_budget,
         csv_path=csv_path,
     )
-    if pool.pool_size > 1:
-        print(
-            f"  🔑  Token pool: {pool.pool_size} keys loaded "
-            f"(auto-rotation on RateLimitError)"
-        )
 
     # ── Counters ───────────────────────────────────────────────────
     ok = err = skipped = syntax_errs = 0
@@ -1037,7 +906,7 @@ def run_single_benchmark(
         completion_tokens  = 0
         total_tokens       = 0
 
-        # ── API call (with backoff + token rotation) ───────────────
+        # ── API call (with backoff) ────────────────────────────────
         try:
             if provider == "gemini":
                 fn_factory = lambda c: _call_gemini(         # noqa: E731
@@ -1048,7 +917,7 @@ def run_single_benchmark(
                     c, model, prompt, is_reasoning,
                 )
 
-            result = _call_with_backoff(fn_factory, pool, label=pid)
+            result = _call_with_backoff(fn_factory, client, label=pid)
 
             latency_ms         = result["latency_ms"]
             prompt_tokens      = result["prompt_tokens"]
@@ -1106,12 +975,6 @@ def run_single_benchmark(
     avg = f"{sum(latencies)/len(latencies):.1f}" if latencies else "N/A"
     p50 = f"{_pct(latencies, 50):.1f}" if latencies else "N/A"
     p95 = f"{_pct(latencies, 95):.1f}" if latencies else "N/A"
-    rot_str = (
-        f"  Token rotations : {pool.rotations}  "
-        f"(across {pool.pool_size} keys)\n"
-        if pool.pool_size > 1 else ""
-    )
-
     print(
         f"\n{'═' * 72}\n"
         f"  STAGE 1 COMPLETE — {provider.upper()} / {model}\n"
@@ -1120,7 +983,6 @@ def run_single_benchmark(
         f"  Syntax errors : {syntax_errs}\n"
         f"  API errors    : {err}\n"
         f"  Skipped       : {skipped}\n"
-        f"{rot_str}"
         f"{'─' * 72}\n"
         f"  Latency (API-only)  avg={avg}ms  p50={p50}ms  p95={p95}ms\n"
         f"  Wall clock          {h_e:02d}h {m_e:02d}m {s_e:02d}s\n"
@@ -1242,7 +1104,7 @@ def _interactive_model_picker() -> str | None:
                   "value": "__SUITE__S1", "is_header": False, "disabled": False})
     items.append({"label": "Run ALL System 2 models (reasoning)",
                   "value": "__SUITE__S2", "is_header": False, "disabled": False})
-    items.append({"label": "Run ALL 12 models",
+    items.append({"label": "Run ALL 11 models",
                   "value": "__SUITE__ALL", "is_header": False, "disabled": False})
     items.append({"label": "Quit",
                   "value": "__QUIT__", "is_header": False, "disabled": False})
@@ -1387,9 +1249,9 @@ def main() -> None:
 
         for i, (model_id, info) in enumerate(models.items(), 1):
             provider = info["provider"]
-            all_keys = _resolve_all_keys(provider, args.api_key)
+            key = _resolve_api_key(provider, args.api_key)
 
-            if not all_keys:
+            if not key:
                 print(
                     f"\n  ⚠  [{i}/{len(models)}] SKIP {model_id} — "
                     f"no API key for provider '{provider}'"
@@ -1397,20 +1259,16 @@ def main() -> None:
                 skipped_models.append(model_id)
                 continue
 
-            key_info = (
-                f" ({len(all_keys)} keys in pool)"
-                if len(all_keys) > 1 else ""
-            )
             print(
                 f"\n  ▶  [{i}/{len(models)}] Starting {model_id} "
-                f"({info['label']}){key_info}"
+                f"({info['label']})"
             )
 
             thinking = info.get("thinking_budget") or args.thinking_budget
             summary = run_single_benchmark(
                 provider=provider,
                 model=model_id,
-                api_keys=all_keys,
+                api_key=key,
                 dataset=dataset,
                 data_dir=data_dir,
                 delay=args.delay,
@@ -1438,7 +1296,7 @@ def main() -> None:
             )
         if skipped_models:
             print(f"{'─' * 72}")
-            print(f"    Skipped (missing keys): {', '.join(skipped_models)}")
+            print(f"    Skipped (missing key): {', '.join(skipped_models)}")
         print(f"{'─' * 72}")
         print(
             f"    Totals   OK={total_ok}  ERR={total_err}  "
@@ -1460,15 +1318,12 @@ def main() -> None:
                 f"(not found in registry)."
             )
 
-    all_keys = _resolve_all_keys(args.provider, args.api_key)
-    if not all_keys:
+    key = _resolve_api_key(args.provider, args.api_key)
+    if not key:
         sys.exit(
             f"ERROR: No API key for provider '{args.provider}'. "
             "Pass --api-key or set a key in backend/.env."
         )
-
-    if len(all_keys) > 1:
-        print(f"  🔑  Token pool: {len(all_keys)} keys loaded for {args.provider}")
 
     # If model is in registry, auto-apply thinking_budget when not set via CLI
     reg = MODEL_REGISTRY.get(args.model, {})
@@ -1477,7 +1332,7 @@ def main() -> None:
     run_single_benchmark(
         provider=args.provider,
         model=args.model,
-        api_keys=all_keys,
+        api_key=key,
         dataset=dataset,
         data_dir=data_dir,
         delay=args.delay,

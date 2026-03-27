@@ -21,6 +21,10 @@ Usage
     python src/evaluators/verify_llm_results.py \\
         --input data/raw/github_gpt_4o.csv
 
+    # Verify only rows 1-20 of a CSV
+    python src/evaluators/verify_llm_results.py \\
+        --input data/raw/github_gpt_4o.csv --range 1-20
+
     # Verify all CSVs in data/raw/ (batch mode)
     python src/evaluators/verify_llm_results.py --all
 
@@ -754,9 +758,11 @@ def process_file(
     api_url: str | None,
     timeout: int,
     force: bool,
+    id_range: tuple[int, int] | None = None,
 ) -> dict[str, int]:
     """
-    Verify all rows in ``raw_path`` and write to ``verified_dir``.
+    Verify rows in ``raw_path`` and write to ``verified_dir``.
+    If *id_range* is given, only 1-based rows in [start, end] are verified.
     Returns counters dict.
     """
     raw_rows = _read_raw_csv(raw_path)
@@ -799,6 +805,7 @@ def process_file(
             r.get("api_status", "") not in ("SYNTAX_ERROR",)
             and r.get("generated_code", "").strip()
             and (force or not r.get("verdict", "").strip())
+            and (id_range is None or id_range[0] <= (i + 1) <= id_range[1])
         )
     ]
 
@@ -936,6 +943,15 @@ def parse_args() -> argparse.Namespace:
         help="Verify ALL *.csv files in data/raw/.",
     )
     ap.add_argument(
+        "--range",
+        default=None,
+        dest="id_range",
+        help=(
+            "1-based row range to verify, e.g. '1-20' verifies rows 1 "
+            "through 20 inclusive. Prompted interactively if omitted."
+        ),
+    )
+    ap.add_argument(
         "--raw-dir",
         default=str(DEFAULT_RAW_DIR),
         dest="raw_dir",
@@ -969,6 +985,33 @@ def parse_args() -> argparse.Namespace:
     return ap.parse_args()
 
 
+def _parse_range(range_str: str | None) -> tuple[int, int] | None:
+    """Parse a range string like '1-20' into (start, end) inclusive."""
+    if not range_str:
+        return None
+    m = re.match(r"^(\d+)-(\d+)$", range_str.strip())
+    if not m:
+        sys.exit(f"ERROR: Invalid --range format '{range_str}'. Expected e.g. '1-20'.")
+    start, end = int(m.group(1)), int(m.group(2))
+    if start < 1 or end < start:
+        sys.exit(f"ERROR: Invalid --range '{range_str}'. Start must be >= 1 and <= end.")
+    return (start, end)
+
+
+def _prompt_range(total_rows: int) -> tuple[int, int] | None:
+    """Ask the user for a row range interactively. Returns None for 'all'."""
+    print(f"\n  CSV has {total_rows} rows (IDs 1-{total_rows}).")
+    print(f"  Enter a range to verify (e.g. 1-20), or press Enter to verify all:")
+    try:
+        ans = input("  Range> ").strip()
+    except (KeyboardInterrupt, EOFError):
+        print("\n  Aborted.")
+        sys.exit(0)
+    if not ans:
+        return None
+    return _parse_range(ans)
+
+
 def main() -> None:
     args         = parse_args()
     verified_dir = Path(args.verified_dir)
@@ -991,6 +1034,13 @@ def main() -> None:
         if not targets:
             sys.exit(f"ERROR: No CSV files found in {raw_dir}")
 
+    # ── Resolve row range ─────────────────────────────────────────
+    id_range = _parse_range(args.id_range)
+    # For single-file mode, prompt for range interactively if not given
+    if id_range is None and len(targets) == 1 and not args.all:
+        total_rows = len(_read_raw_csv(targets[0]))
+        id_range = _prompt_range(total_rows)
+
     if not _DIRECT_IMPORT_OK and not args.url:
         print(
             "  ℹ  Direct import unavailable (z3 not installed?). "
@@ -1006,9 +1056,11 @@ def main() -> None:
         f"Backend: {backend_str}"
     )
 
+    range_info = f"rows {id_range[0]}-{id_range[1]}" if id_range else "all"
     print(
         f"\n  Force   : {args.force}\n"
         f"  Timeout : {args.timeout}s\n"
+        f"  Range   : {range_info}\n"
     )
 
     grand: dict[str, int] = {
@@ -1021,6 +1073,7 @@ def main() -> None:
             api_url=args.url,
             timeout=args.timeout,
             force=args.force,
+            id_range=id_range,
         )
         for k, v in counts.items():
             grand[k] = grand.get(k, 0) + v

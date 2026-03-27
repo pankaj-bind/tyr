@@ -566,23 +566,27 @@ function getWebviewHtml(r: VerifyResponse): string {
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="color-scheme" content="light" />
 <title>Tyr Results</title>
 <style>
   :root {
-    --bg: #1e1e1e;
-    --surface: #252526;
-    --surface2: #2d2d30;
-    --border: #3e3e42;
-    --text: #cccccc;
-    --text-dim: #969696;
-    --accent: #569cd6;
-    --green: #4ec9b0;
-    --red: #f44747;
-    --orange: #ce9178;
-    --yellow: #dcdcaa;
+    /* Force a light UI regardless of VS Code theme */
+    --bg: #ffffff;
+    --surface: #f5f5f5;
+    --surface2: #ffffff;
+    --border: #d9d9d9;
+    --text: #1f1f1f;
+    --text-dim: #5f5f5f;
+    --accent: #0b66c3;
+    --green: #0f7b0f;
+    --red: #b00020;
+    --orange: #8a4b2a;
+    --yellow: #7a5d00;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { color-scheme: light; }
 
   body {
     font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;

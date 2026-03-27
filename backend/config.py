@@ -29,7 +29,7 @@ NEG_INF_SENTINEL: int = -(2**60)     # float('-inf') → large negative
 STRING_ID_BASE: int = 2**61          # first interned string ID
 
 # ── Solver ────────────────────────────────────────────────────────────
-Z3_TIMEOUT_MS: int = 30_000
+Z3_TIMEOUT_MS: int = 10_000
 CONCRETE_EXEC_TIMEOUT_S: int = 5
 
 # ── CGSC ──────────────────────────────────────────────────────────────
