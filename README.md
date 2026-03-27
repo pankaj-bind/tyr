@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 <p align="center">
   <h1 align="center">Tyr</h1>
   <p align="center">
@@ -20,45 +19,26 @@
 
 ## Key Findings
 
-Across **2,750 experiments** (11 frontier models x 250 problems), Tyr formally caught **557 semantic hallucinations** -- cases where models returned code that looked correct but silently changed behavior:
+**2,750 experiments** (11 frontier models x 250 problems)
 
-| Model | Hallucinations Caught (SAT) | Failure Rate |
-|:------|:---------------------------:|:------------:|
-| Meta-Llama-3.1-405B-Instruct | 88 / 250 | **35.2%** |
-| Grok-3 | 67 / 250 | 26.8% |
-| Codestral-2501 | 58 / 250 | 23.2% |
-| DeepSeek-V3-0324 | 53 / 250 | 21.2% |
-| o4-mini | 52 / 250 | 20.8% |
-| o3 | 47 / 250 | 18.8% |
-| GPT-4.1 | 46 / 250 | 18.4% |
-| DeepSeek-R1-0528 | 42 / 250 | 16.8% |
-| Gemini-2.5-Flash | 41 / 250 | 16.4% |
-| Gemini-2.5-Pro | 37 / 250 | 14.8% |
-| **GPT-5** | **26 / 250** | **10.4%** |
+**Table: Formal Verification Outcomes by Frontier Model (% of total benchmark runs)**
 
-Even GPT-5, the best-performing model, still produced semantically incorrect "optimizations" in 1 out of every 10 problems.
+| Model | UNSAT (%) | SAT (%) | WARNING (%) | ERROR (%) |
+| :--- | :--- | :--- | :--- | :--- |
+| GPT-5 | 22.4 | 10.4 | 38.8 | 28.4 |
+| Gemini 2.5 Flash | 22.0 | 16.4 | 25.6 | 36.0 |
+| Codestral | 22.4 | 23.2 | 24.8 | 29.6 |
+| DeepSeek R1 | 20.4 | 16.8 | 32.0 | 30.8 |
+| Grok 3 | 19.6 | 26.4 | 28.8 | 25.2 |
+| DeepSeek V3 | 18.8 | 20.8 | 28.8 | 31.6 |
+| GPT-4.1 | 14.0 | 18.4 | 30.8 | 36.8 |
+| o4-mini | 14.8 | 20.8 | 32.4 | 32.0 |
+| o3 | 14.8 | 18.8 | 31.6 | 34.8 |
+| Gemini 2.5 Pro | 16.8 | 14.8 | 26.0 | 42.4 |
+| Llama 3.1 405B | 16.4 | 35.2 | 22.4 | 26.0 |
 
+Even GPT-5, the best-performing model, still produced semantically incorrect "optimizations"
 ## How It Works
-
-Tyr operates as a two-stage verification pipeline:
-
-```mermaid
-flowchart TD
-    A["Original Code\n(O(N^2) brute-force)"] --> B["LLM Optimization\n(11 frontier models)"]
-    B --> C["AST Parsing &\nParameter Type Inference"]
-    C --> D["Z3 Symbolic Execution\n(Bounded Model Checking)"]
-    D --> E{Z3 Result?}
-    E -- "UNSAT" --> F["Formally Proven Equivalent"]
-    E -- "SAT" --> G["Counterexample Found\n(Hallucination Caught)"]
-    E -- "UNKNOWN / Timeout" --> H["Concrete Execution Fallback\n(Empirical Test Suite)"]
-    H --> I{Divergence?}
-    I -- "Yes" --> G
-    I -- "No" --> J["WARNING\n(Empirically Equivalent)"]
-
-    style F fill:#27ae60,color:#fff
-    style G fill:#e74c3c,color:#fff
-    style J fill:#f39c12,color:#fff
-```
 
 **Stage 1 -- Symbolic Verification (Z3 BMC):**
 The original and LLM-generated functions are translated into Z3 constraints via AST-level symbolic execution. Z3 searches for any input within the bounded domain (arrays up to 5 elements, integers in bounded ranges) where the two functions produce different outputs.
@@ -228,6 +208,3 @@ If you use Tyr in your research, please cite:
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
-=======
-
->>>>>>> ad619e509f2da79aee51cb06f016001a2bfab973
