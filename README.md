@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 <p align="center">
   <h1 align="center">Tyr</h1>
   <p align="center">
@@ -37,29 +36,55 @@ Across **2,750 experiments** (11 frontier models x 250 problems), Tyr formally c
 | **GPT-5** | **26 / 250** | **10.4%** |
 
 Even GPT-5, the best-performing model, still produced semantically incorrect "optimizations" in 1 out of every 10 problems.
-
 ## How It Works
 
 Tyr operates as a two-stage verification pipeline:
 
 ```mermaid
-flowchart TD
-    A["Original Code\n(O(N^2) brute-force)"] --> B["LLM Optimization\n(11 frontier models)"]
-    B --> C["AST Parsing &\nParameter Type Inference"]
-    C --> D["Z3 Symbolic Execution\n(Bounded Model Checking)"]
-    D --> E{Z3 Result?}
-    E -- "UNSAT" --> F["Formally Proven Equivalent"]
-    E -- "SAT" --> G["Counterexample Found\n(Hallucination Caught)"]
-    E -- "UNKNOWN / Timeout" --> H["Concrete Execution Fallback\n(Empirical Test Suite)"]
-    H --> I{Divergence?}
-    I -- "Yes" --> G
-    I -- "No" --> J["WARNING\n(Empirically Equivalent)"]
+graph TD
+    %% Main Pipeline Nodes
+    IN["Input: P_orig and P_opt"]
+    SB["(1) Security Sandbox + AST Parser"]
+    TR["(2) AST-to-SMT Translation τ"]
+    Z3["(3B) Z3 SMT Solver (timeout T=10s)"]
+    FB["(4) Concrete Fallback F (400 inputs)"]
+    
+    %% Parallel Nodes
+    CP["(3A) Complexity Parser C"]
 
-    style F fill:#27ae60,color:#fff
-    style G fill:#e74c3c,color:#fff
-    style J fill:#f39c12,color:#fff
+    %% Verdict Nodes (Stadium shape for emphasis)
+    ERR(["ERROR"])
+    UNS(["UNSAT"])
+    SAT(["SAT"])
+    WARN(["WARNING"])
+
+    %% Routing Arrows
+    IN --> SB
+    SB --> TR
+    SB -- "Fail" --> ERR
+    
+    TR -- "Semantic Eq." --> Z3
+    TR --> CP
+    
+    Z3 -- "Proven" --> UNS
+    Z3 -- "Bug Found" --> SAT
+    Z3 -- "Timeout" --> FB
+    
+    FB -- "All Pass" --> WARN
+    FB -- "Counterexample Found" --> SAT
+
+    %% Styling to match LaTeX colors
+    classDef redBox fill:#f9d0c4,stroke:#cc0000,stroke-width:2px,color:#000,font-weight:bold;
+    classDef greenBox fill:#d5e8d4,stroke:#4c9900,stroke-width:2px,color:#000,font-weight:bold;
+    classDef orangeBox fill:#ffe6cc,stroke:#d79b00,stroke-width:2px,color:#000,font-weight:bold;
+    classDef mainBox fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000;
+
+    %% Apply Styles
+    class ERR,SAT redBox;
+    class UNS greenBox;
+    class WARN orangeBox;
+    class IN,SB,TR,CP,Z3,FB mainBox;
 ```
-
 **Stage 1 -- Symbolic Verification (Z3 BMC):**
 The original and LLM-generated functions are translated into Z3 constraints via AST-level symbolic execution. Z3 searches for any input within the bounded domain (arrays up to 5 elements, integers in bounded ranges) where the two functions produce different outputs.
 
@@ -228,6 +253,3 @@ If you use Tyr in your research, please cite:
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
-=======
-
->>>>>>> ad619e509f2da79aee51cb06f016001a2bfab973
