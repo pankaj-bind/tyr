@@ -12,11 +12,6 @@ __pycache__/
 .env
 .venv/
 
-# ----- Research Paper (generated artifacts) -
-Research_Paper/
-data/
-dataset/
-
 # ----- VS Code Extension --------------------
 vscode-extension/out/
 vscode-extension/node_modules/
