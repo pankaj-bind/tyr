@@ -1,0 +1,6251 @@
+id,name,model_name,category,difficulty,original_complexity,target_complexity,original_code,generated_code,latency_ms,prompt_tokens,reasoning_tokens,completion_tokens,total_tokens,api_status,error_detail
+TYR-001,two_sum_exists,o3,pair-finding,easy,O(N^2),O(N),"def two_sum_exists(nums, target):
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] + nums[j] == target:
+                return 1
+    return 0
+","def two_sum_exists(nums, target):
+    seen = set()
+    for num in nums:
+        if target - num in seen:
+            return 1
+        seen.add(num)
+    return 0",14956.74,101,64,124,225,OK,
+TYR-002,count_pairs_with_sum,o3,pair-finding,easy,O(N^2),O(N),"def count_pairs_with_sum(nums, target):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] + nums[j] == target:
+                count += 1
+    return count
+","def count_pairs_with_sum(nums, target):
+    seen = {}
+    count = 0
+    for num in nums:
+        complement = target - num
+        count += seen.get(complement, 0)
+        seen[num] = seen.get(num, 0) + 1
+    return count",56048.76,108,64,145,253,OK,
+TYR-003,has_pair_with_diff,o3,pair-finding,easy,O(N^2),O(N),"def has_pair_with_diff(nums, target):
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if abs(nums[i] - nums[j]) == target:
+                return 1
+    return 0
+","def has_pair_with_diff(nums, target):
+    target = abs(target)
+    seen = set()
+    for num in nums:
+        if num + target in seen or num - target in seen:
+            return 1
+        seen.add(num)
+    return 0",57836.47,103,320,393,496,OK,
+TYR-004,count_equal_pairs,o3,pair-finding,easy,O(N^2),O(N),"def count_equal_pairs(nums):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] == nums[j]:
+                count += 1
+    return count
+","from collections import Counter
+
+def count_equal_pairs(nums):
+    counts = Counter(nums)
+    return sum(v * (v - 1) // 2 for v in counts.values())",54576.15,102,64,120,222,OK,
+TYR-005,closest_pair_sum,o3,pair-finding,medium,O(N^2),O(N),"def closest_pair_sum(nums, target):
+    if len(nums) < 2:
+        return 0
+    best = nums[0] + nums[1]
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            s = nums[i] + nums[j]
+            if abs(s - target) < abs(best - target):
+                best = s
+    return best
+","def closest_pair_sum(nums, target):
+    if len(nums) < 2:
+        return 0
+
+    nums.sort()
+    left, right = 0, len(nums) - 1
+    best = nums[left] + nums[right]
+
+    while left < right:
+        s = nums[left] + nums[right]
+        if abs(s - target) < abs(best - target):
+            best = s
+            if best == target:
+                return best
+        if s < target:
+            left += 1
+        else:
+            right -= 1
+    return best",68496.85,137,1152,1295,1432,OK,
+TYR-006,count_pairs_divisible_sum,o3,pair-finding,medium,O(N^2),O(N),"def count_pairs_divisible_sum(nums, k):
+    if k == 0:
+        return 0
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if (nums[i] + nums[j]) % k == 0:
+                count += 1
+    return count
+","def count_pairs_divisible_sum(nums, k):
+    if k == 0:
+        return 0
+    freq = {}
+    total = 0
+    for num in nums:
+        r = num % k
+        comp = (-r) % k
+        total += freq.get(comp, 0)
+        freq[r] = freq.get(r, 0) + 1
+    return total",49043.83,125,448,555,680,OK,
+TYR-007,max_pair_sum,o3,pair-finding,easy,O(N^2),O(N),"def max_pair_sum(nums):
+    if len(nums) < 2:
+        return 0
+    best = nums[0] + nums[1]
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            s = nums[i] + nums[j]
+            if s > best:
+                best = s
+    return best
+","def max_pair_sum(nums):
+    if len(nums) < 2:
+        return 0
+    max1 = max2 = float('-inf')
+    for x in nums:
+        if x > max1:
+            max2, max1 = max1, x
+        elif x > max2:
+            max2 = x
+    return max1 + max2",51756.93,128,192,292,420,OK,
+TYR-008,count_pairs_sum_less,o3,pair-finding,easy,O(N^2),O(N),"def count_pairs_sum_less(nums, target):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] + nums[j] < target:
+                count += 1
+    return count
+","def count_pairs_sum_less(nums, target):
+    nums.sort()
+    count = 0
+    left, right = 0, len(nums) - 1
+    while left < right:
+        if nums[left] + nums[right] < target:
+            count += right - left
+            left += 1
+        else:
+            right -= 1
+    return count",72203.70,108,1536,1632,1740,OK,
+TYR-009,count_pairs_sum_greater,o3,pair-finding,easy,O(N^2),O(N),"def count_pairs_sum_greater(nums, target):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] + nums[j] > target:
+                count += 1
+    return count
+","def count_pairs_sum_greater(nums, target):
+    nums = sorted(nums)
+    left, right = 0, len(nums) - 1
+    count = 0
+    while left < right:
+        if nums[left] + nums[right] > target:
+            count += right - left
+            right -= 1
+        else:
+            left += 1
+    return count",66728.48,109,1280,1379,1488,OK,
+TYR-010,has_pair_product,o3,pair-finding,easy,O(N^2),O(N),"def has_pair_product(nums, target):
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] * nums[j] == target:
+                return 1
+    return 0
+","def has_pair_product(nums, target):
+    seen = set()
+    if target == 0:
+        zero_found = False
+        for x in nums:
+            if x == 0:
+                if zero_found:
+                    return 1
+                zero_found = True
+            elif zero_found:
+                return 1
+        return 0
+    for x in nums:
+        if x != 0 and target % x == 0 and (target // x) in seen:
+            return 1
+        seen.add(x)
+    return 0",10579.98,101,512,643,744,OK,
+TYR-011,min_abs_pair_diff,o3,pair-finding,easy,O(N^2),O(N log N),"def min_abs_pair_diff(nums):
+    if len(nums) < 2:
+        return 0
+    best = abs(nums[0] - nums[1])
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            d = abs(nums[i] - nums[j])
+            if d < best:
+                best = d
+    return best
+","def min_abs_pair_diff(nums):
+    n = len(nums)
+    if n < 2:
+        return 0
+    nums.sort()
+    best = float('inf')
+    for i in range(1, n):
+        diff = nums[i] - nums[i - 1]
+        if diff < best:
+            best = diff
+            if best == 0:
+                break
+    return best",52593.21,133,128,230,363,OK,
+TYR-012,count_reverse_pairs,o3,pair-finding,medium,O(N^2),O(N log N),"def count_reverse_pairs(nums):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] > 2 * nums[j]:
+                count += 1
+    return count
+","def count_reverse_pairs(nums):
+    def merge_sort(l, r):
+        if l >= r:
+            return 0
+        mid = (l + r) // 2
+        count = merge_sort(l, mid) + merge_sort(mid + 1, r)
+        j = mid + 1
+        for i in range(l, mid + 1):
+            while j <= r and nums[i] > 2 * nums[j]:
+                j += 1
+            count += j - (mid + 1)
+        merged, i, j = [], l, mid + 1
+        while i <= mid and j <= r:
+            if nums[i] <= nums[j]:
+                merged.append(nums[i])
+                i += 1
+            else:
+                merged.append(nums[j])
+                j += 1
+        merged.extend(nums[i:mid + 1])
+        merged.extend(nums[j:r + 1])
+        nums[l:r + 1] = merged
+        return count
+    return merge_sort(0, len(nums) - 1) if nums else 0",60169.73,107,576,820,927,OK,
+TYR-013,count_pairs_abs_diff_k,o3,pair-finding,easy,O(N^2),O(N),"def count_pairs_abs_diff_k(nums, k):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if abs(nums[i] - nums[j]) == k:
+                count += 1
+    return count
+","from collections import Counter
+
+def count_pairs_abs_diff_k(nums, k):
+    if k < 0:
+        return 0
+    freq = Counter(nums)
+    if k == 0:
+        return sum(v * (v - 1) // 2 for v in freq.values())
+    return sum(freq[n] * freq.get(n + k, 0) for n in freq)",71701.79,110,448,552,662,OK,
+TYR-014,count_distinct_pair_sums,o3,pair-finding,medium,O(N^2),O(N),"def count_distinct_pair_sums(nums):
+    seen = {}
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            s = nums[i] + nums[j]
+            seen[s] = 1
+    total = 0
+    for k in seen:
+        total += 1
+    return total
+","import numpy as np
+
+def count_distinct_pair_sums(nums):
+    if len(nums) < 2:
+        return 0
+
+    min_val = min(nums)
+    offset = -min_val if min_val < 0 else 0
+    max_val = max(nums) + offset
+
+    size = 1
+    while size <= 2 * max_val:
+        size <<= 1
+
+    freq = np.zeros(size, dtype=np.int64)
+    for num in nums:
+        freq[num + offset] += 1
+
+    fft_freq = np.fft.fft(freq)
+    conv = np.fft.ifft(fft_freq * fft_freq).real.round().astype(np.int64)
+
+    single_occurrence = np.nonzero(freq == 1)[0]
+    conv[2 * single_occurrence] -= 1
+
+    return int(np.count_nonzero(conv))",307467.30,124,26368,26597,26721,OK,
+TYR-015,two_sum_less_than_k,o3,pair-finding,medium,O(N^2),O(N log N),"def two_sum_less_than_k(nums, k):
+    best = -1
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            s = nums[i] + nums[j]
+            if s < k and s > best:
+                best = s
+    return best
+","def two_sum_less_than_k(nums, k):
+    nums.sort()
+    left, right = 0, len(nums) - 1
+    best = -1
+    while left < right:
+        s = nums[left] + nums[right]
+        if s < k:
+            if s > best:
+                best = s
+            left += 1
+        else:
+            right -= 1
+    return best",66673.14,118,128,238,356,OK,
+TYR-016,most_frequent_element,o3,frequency,easy,O(N^2),O(N),"def most_frequent_element(nums):
+    if len(nums) == 0:
+        return -1
+    best = nums[0]
+    best_count = 0
+    for i in range(len(nums)):
+        count = 0
+        for j in range(len(nums)):
+            if nums[j] == nums[i]:
+                count += 1
+        if count > best_count:
+            best_count = count
+            best = nums[i]
+    return best
+","def most_frequent_element(nums):
+    if not nums:
+        return -1
+    counts = {}
+    best = nums[0]
+    best_count = 0
+    for num in nums:
+        counts[num] = counts.get(num, 0) + 1
+        if counts[num] > best_count:
+            best_count = counts[num]
+            best = num
+    return best",61111.19,145,576,676,821,OK,
+TYR-017,has_duplicate,o3,frequency,easy,O(N^2),O(N),"def has_duplicate(nums):
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] == nums[j]:
+                return 1
+    return 0
+","def has_duplicate(nums):
+    seen = set()
+    for num in nums:
+        if num in seen:
+            return 1
+        seen.add(num)
+    return 0",57028.27,95,64,124,219,OK,
+TYR-018,first_non_repeating,o3,frequency,easy,O(N^2),O(N),"def first_non_repeating(nums):
+    for i in range(len(nums)):
+        found_dup = 0
+        for j in range(len(nums)):
+            if i != j and nums[i] == nums[j]:
+                found_dup = 1
+        if found_dup == 0:
+            return nums[i]
+    return -1
+","from collections import Counter
+
+def first_non_repeating(nums):
+    counts = Counter(nums)
+    for num in nums:
+        if counts[num] == 1:
+            return num
+    return -1",5868.59,118,192,257,375,OK,
+TYR-019,count_distinct,o3,frequency,easy,O(N^2),O(N),"def count_distinct(nums):
+    count = 0
+    for i in range(len(nums)):
+        is_first = 1
+        for j in range(i):
+            if nums[j] == nums[i]:
+                is_first = 0
+        count += is_first
+    return count
+","def count_distinct(nums):
+    seen = set()
+    for num in nums:
+        seen.add(num)
+    return len(seen)",56012.33,110,128,175,285,OK,
+TYR-020,majority_element,o3,frequency,easy,O(N^2),O(N),"def majority_element(nums):
+    n = len(nums)
+    for i in range(n):
+        count = 0
+        for j in range(n):
+            if nums[j] == nums[i]:
+                count += 1
+        if count > n // 2:
+            return nums[i]
+    return -1
+","def majority_element(nums):
+    candidate, count = None, 0
+    for num in nums:
+        if count == 0:
+            candidate = num
+            count = 1
+        elif num == candidate:
+            count += 1
+        else:
+            count -= 1
+    return candidate if candidate is not None and nums.count(candidate) > len(nums) // 2 else -1",56578.78,115,128,230,345,OK,
+TYR-021,find_first_duplicate,o3,frequency,easy,O(N^2),O(N),"def find_first_duplicate(nums):
+    for i in range(len(nums)):
+        for j in range(i):
+            if nums[j] == nums[i]:
+                return nums[i]
+    return -1
+","def find_first_duplicate(nums):
+    seen = set()
+    for num in nums:
+        if num in seen:
+            return num
+        seen.add(num)
+    return -1",56457.65,90,192,247,337,OK,
+TYR-022,count_elements_appearing_twice,o3,frequency,medium,O(N^2),O(N),"def count_elements_appearing_twice(nums):
+    result = 0
+    for i in range(len(nums)):
+        is_first = 1
+        for k in range(i):
+            if nums[k] == nums[i]:
+                is_first = 0
+        if is_first == 0:
+            continue
+        count = 0
+        for j in range(len(nums)):
+            if nums[j] == nums[i]:
+                count += 1
+        if count == 2:
+            result += 1
+    return result
+","def count_elements_appearing_twice(nums):
+    freq = {}
+    for num in nums:
+        freq[num] = freq.get(num, 0) + 1
+    return sum(1 for count in freq.values() if count == 2)",57740.08,161,192,268,429,OK,
+TYR-023,count_inversions,o3,frequency,medium,O(N^2),O(N log N),"def count_inversions(nums):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] > nums[j]:
+                count += 1
+    return count
+","def count_inversions(nums):
+    def merge_sort(arr):
+        if len(arr) <= 1:
+            return arr, 0
+        mid = len(arr) // 2
+        left, inv_left = merge_sort(arr[:mid])
+        right, inv_right = merge_sort(arr[mid:])
+        merged, i, j, inv_split = [], 0, 0, 0
+        while i < len(left) and j < len(right):
+            if left[i] <= right[j]:
+                merged.append(left[i])
+                i += 1
+            else:
+                merged.append(right[j])
+                j += 1
+                inv_split += len(left) - i
+        merged.extend(left[i:])
+        merged.extend(right[j:])
+        return merged, inv_left + inv_right + inv_split
+    return merge_sort(nums)[1]",58927.16,104,320,516,620,OK,
+TYR-024,missing_number,o3,frequency,easy,O(N^2),O(N),"def missing_number(nums):
+    n = len(nums)
+    for i in range(n + 1):
+        found = 0
+        for j in range(n):
+            if nums[j] == i:
+                found = 1
+        if found == 0:
+            return i
+    return -1
+","def missing_number(nums):
+    n = len(nums)
+    return n * (n + 1) // 2 - sum(nums)",51135.33,114,64,111,225,OK,
+TYR-025,count_matching_last_digit_pairs,o3,frequency,easy,O(N^2),O(N),"def count_matching_last_digit_pairs(nums):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] % 10 == nums[j] % 10:
+                count += 1
+    return count
+","def count_matching_last_digit_pairs(nums):
+    freq = [0] * 10
+    for num in nums:
+        freq[num % 10] += 1
+    return sum(f * (f - 1) // 2 for f in freq)",59588.06,111,128,205,316,OK,
+TYR-026,count_unique_elements,o3,frequency,easy,O(N^2),O(N),"def count_unique_elements(nums):
+    count = 0
+    for i in range(len(nums)):
+        freq = 0
+        for j in range(len(nums)):
+            if nums[j] == nums[i]:
+                freq += 1
+        if freq == 1:
+            count += 1
+    return count
+","from collections import Counter
+
+def count_unique_elements(nums):
+    return sum(1 for v in Counter(nums).values() if v == 1)",55265.19,116,128,181,297,OK,
+TYR-027,single_number,o3,frequency,easy,O(N^2),O(N),"def single_number(nums):
+    for i in range(len(nums)):
+        count = 0
+        for j in range(len(nums)):
+            if nums[j] == nums[i]:
+                count += 1
+        if count == 1:
+            return nums[i]
+    return -1
+","def single_number(nums):
+    freq = {}
+    for n in nums:
+        freq[n] = freq.get(n, 0) + 1
+    for n in nums:
+        if freq[n] == 1:
+            return n
+    return -1",59020.52,109,192,265,374,OK,
+TYR-028,count_greater_than_all_right,o3,frequency,medium,O(N^2),O(N),"def count_greater_than_all_right(nums):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        is_leader = 1
+        for j in range(i + 1, n):
+            if nums[j] >= nums[i]:
+                is_leader = 0
+        count += is_leader
+    return count
+","def count_greater_than_all_right(nums):
+    count = 0
+    max_right = float('-inf')
+    for num in reversed(nums):
+        if num > max_right:
+            count += 1
+            max_right = num
+    return count",66250.70,126,448,524,650,OK,
+TYR-029,kth_largest,o3,frequency,medium,O(N^2),O(N log N),"def kth_largest(nums, k):
+    n = len(nums)
+    for target_rank in range(k):
+        max_val = nums[0]
+        max_idx = 0
+        for i in range(1, n):
+            if nums[i] > max_val:
+                max_val = nums[i]
+                max_idx = i
+        if target_rank == k - 1:
+            return max_val
+        nums[max_idx] = nums[0] - 1
+    return -1
+","def kth_largest(nums, k):
+    return sorted(nums, reverse=True)[k - 1]",54305.93,155,256,296,451,OK,
+TYR-030,frequency_of_max,o3,frequency,easy,O(N),O(N),"def frequency_of_max(nums):
+    if len(nums) == 0:
+        return 0
+    max_val = nums[0]
+    for i in range(len(nums)):
+        if nums[i] > max_val:
+            max_val = nums[i]
+    count = 0
+    for i in range(len(nums)):
+        if nums[i] == max_val:
+            count += 1
+    return count
+","def frequency_of_max(nums):
+    max_val = None
+    count = 0
+    for num in nums:
+        if max_val is None or num > max_val:
+            max_val, count = num, 1
+        elif num == max_val:
+            count += 1
+    return count",58677.70,135,320,407,542,OK,
+TYR-031,max_subarray_sum,o3,subarray,medium,O(N^2),O(N),"def max_subarray_sum(nums):
+    if len(nums) == 0:
+        return 0
+    best = nums[0]
+    n = len(nums)
+    for i in range(n):
+        cur = 0
+        for j in range(i, n):
+            cur += nums[j]
+            if cur > best:
+                best = cur
+    return best
+","def max_subarray_sum(nums):
+    if not nums:
+        return 0
+    best = current = nums[0]
+    for num in nums[1:]:
+        current = num if current + num < num else current + num
+        best = current if current > best else best
+    return best",52169.21,127,64,147,274,OK,
+TYR-032,has_subarray_with_sum,o3,subarray,medium,O(N^2),O(N),"def has_subarray_with_sum(nums, target):
+    n = len(nums)
+    for i in range(n):
+        cur = 0
+        for j in range(i, n):
+            cur += nums[j]
+            if cur == target:
+                return 1
+    return 0
+","def has_subarray_with_sum(nums, target):
+    seen = {0}
+    prefix = 0
+    for num in nums:
+        prefix += num
+        if prefix - target in seen:
+            return 1
+        seen.add(prefix)
+    return 0",24392.62,110,128,207,317,OK,
+TYR-033,count_subarrays_with_sum,o3,subarray,medium,O(N^2),O(N),"def count_subarrays_with_sum(nums, k):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        cur = 0
+        for j in range(i, n):
+            cur += nums[j]
+            if cur == k:
+                count += 1
+    return count
+","def count_subarrays_with_sum(nums, k):
+    count = 0
+    prefix_sum = 0
+    freq = {0: 1}
+    for num in nums:
+        prefix_sum += num
+        count += freq.get(prefix_sum - k, 0)
+        freq[prefix_sum] = freq.get(prefix_sum, 0) + 1
+    return count",66932.97,116,128,231,347,OK,
+
+TYR-034,longest_subarray_sum_k,o3,subarray,medium,O(N^2),O(N),"def longest_subarray_sum_k(nums, k):
+    best = 0
+    n = len(nums)
+    for i in range(n):
+        cur = 0
+        for j in range(i, n):
+            cur += nums[j]
+            if cur == k:
+                length = j - i + 1
+                if length > best:
+                    best = length
+    return best
+","def longest_subarray_sum_k(nums, k):
+    best = 0
+    prefix = 0
+    first_idx = {0: -1}
+    for i, num in enumerate(nums):
+        prefix += num
+        if prefix - k in first_idx:
+            best = max(best, i - first_idx[prefix - k])
+        if prefix not in first_idx:
+            first_idx[prefix] = i
+    return best",7316.27,131,192,306,437,OK,
+TYR-035,max_window_sum_size_k,o3,subarray,easy,O(N^2),O(N),"def max_window_sum_size_k(nums, k):
+    if len(nums) == 0 or k <= 0:
+        return 0
+    best = 0
+    n = len(nums)
+    for i in range(n - k + 1):
+        cur = 0
+        for j in range(i, i + k):
+            cur += nums[j]
+        if i == 0 or cur > best:
+            best = cur
+    return best
+","def max_window_sum_size_k(nums, k):
+    n = len(nums)
+    if n == 0 or k <= 0 or k > n:
+        return 0
+    window_sum = sum(nums[:k])
+    best = window_sum
+    for i in range(k, n):
+        window_sum += nums[i] - nums[i - k]
+        if window_sum > best:
+            best = window_sum
+    return best",57487.74,146,192,301,447,OK,
+TYR-036,min_subarray_len_ge_target,o3,subarray,medium,O(N^2),O(N),"def min_subarray_len_ge_target(nums, target):
+    best = 0
+    n = len(nums)
+    for i in range(n):
+        cur = 0
+        for j in range(i, n):
+            cur += nums[j]
+            if cur >= target:
+                length = j - i + 1
+                if best == 0 or length < best:
+                    best = length
+                break
+    return best
+","def min_subarray_len_ge_target(nums, target):
+    best = 0
+    left = 0
+    current = 0
+    for right, val in enumerate(nums):
+        current += val
+        while current >= target:
+            length = right - left + 1
+            if best == 0 or length < best:
+                best = length
+            current -= nums[left]
+            left += 1
+    return best",59580.09,140,512,622,762,OK,
+TYR-037,max_product_pair,o3,subarray,easy,O(N^2),O(N),"def max_product_pair(nums):
+    if len(nums) < 2:
+        return 0
+    best = nums[0] * nums[1]
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            p = nums[i] * nums[j]
+            if p > best:
+                best = p
+    return best
+","def max_product_pair(nums):
+    if len(nums) < 2:
+        return 0
+    max1 = max2 = float('-inf')
+    min1 = min2 = float('inf')
+    for x in nums:
+        if x >= max1:
+            max2, max1 = max1, x
+        elif x > max2:
+            max2 = x
+        if x <= min1:
+            min2, min1 = min1, x
+        elif x < min2:
+            min2 = x
+    return max(max1 * max2, min1 * min2)",58859.80,128,512,662,790,OK,
+TYR-038,longest_increasing_run,o3,subarray,easy,O(N^2),O(N),"def longest_increasing_run(nums):
+    if len(nums) == 0:
+        return 0
+    best = 1
+    n = len(nums)
+    for i in range(n):
+        length = 1
+        for j in range(i + 1, n):
+            if nums[j] > nums[j - 1]:
+                length += 1
+            else:
+                break
+        if length > best:
+            best = length
+    return best
+","def longest_increasing_run(nums):
+    best = cur = 0
+    for i, num in enumerate(nums):
+        if i and num <= nums[i - 1]:
+            cur = 1
+        else:
+            cur = cur + 1 if i else 1
+        if cur > best:
+            best = cur
+    return best",53608.87,147,320,416,563,OK,
+TYR-039,max_diff_ordered,o3,subarray,easy,O(N^2),O(N),"def max_diff_ordered(nums):
+    if len(nums) < 2:
+        return 0
+    best = nums[1] - nums[0]
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            d = nums[j] - nums[i]
+            if d > best:
+                best = d
+    return best
+","def max_diff_ordered(nums):
+    n = len(nums)
+    if n < 2:
+        return 0
+    min_val = nums[0]
+    best = nums[1] - nums[0]
+    for i in range(1, n):
+        if nums[i] - min_val > best:
+            best = nums[i] - min_val
+        if nums[i] < min_val:
+            min_val = nums[i]
+    return best",55500.93,133,192,306,439,OK,
+TYR-040,equilibrium_index,o3,subarray,easy,O(N^2),O(N),"def equilibrium_index(nums):
+    n = len(nums)
+    for i in range(n):
+        left_sum = 0
+        for j in range(i):
+            left_sum += nums[j]
+        right_sum = 0
+        for j in range(i + 1, n):
+            right_sum += nums[j]
+        if left_sum == right_sum:
+            return i
+    return -1
+","def equilibrium_index(nums):
+    total = sum(nums)
+    left_sum = 0
+    for i, val in enumerate(nums):
+        total -= val          # right sum excluding current element
+        if left_sum == total:
+            return i
+        left_sum += val       # include current element in left sum
+    return -1",54995.52,132,64,156,288,OK,
+TYR-041,product_except_self,o3,subarray,medium,O(N^2),O(N),"def product_except_self(nums):
+    n = len(nums)
+    result = []
+    for i in range(n):
+        prod = 1
+        for j in range(n):
+            if j != i:
+                prod = prod * nums[j]
+        result.append(prod)
+    return result
+","def product_except_self(nums):
+    n = len(nums)
+    result = [1] * n
+
+    prefix = 1
+    for i in range(n):
+        result[i] = prefix
+        prefix *= nums[i]
+
+    suffix = 1
+    for i in range(n - 1, -1, -1):
+        result[i] *= suffix
+        suffix *= nums[i]
+
+    return result",58468.15,109,128,237,346,OK,
+TYR-042,count_positive_subarrays,o3,subarray,medium,O(N^2),O(N),"def count_positive_subarrays(nums):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        cur = 0
+        for j in range(i, n):
+            cur += nums[j]
+            if cur > 0:
+                count += 1
+    return count
+","def count_positive_subarrays(nums):
+    # Compute prefix sums
+    pref = [0]
+    for num in nums:
+        pref.append(pref[-1] + num)
+
+    # Coordinate compression of prefix sums
+    vals = {v: i + 1 for i, v in enumerate(sorted(set(pref)))}  # 1-based index
+
+    size = len(vals) + 2
+    bit = [0] * size
+
+    def update(i):
+        while i < size:
+            bit[i] += 1
+            i += i & -i
+
+    def query(i):
+        s = 0
+        while i:
+            s += bit[i]
+            i -= i & -i
+        return s
+
+    count = 0
+    for p in pref:
+        idx = vals[p]
+        count += query(idx - 1)          # number of previous prefix sums < current
+        update(idx)                      # add current prefix sum
+    return count",74852.18,114,1984,2210,2324,OK,
+TYR-043,min_subarray_sum,o3,subarray,medium,O(N^2),O(N),"def min_subarray_sum(nums):
+    if len(nums) == 0:
+        return 0
+    best = nums[0]
+    n = len(nums)
+    for i in range(n):
+        cur = 0
+        for j in range(i, n):
+            cur += nums[j]
+            if cur < best:
+                best = cur
+    return best
+","def min_subarray_sum(nums):
+    if not nums:
+        return 0
+    current = result = nums[0]
+    for num in nums[1:]:
+        current = min(num, current + num)
+        result = min(result, current)
+    return result",37478.59,127,128,203,330,OK,
+TYR-044,count_subarrays_max_le_k,o3,subarray,medium,O(N^2),O(N),"def count_subarrays_max_le_k(nums, k):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        ok = 1
+        for j in range(i, n):
+            if nums[j] > k:
+                ok = 0
+            if ok == 1:
+                count += 1
+            else:
+                break
+    return count
+","def count_subarrays_max_le_k(nums, k):
+    total = length = 0
+    for x in nums:
+        if x <= k:
+            length += 1
+        else:
+            total += length * (length + 1) // 2
+            length = 0
+    total += length * (length + 1) // 2
+    return total",57343.34,132,256,359,491,OK,
+TYR-045,sum_of_all_subarray_sums,o3,subarray,medium,O(N^2),O(N),"def sum_of_all_subarray_sums(nums):
+    total = 0
+    n = len(nums)
+    for i in range(n):
+        cur = 0
+        for j in range(i, n):
+            cur += nums[j]
+            total += cur
+    return total
+","def sum_of_all_subarray_sums(nums):
+    n = len(nums)
+    return sum(val * (i + 1) * (n - i) for i, val in enumerate(nums))",66057.77,109,576,636,745,OK,
+TYR-046,remove_duplicates_preserve_order,o3,set-operations,easy,O(N^2),O(N),"def remove_duplicates_preserve_order(nums):
+    result = []
+    for i in range(len(nums)):
+        found = 0
+        for j in range(i):
+            if nums[j] == nums[i]:
+                found = 1
+        if found == 0:
+            result.append(nums[i])
+    return result
+","def remove_duplicates_preserve_order(nums):
+    seen = set()
+    result = []
+    for num in nums:
+        if num not in seen:
+            seen.add(num)
+            result.append(num)
+    return result",5078.19,115,64,131,246,OK,
+TYR-047,symmetric_difference_count,o3,set-operations,medium,O(N^2),O(N),"def symmetric_difference_count(nums):
+    mid = len(nums) // 2
+    count = 0
+    for i in range(mid):
+        found = 0
+        for j in range(mid, len(nums)):
+            if nums[i] == nums[j]:
+                found = 1
+        if found == 0:
+            count += 1
+    for i in range(mid, len(nums)):
+        found = 0
+        for j in range(mid):
+            if nums[i] == nums[j]:
+                found = 1
+        if found == 0:
+            count += 1
+    return count
+","def symmetric_difference_count(nums):
+    mid = len(nums) // 2
+    first, second = nums[:mid], nums[mid:]
+    set_first, set_second = set(first), set(second)
+    return sum(x not in set_second for x in first) + sum(x not in set_first for x in second)",62586.45,178,512,601,779,OK,
+TYR-048,count_common_elements,o3,set-operations,easy,O(N^2),O(N),"def count_common_elements(nums):
+    mid = len(nums) // 2
+    count = 0
+    for i in range(mid):
+        for j in range(mid, len(nums)):
+            if nums[i] == nums[j]:
+                count += 1
+                break
+    return count
+","def count_common_elements(nums):
+    mid = len(nums) // 2
+    second_half = set(nums[mid:])
+    return sum(1 for x in nums[:mid] if x in second_half)",52000.87,111,320,385,496,OK,
+TYR-049,is_subset_first_half,o3,set-operations,easy,O(N^2),O(N),"def is_subset_first_half(nums):
+    mid = len(nums) // 2
+    for i in range(mid):
+        found = 0
+        for j in range(mid, len(nums)):
+            if nums[i] == nums[j]:
+                found = 1
+        if found == 0:
+            return 0
+    return 1
+","def is_subset_first_half(nums):
+    mid = len(nums) // 2
+    second_half_set = set(nums[mid:])
+    for i in range(mid):
+        if nums[i] not in second_half_set:
+            return 0
+    return 1",56833.25,122,256,333,455,OK,
+TYR-050,remove_if_more_than_two,o3,set-operations,medium,O(N^2),O(N),"def remove_if_more_than_two(nums):
+    result = []
+    for i in range(len(nums)):
+        count = 0
+        for j in range(len(result)):
+            if result[j] == nums[i]:
+                count += 1
+        if count < 2:
+            result.append(nums[i])
+    return result
+","def remove_if_more_than_two(nums):
+    counts, result = {}, []
+    for num in nums:
+        if counts.get(num, 0) < 2:
+            result.append(num)
+            counts[num] = counts.get(num, 0) + 1
+    return result",56549.94,116,256,338,454,OK,
+TYR-051,first_missing_positive,o3,set-operations,medium,O(N^2),O(N),"def first_missing_positive(nums):
+    candidate = 1
+    while candidate < len(nums) + 2:
+        found = 0
+        for i in range(len(nums)):
+            if nums[i] == candidate:
+                found = 1
+        if found == 0:
+            return candidate
+        candidate += 1
+    return candidate
+","def first_missing_positive(nums):
+    n = len(nums)
+    for i in range(n):
+        while 1 <= nums[i] <= n and nums[nums[i] - 1] != nums[i]:
+            nums[i], nums[nums[i] - 1] = nums[nums[i] - 1], nums[i]
+    for i in range(n):
+        if nums[i] != i + 1:
+            return i + 1
+    return n + 1",55170.66,122,128,252,374,OK,
+TYR-052,is_permutation_of_other_half,o3,set-operations,easy,O(N^2),O(N),"def is_permutation_of_other_half(nums):
+    mid = len(nums) // 2
+    for i in range(mid):
+        found = 0
+        used = []
+        for j in range(mid, len(nums)):
+            skip = 0
+            for u in range(len(used)):
+                if used[u] == j:
+                    skip = 1
+            if skip == 0 and nums[j] == nums[i]:
+                found = 1
+                used.append(j)
+                break
+        if found == 0:
+            return 0
+    return 1
+","def is_permutation_of_other_half(nums):
+    mid = len(nums) // 2
+    second_half_set = set(nums[mid:])
+    for val in nums[:mid]:
+        if val not in second_half_set:
+            return 0
+    return 1",84377.93,170,2752,2825,2995,OK,
+TYR-053,count_elements_in_range,o3,set-operations,easy,O(N),O(N),"def count_elements_in_range(nums):
+    if len(nums) < 2:
+        return len(nums)
+    lo = nums[0]
+    hi = nums[len(nums) - 1]
+    if lo > hi:
+        lo, hi = hi, lo
+    count = 0
+    for i in range(len(nums)):
+        if nums[i] >= lo and nums[i] <= hi:
+            count += 1
+    return count
+","def count_elements_in_range(nums):
+    if not nums:
+        return 0
+    lo, hi = (nums[0], nums[-1]) if nums[0] <= nums[-1] else (nums[-1], nums[0])
+    return sum(1 for x in nums if lo <= x <= hi)",41371.48,142,1408,1494,1636,OK,
+TYR-054,deduplicate_sorted_count,o3,set-operations,easy,O(N^2),O(N),"def deduplicate_sorted_count(nums):
+    if len(nums) == 0:
+        return 0
+    count = 1
+    for i in range(1, len(nums)):
+        is_dup = 0
+        for j in range(i):
+            if nums[j] == nums[i]:
+                is_dup = 1
+        if is_dup == 0:
+            count += 1
+    return count
+","def deduplicate_sorted_count(nums):
+    if not nums:
+        return 0
+    count = 1
+    prev = nums[0]
+    for num in nums[1:]:
+        if num != prev:
+            count += 1
+            prev = num
+    return count",42906.81,136,128,211,347,OK,
+TYR-055,count_pairs_from_halves,o3,set-operations,medium,O(N^2),O(N),"def count_pairs_from_halves(nums):
+    if len(nums) == 0:
+        return 0
+    target = nums[0]
+    mid = len(nums) // 2
+    count = 0
+    for i in range(mid):
+        for j in range(mid, len(nums)):
+            if nums[i] + nums[j] == target:
+                count += 1
+    return count
+","def count_pairs_from_halves(nums):
+    if not nums:
+        return 0
+    target = nums[0]
+    mid = len(nums) // 2
+    freq = {}
+    for v in nums[mid:]:
+        freq[v] = freq.get(v, 0) + 1
+    return sum(freq.get(target - v, 0) for v in nums[:mid])",56422.33,134,192,297,431,OK,
+TYR-056,count_smaller_before,o3,order-statistics,medium,O(N^2),O(N),"def count_smaller_before(nums):
+    total = 0
+    for i in range(len(nums)):
+        for j in range(i):
+            if nums[j] < nums[i]:
+                total += 1
+    return total
+","def count_smaller_before(nums):
+    if not nums:
+        return 0
+    ranks = {v: i for i, v in enumerate(sorted(set(nums)), 1)}
+    size = len(ranks)
+    bit = [0] * (size + 1)
+
+    def update(idx):
+        while idx <= size:
+            bit[idx] += 1
+            idx += idx & -idx
+
+    def query(idx):
+        s = 0
+        while idx:
+            s += bit[idx]
+            idx -= idx & -idx
+        return s
+
+    total = 0
+    for num in nums:
+        r = ranks[num]
+        total += query(r - 1)
+        update(r)
+    return total",72501.25,97,1472,1647,1744,OK,
+TYR-057,kth_smallest,o3,order-statistics,medium,O(N^2),O(N log N),"def kth_smallest(nums, k):
+    n = len(nums)
+    for rank in range(k):
+        min_val = nums[0]
+        min_idx = 0
+        for i in range(1, n):
+            if nums[i] < min_val:
+                min_val = nums[i]
+                min_idx = i
+        if rank == k - 1:
+            return min_val
+        nums[min_idx] = nums[0] + 1
+    return -1
+","import heapq
+
+def kth_smallest(nums, k):
+    if not 1 <= k <= len(nums):
+        raise ValueError(""k is out of bounds"")
+    return heapq.nsmallest(k, nums)[-1]",6328.93,153,256,323,476,OK,
+TYR-058,sort_binary_array,o3,order-statistics,easy,O(N),O(N),"def sort_binary_array(nums):
+    result = []
+    for i in range(len(nums)):
+        if nums[i] == 0:
+            result.append(0)
+    for i in range(len(nums)):
+        if nums[i] == 1:
+            result.append(1)
+    return result
+","def sort_binary_array(nums):
+    zero = 0
+    for i in range(len(nums)):
+        if nums[i] == 0:
+            nums[zero], nums[i] = nums[i], nums[zero]
+            zero += 1
+    return nums",61352.33,110,128,201,311,OK,
+TYR-059,second_largest,o3,order-statistics,easy,O(N),O(N),"def second_largest(nums):
+    if len(nums) < 2:
+        return -1
+    first = nums[0]
+    for i in range(len(nums)):
+        if nums[i] > first:
+            first = nums[i]
+    second = -1
+    found = 0
+    for i in range(len(nums)):
+        if nums[i] != first:
+            if found == 0 or nums[i] > second:
+                second = nums[i]
+                found = 1
+    if found == 0:
+        return -1
+    return second
+","def second_largest(nums):
+    first = second = None
+    for n in nums:
+        if first is None or n > first:
+            second, first = first, n
+        elif n != first and (second is None or n > second):
+            second = n
+    return second if second is not None else -1",59092.97,168,192,280,448,OK,
+TYR-060,count_peaks,o3,order-statistics,easy,O(N),O(N),"def count_peaks(nums):
+    count = 0
+    for i in range(1, len(nums) - 1):
+        if nums[i] > nums[i - 1] and nums[i] > nums[i + 1]:
+            count += 1
+    return count
+","from typing import Iterable, Iterator
+
+def count_peaks(nums: Iterable[int]) -> int:
+    it: Iterator[int] = iter(nums)
+    try:
+        prev = next(it)
+        curr = next(it)
+    except StopIteration:
+        return 0
+    count = 0
+    for nxt in it:
+        if curr > prev and curr > nxt:
+            count += 1
+        prev, curr = curr, nxt
+    return count",52787.69,110,256,369,479,OK,
+TYR-061,find_leaders,o3,order-statistics,medium,O(N^2),O(N),"def find_leaders(nums):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        is_leader = 1
+        for j in range(i + 1, n):
+            if nums[j] >= nums[i]:
+                is_leader = 0
+                break
+        count += is_leader
+    return count
+","def find_leaders(nums):
+    count = 0
+    max_so_far = float('-inf')
+    for num in reversed(nums):
+        if num > max_so_far:
+            count += 1
+            max_so_far = num
+    return count",55156.27,126,0,71,197,OK,
+TYR-062,rank_elements_sum,o3,order-statistics,medium,O(N^2),O(N),"def rank_elements_sum(nums):
+    total = 0
+    n = len(nums)
+    for i in range(n):
+        rank = 1
+        for j in range(n):
+            if nums[j] < nums[i]:
+                rank += 1
+        total += rank
+    return total
+","def rank_elements_sum(nums):
+    if not nums:
+        return 0
+    mn, mx = min(nums), max(nums)
+    shift = -mn
+    size = mx - mn + 1
+    freq = [0] * size
+    for num in nums:
+        freq[num + shift] += 1
+    total = 0
+    prefix = 0
+    for count in freq:
+        if count:
+            rank = prefix + 1
+            total += count * rank
+            prefix += count
+    return total",89581.61,112,960,1092,1204,OK,
+TYR-063,closest_to_zero,o3,order-statistics,easy,O(N),O(N),"def closest_to_zero(nums):
+    if len(nums) == 0:
+        return 0
+    best = nums[0]
+    for i in range(len(nums)):
+        a = abs(nums[i])
+        b = abs(best)
+        if a < b:
+            best = nums[i]
+        elif a == b and nums[i] > best:
+            best = nums[i]
+    return best
+","def closest_to_zero(nums):
+    best = 0
+    first = True
+    for n in nums:
+        if first or abs(n) < abs(best) or (abs(n) == abs(best) and n > best):
+            best = n
+            first = False
+    return best",22632.58,132,128,208,340,OK,
+TYR-064,count_out_of_place,o3,order-statistics,medium,O(N^2),O(N log N),"def count_out_of_place(nums):
+    n = len(nums)
+    sorted_nums = []
+    for v in nums:
+        sorted_nums.append(v)
+    for i in range(n):
+        for j in range(i + 1, n):
+            if sorted_nums[i] > sorted_nums[j]:
+                tmp = sorted_nums[i]
+                sorted_nums[i] = sorted_nums[j]
+                sorted_nums[j] = tmp
+    count = 0
+    for i in range(n):
+        if nums[i] != sorted_nums[i]:
+            count += 1
+    return count
+","def count_out_of_place(nums):
+    sorted_nums = sorted(nums)
+    return sum(a != b for a, b in zip(nums, sorted_nums))",61640.69,170,256,310,480,OK,
+TYR-065,element_rank_product,o3,order-statistics,medium,O(N^2),O(N),"def element_rank_product(nums):
+    total = 0
+    n = len(nums)
+    for i in range(n):
+        rank = 1
+        for j in range(n):
+            if nums[j] < nums[i]:
+                rank += 1
+        total += nums[i] * rank
+    return total
+","def element_rank_product(nums):
+    if not nums:
+        return 0
+    mn, mx = min(nums), max(nums)
+    rng = mx - mn + 1
+    freq = [0] * rng
+    for num in nums:
+        freq[num - mn] += 1
+
+    total = 0
+    smaller = 0
+    for offset, cnt in enumerate(freq):
+        if cnt:
+            val = mn + offset
+            rank = smaller + 1
+            total += val * rank * cnt
+            smaller += cnt
+    return total",79979.39,116,3712,3855,3971,OK,
+TYR-066,prefix_sum_total,o3,prefix-sum,easy,O(N),O(N),"def prefix_sum_total(nums):
+    total = 0
+    running = 0
+    for i in range(len(nums)):
+        running += nums[i]
+        total += running
+    return total
+","def prefix_sum_total(nums):
+    total = 0
+    multiplier = len(nums)
+    for num in nums:
+        total += num * multiplier
+        multiplier -= 1
+    return total",28366.07,91,256,315,406,OK,
+TYR-067,range_sum_brute,o3,prefix-sum,easy,O(N),O(N),"def range_sum_brute(nums, k):
+    total = 0
+    for i in range(len(nums)):
+        if i <= k:
+            total += nums[i]
+    return total
+","def range_sum(nums, k):
+    return sum(nums[:k + 1])",55705.81,89,320,356,445,OK,
+TYR-068,count_equilibrium_indices,o3,prefix-sum,medium,O(N^2),O(N),"def count_equilibrium_indices(nums):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        left = 0
+        for j in range(i):
+            left += nums[j]
+        right = 0
+        for j in range(i + 1, n):
+            right += nums[j]
+        if left == right:
+            count += 1
+    return count
+","def count_equilibrium_indices(nums):
+    total = sum(nums)
+    left_sum = 0
+    count = 0
+    for num in nums:
+        if left_sum == total - left_sum - num:
+            count += 1
+        left_sum += num
+    return count",55295.87,135,64,142,277,OK,
+TYR-069,max_prefix_sum,o3,prefix-sum,easy,O(N),O(N),"def max_prefix_sum(nums):
+    if len(nums) == 0:
+        return 0
+    best = nums[0]
+    cur = 0
+    for i in range(len(nums)):
+        cur += nums[i]
+        if cur > best:
+            best = cur
+    return best
+","from itertools import accumulate
+
+def max_prefix_sum(nums):
+    if not nums:
+        return 0
+    return max(accumulate(nums))",64922.95,112,1280,1327,1439,OK,
+ TYR-070,left_max_minus_right_min,o3,prefix-sum,medium,O(N^2),O(N),"def left_max_minus_right_min(nums):
+    if len(nums) < 2:
+        return 0
+    best = nums[0] - nums[1]
+    n = len(nums)
+    for i in range(n - 1):
+        left_max = nums[0]
+        for j in range(1, i + 1):
+            if nums[j] > left_max:
+                left_max = nums[j]
+        right_min = nums[i + 1]
+        for j in range(i + 2, n):
+            if nums[j] < right_min:
+                right_min = nums[j]
+        d = left_max - right_min
+        if d > best:
+            best = d
+    return best
+","def left_max_minus_right_min(nums):
+    n = len(nums)
+    if n < 2:
+        return 0
+    suffix_min = [0] * n
+    suffix_min[-1] = nums[-1]
+    for i in range(n - 2, -1, -1):
+        suffix_min[i] = nums[i] if nums[i] < suffix_min[i + 1] else suffix_min[i + 1]
+    best = float('-inf')
+    left_max = nums[0]
+    for i in range(n - 1):
+        diff = left_max - suffix_min[i + 1]
+        if diff > best:
+            best = diff
+        if nums[i + 1] > left_max:
+            left_max = nums[i + 1]
+    return best",74945.22,199,448,633,832,OK,
+TYR-071,count_subarrays_divisible_by_k,o3,prefix-sum,medium,O(N^2),O(N),"def count_subarrays_divisible_by_k(nums, k):
+    if k == 0:
+        return 0
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        cur = 0
+        for j in range(i, n):
+            cur += nums[j]
+            if cur % k == 0:
+                count += 1
+    return count
+","from collections import defaultdict
+
+def count_subarrays_divisible_by_k(nums, k):
+    if k == 0:
+        return 0
+    freq = defaultdict(int)
+    freq[0] = 1
+    prefix = total = 0
+    for num in nums:
+        prefix = (prefix + num) % k
+        total += freq[prefix]
+        freq[prefix] += 1
+    return total",5084.45,133,256,368,501,OK,
+TYR-072,sum_of_all_subarrays,o3,prefix-sum,medium,O(N^2),O(N),"def sum_of_all_subarrays(nums):
+    total = 0
+    n = len(nums)
+    for i in range(n):
+        cur = 0
+        for j in range(i, n):
+            cur += nums[j]
+            total += cur
+    return total
+","def sum_of_all_subarrays(nums):
+    n = len(nums)
+    return sum(num * (i + 1) * (n - i) for i, num in enumerate(nums))",15057.42,107,256,314,421,OK,
+TYR-073,count_subarrays_odd_sum,o3,prefix-sum,medium,O(N^2),O(N),"def count_subarrays_odd_sum(nums):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        cur = 0
+        for j in range(i, n):
+            cur += nums[j]
+            if cur % 2 != 0:
+                count += 1
+    return count
+","def count_subarrays_odd_sum(nums):
+    count = 0
+    even, odd = 1, 0  # prefix sum parity counts; empty prefix is even
+    parity = 0
+    for num in nums:
+        parity ^= num & 1  # update parity (0=even, 1=odd)
+        if parity:
+            count += even
+            odd += 1
+        else:
+            count += odd
+            even += 1
+    return count",47703.16,119,384,510,629,OK,
+TYR-074,count_zero_sum_subarrays,o3,prefix-sum,medium,O(N^2),O(N),"def count_zero_sum_subarrays(nums):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        cur = 0
+        for j in range(i, n):
+            cur += nums[j]
+            if cur == 0:
+                count += 1
+    return count
+","def count_zero_sum_subarrays(nums):
+    prefix_sum = 0
+    freq = {0: 1}
+    count = 0
+    for num in nums:
+        prefix_sum += num
+        count += freq.get(prefix_sum, 0)
+        freq[prefix_sum] = freq.get(prefix_sum, 0) + 1
+    return count",73387.76,115,64,163,278,OK,
+TYR-075,max_sum_two_non_overlapping,o3,prefix-sum,medium,O(N^2),O(N),"def max_sum_two_non_overlapping(nums):
+    if len(nums) < 2:
+        return 0
+    best = nums[0] + nums[1]
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            s = nums[i] + nums[j]
+            if s > best:
+                best = s
+    return best
+","def max_sum_two_non_overlapping(nums):
+    if len(nums) < 2:
+        return 0
+    max1 = max2 = float('-inf')
+    for num in nums:
+        if num > max1:
+            max1, max2 = num, max1
+        elif num > max2:
+            max2 = num
+    return max1 + max2",4371.61,135,128,231,366,OK,
+TYR-076,max_of_all_windows,o3,sliding-window,medium,O(N^2),O(N),"def max_of_all_windows(nums, k):
+    result = []
+    n = len(nums)
+    for i in range(n - k + 1):
+        mx = nums[i]
+        for j in range(i + 1, i + k):
+            if nums[j] > mx:
+                mx = nums[j]
+        result.append(mx)
+    return result
+","from collections import deque
+
+def max_of_all_windows(nums, k):
+    if not nums or k <= 0:
+        return []
+    dq, res = deque(), []
+    for i, num in enumerate(nums):
+        while dq and nums[dq[-1]] <= num:
+            dq.pop()
+        dq.append(i)
+        if dq[0] <= i - k:
+            dq.popleft()
+        if i >= k - 1:
+            res.append(nums[dq[0]])
+    return res",6278.72,124,128,250,374,OK,
+TYR-077,min_of_all_windows,o3,sliding-window,medium,O(N^2),O(N),"def min_of_all_windows(nums, k):
+    result = []
+    n = len(nums)
+    for i in range(n - k + 1):
+        mn = nums[i]
+        for j in range(i + 1, i + k):
+            if nums[j] < mn:
+                mn = nums[j]
+        result.append(mn)
+    return result
+","from collections import deque
+
+def min_of_all_windows(nums, k):
+    if k <= 0 or k > len(nums):
+        return []
+    dq, res = deque(), []
+    for i, v in enumerate(nums):
+        # discard indices outside the current window
+        if dq and dq[0] <= i - k:
+            dq.popleft()
+        # maintain increasing order in deque
+        while dq and nums[dq[-1]] >= v:
+            dq.pop()
+        dq.append(i)
+        if i >= k - 1:
+            res.append(nums[dq[0]])
+    return res",7872.17,125,256,399,524,OK,
+TYR-078,count_distinct_in_windows,o3,sliding-window,medium,O(N^2),O(N),"def count_distinct_in_windows(nums, k):
+    if len(nums) < k or k <= 0:
+        return 0
+    count = 0
+    for i in range(k):
+        is_first = 1
+        for j in range(i):
+            if nums[j] == nums[i]:
+                is_first = 0
+        count += is_first
+    return count
+","def count_distinct_in_windows(nums, k):
+    if k <= 0 or len(nums) < k:
+        return 0
+    return len(set(nums[:k]))",8111.86,131,384,439,570,OK,
+TYR-079,sum_of_all_windows,o3,sliding-window,easy,O(N^2),O(N),"def sum_of_all_windows(nums, k):
+    total = 0
+    n = len(nums)
+    for i in range(n - k + 1):
+        cur = 0
+        for j in range(i, i + k):
+            cur += nums[j]
+        total += cur
+    return total
+","def sum_of_all_windows(nums, k):
+    n = len(nums)
+    if k <= 0 or k > n:
+        return 0
+    window_sum = sum(nums[:k])
+    total = window_sum
+    for i in range(k, n):
+        window_sum += nums[i] - nums[i - k]
+        total += window_sum
+    return total",55905.70,115,128,229,344,OK,
+TYR-080,has_duplicate_within_k,o3,sliding-window,easy,O(N^2),O(N),"def has_duplicate_within_k(nums, k):
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, min(i + k + 1, n)):
+            if nums[i] == nums[j]:
+                return 1
+    return 0
+","def has_duplicate_within_k(nums, k):
+    if k <= 0:
+        return 0
+    window = set()
+    for i, num in enumerate(nums):
+        if num in window:
+            return 1
+        window.add(num)
+        if i >= k:
+            window.discard(nums[i - k])
+    return 0",4964.06,112,192,287,399,OK,
+TYR-081,max_sum_window,o3,sliding-window,easy,O(N^2),O(N),"def max_sum_window(nums, k):
+    if len(nums) < k:
+        return 0
+    best = 0
+    n = len(nums)
+    for i in range(n - k + 1):
+        cur = 0
+        for j in range(i, i + k):
+            cur += nums[j]
+        if i == 0 or cur > best:
+            best = cur
+    return best
+","def max_sum_window(nums, k):
+    n = len(nums)
+    if k <= 0 or n < k:
+        return 0
+    window_sum = sum(nums[:k])
+    best = window_sum
+    for i in range(k, n):
+        window_sum += nums[i] - nums[i - k]
+        if window_sum > best:
+            best = window_sum
+    return best",7031.84,138,192,299,437,OK,
+TYR-082,min_sum_window,o3,sliding-window,easy,O(N^2),O(N),"def min_sum_window(nums, k):
+    if len(nums) < k:
+        return 0
+    best = 0
+    n = len(nums)
+    for i in range(n - k + 1):
+        cur = 0
+        for j in range(i, i + k):
+            cur += nums[j]
+        if i == 0 or cur < best:
+            best = cur
+    return best
+","def min_sum_window(nums, k):
+    n = len(nums)
+    if n < k or k <= 0:
+        return 0
+    window_sum = best = sum(nums[:k])
+    for i in range(k, n):
+        window_sum += nums[i] - nums[i - k]
+        if window_sum < best:
+            best = window_sum
+    return best",57164.75,138,128,231,369,OK,
+TYR-083,count_windows_all_positive,o3,sliding-window,easy,O(N^2),O(N),"def count_windows_all_positive(nums, k):
+    count = 0
+    n = len(nums)
+    for i in range(n - k + 1):
+        all_pos = 1
+        for j in range(i, i + k):
+            if nums[j] <= 0:
+                all_pos = 0
+        count += all_pos
+    return count
+","def count_windows_all_positive(nums, k):
+    n = len(nums)
+    if k > n or k <= 0:
+        return 0
+    non_pos = sum(1 for x in nums[:k] if x <= 0)
+    count = 0 if non_pos else 1
+    for i in range(k, n):
+        if nums[i - k] <= 0:
+            non_pos -= 1
+        if nums[i] <= 0:
+            non_pos += 1
+        if non_pos == 0:
+            count += 1
+    return count",59697.88,127,128,270,397,OK,
+TYR-084,max_window_range,o3,sliding-window,medium,O(N^2),O(N),"def max_window_range(nums, k):
+    if len(nums) < k:
+        return 0
+    best = 0
+    n = len(nums)
+    for i in range(n - k + 1):
+        mx = nums[i]
+        mn = nums[i]
+        for j in range(i + 1, i + k):
+            if nums[j] > mx:
+                mx = nums[j]
+            if nums[j] < mn:
+                mn = nums[j]
+        d = mx - mn
+        if d > best:
+            best = d
+    return best
+","from collections import deque
+
+def max_window_range(nums, k):
+    n = len(nums)
+    if k == 0 or n < k:
+        return 0
+
+    max_deque = deque()
+    min_deque = deque()
+    best = 0
+
+    for i, num in enumerate(nums):
+        while max_deque and nums[max_deque[-1]] <= num:
+            max_deque.pop()
+        max_deque.append(i)
+
+        while min_deque and nums[min_deque[-1]] >= num:
+            min_deque.pop()
+        min_deque.append(i)
+
+        if i >= k - 1:
+            while max_deque[0] <= i - k:
+                max_deque.popleft()
+            while min_deque[0] <= i - k:
+                min_deque.popleft()
+
+            best = max(best, nums[max_deque[0]] - nums[min_deque[0]])
+
+    return best",72807.74,171,192,406,577,OK,
+TYR-085,count_windows_with_target_sum,o3,sliding-window,easy,O(N^2),O(N),"def count_windows_with_target_sum(nums, k, target):
+    count = 0
+    n = len(nums)
+    for i in range(n - k + 1):
+        cur = 0
+        for j in range(i, i + k):
+            cur += nums[j]
+        if cur == target:
+            count += 1
+    return count
+","def count_windows_with_target_sum(nums, k, target):
+    n = len(nums)
+    if k <= 0 or k > n:
+        return 0
+
+    window_sum = sum(nums[:k])
+    count = 1 if window_sum == target else 0
+
+    for i in range(k, n):
+        window_sum += nums[i] - nums[i - k]
+        if window_sum == target:
+            count += 1
+
+    return count",64180.38,125,192,306,431,OK,
+TYR-086,first_recurring_element,o3,hash-map,easy,O(N^2),O(N),"def first_recurring_element(nums):
+    for i in range(len(nums)):
+        for j in range(i):
+            if nums[j] == nums[i]:
+                return nums[i]
+    return -1
+","def first_recurring_element(nums):
+    seen = set()
+    for num in nums:
+        if num in seen:
+            return num
+        seen.add(num)
+    return -1",60545.08,91,64,125,216,OK,
+TYR-087,same_frequency_distribution,o3,hash-map,medium,O(N^2),O(N),"def same_frequency_distribution(nums):
+    mid = len(nums) // 2
+    for i in range(mid):
+        count_a = 0
+        for j in range(mid):
+            if nums[j] == nums[i]:
+                count_a += 1
+        count_b = 0
+        for j in range(mid, len(nums)):
+            if nums[j] == nums[i]:
+                count_b += 1
+        if count_a != count_b:
+            return 0
+    return 1
+","def same_frequency_distribution(nums):
+    mid = len(nums) // 2
+    diff = {}
+    for i in range(mid):
+        diff[nums[i]] = diff.get(nums[i], 0) + 1
+    for val in nums[mid:]:
+        if val in diff:
+            diff[val] -= 1
+    return 1 if all(v == 0 for v in diff.values()) else 0",82022.59,154,2624,2735,2889,OK,
+TYR-088,longest_consecutive_sequence,o3,hash-map,medium,O(N^2),O(N),"def longest_consecutive_sequence(nums):
+    if len(nums) == 0:
+        return 0
+    best = 1
+    n = len(nums)
+    for i in range(n):
+        cur = nums[i]
+        length = 1
+        while True:
+            found = 0
+            for j in range(n):
+                if nums[j] == cur + 1:
+                    found = 1
+                    break
+            if found == 1:
+                cur += 1
+                length += 1
+            else:
+                break
+        if length > best:
+            best = length
+    return best
+","def longest_consecutive_sequence(nums):
+    if not nums:
+        return 0
+    num_set = set(nums)
+    best = 0
+    for num in num_set:
+        if num - 1 not in num_set:  # start of a sequence
+            length = 1
+            current = num
+            while current + 1 in num_set:
+                current += 1
+                length += 1
+            if length > best:
+                best = length
+    return best",32437.55,179,192,318,497,OK,
+TYR-089,top_k_frequent_sum,o3,hash-map,medium,O(N^2),O(N),"def top_k_frequent_sum(nums, k):
+    if len(nums) == 0 or k <= 0:
+        return 0
+    n = len(nums)
+    used = []
+    result_sum = 0
+    for rank in range(k):
+        best_val = 0
+        best_count = -1
+        for i in range(n):
+            skip = 0
+            for u in range(len(used)):
+                if used[u] == nums[i]:
+                    skip = 1
+            if skip == 1:
+                continue
+            count = 0
+            for j in range(n):
+                if nums[j] == nums[i]:
+                    count += 1
+            if count > best_count:
+                best_count = count
+                best_val = nums[i]
+        if best_count > 0:
+            used.append(best_val)
+            result_sum += best_val
+    return result_sum
+","from collections import defaultdict
+
+def top_k_frequent_sum(nums, k):
+    if k <= 0 or not nums:
+        return 0
+
+    n = len(nums)
+    freq = defaultdict(int)
+    for num in nums:
+        freq[num] += 1
+
+    buckets = [[] for _ in range(n + 1)]
+    seen = set()
+    for num in nums:          # preserves first-appearance order within the same frequency
+        if num not in seen:
+            seen.add(num)
+            buckets[freq[num]].append(num)
+
+    total = count = 0
+    for f in range(n, 0, -1):
+        for val in buckets[f]:
+            total += val
+            count += 1
+            if count == k:
+                return total
+    return total",67917.38,238,960,1144,1382,OK,
+TYR-090,group_count_by_remainder,o3,hash-map,easy,O(N),O(N),"def group_count_by_remainder(nums, k):
+    if k == 0:
+        return 0
+    count = 0
+    for i in range(len(nums)):
+        if nums[i] % k == 0:
+            count += 1
+    return count
+","def group_count_by_remainder(nums, k):
+    if k == 0:
+        return 0
+    return sum(1 for num in nums if num % k == 0)",4565.74,107,128,186,293,OK,
+TYR-091,count_triplets_with_sum,o3,hash-map,medium,O(N^3),O(N^2),"def count_triplets_with_sum(nums, target):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            for k in range(j + 1, n):
+                if nums[i] + nums[j] + nums[k] == target:
+                    count += 1
+    return count
+","def count_triplets_with_sum(nums, target):
+    nums.sort()
+    n = len(nums)
+    count = 0
+    for i in range(n - 2):
+        left, right = i + 1, n - 1
+        while left < right:
+            s = nums[i] + nums[left] + nums[right]
+            if s == target:
+                if nums[left] == nums[right]:
+                    m = right - left + 1
+                    count += m * (m - 1) // 2
+                    break
+                l_val, r_val = nums[left], nums[right]
+                l_cnt = r_cnt = 0
+                while left < right and nums[left] == l_val:
+                    l_cnt += 1
+                    left += 1
+                while right >= left and nums[right] == r_val:
+                    r_cnt += 1
+                    right -= 1
+                count += l_cnt * r_cnt
+            elif s < target:
+                left += 1
+            else:
+                right -= 1
+    return count",64510.92,131,768,1009,1140,OK,
+TYR-092,longest_subarray_all_distinct,o3,hash-map,medium,O(N^2),O(N),"def longest_subarray_all_distinct(nums):
+    best = 0
+    n = len(nums)
+    for i in range(n):
+        length = 0
+        has_dup = 0
+        for j in range(i, n):
+            for k in range(i, j):
+                if nums[k] == nums[j]:
+                    has_dup = 1
+            if has_dup == 1:
+                break
+            length += 1
+        if length > best:
+            best = length
+    return best
+","def longest_subarray_all_distinct(nums):
+    left = best = 0
+    last = {}
+    for right, val in enumerate(nums):
+        if val in last and last[val] >= left:
+            left = last[val] + 1
+        last[val] = right
+        best = max(best, right - left + 1)
+    return best",48899.71,157,128,227,384,OK,
+TYR-093,count_four_sum,o3,hash-map,medium,O(N^4),O(N^2),"def count_four_sum(nums, target):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            for k in range(j + 1, n):
+                for l in range(k + 1, n):
+                    if nums[i] + nums[j] + nums[k] + nums[l] == target:
+                        count += 1
+    return count
+","from collections import defaultdict
+
+def count_four_sum(nums, target):
+    n = len(nums)
+    if n < 4:
+        return 0
+    pair_counts = defaultdict(int)
+    total = 0
+    for k in range(2, n - 1):
+        j = k - 1
+        for i in range(j):
+            pair_counts[nums[i] + nums[j]] += 1
+        for l in range(k + 1, n):
+            total += pair_counts.get(target - nums[k] - nums[l], 0)
+    return total",101156.61,145,3200,3339,3484,OK,
+TYR-094,has_zero_sum_subarray,o3,hash-map,easy,O(N^2),O(N),"def has_zero_sum_subarray(nums):
+    n = len(nums)
+    for i in range(n):
+        cur = 0
+        for j in range(i, n):
+            cur += nums[j]
+            if cur == 0:
+                return 1
+    return 0
+","def has_zero_sum_subarray(nums):
+    seen = set()
+    prefix_sum = 0
+    for num in nums:
+        prefix_sum += num
+        if prefix_sum == 0 or prefix_sum in seen:
+            return 1
+        seen.add(prefix_sum)
+    return 0",11435.44,109,128,212,321,OK,
+TYR-095,count_complete_subarrays,o3,hash-map,medium,O(N^3),O(N),"def count_complete_subarrays(nums):
+    n = len(nums)
+    total_distinct = 0
+    for i in range(n):
+        is_first = 1
+        for j in range(i):
+            if nums[j] == nums[i]:
+                is_first = 0
+        total_distinct += is_first
+    count = 0
+    for i in range(n):
+        for j in range(i, n):
+            dist = 0
+            for k in range(i, j + 1):
+                is_f = 1
+                for m in range(i, k):
+                    if nums[m] == nums[k]:
+                        is_f = 0
+                dist += is_f
+            if dist == total_distinct:
+                count += 1
+    return count
+","from collections import defaultdict
+
+def count_complete_subarrays(nums):
+    total_distinct = len(set(nums))
+    freq = defaultdict(int)
+    left = distinct = result = 0
+
+    for right, val in enumerate(nums):
+        freq[val] += 1
+        if freq[val] == 1:
+            distinct += 1
+
+        while distinct == total_distinct and freq[nums[left]] > 1:
+            freq[nums[left]] -= 1
+            left += 1
+
+        if distinct == total_distinct:
+            result += left + 1
+
+    return result",84201.89,212,2816,2985,3197,OK,
+TYR-096,longest_equal_01_subarray,o3,hash-map,medium,O(N^2),O(N),"def longest_equal_01_subarray(nums):
+    best = 0
+    n = len(nums)
+    for i in range(n):
+        zeros = 0
+        ones = 0
+        for j in range(i, n):
+            if nums[j] == 0:
+                zeros += 1
+            else:
+                ones += 1
+            if zeros == ones and zeros + ones > best:
+                best = zeros + ones
+    return best
+","def longest_equal_01_subarray(nums):
+    seen = {0: -1}   # prefix_sum -> earliest index
+    prefix_sum = best = 0
+    for i, v in enumerate(nums):
+        prefix_sum += 1 if v else -1
+        if prefix_sum in seen:
+            best = max(best, i - seen[prefix_sum])
+        else:
+            seen[prefix_sum] = i
+    return best",28501.18,146,128,243,389,OK,
+TYR-097,count_pairs_diff_k,o3,hash-map,easy,O(N^2),O(N),"def count_pairs_diff_k(nums, k):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if abs(nums[i] - nums[j]) == k:
+                count += 1
+    return count
+","from collections import Counter
+
+def count_pairs_diff_k(nums, k):
+    if k < 0:
+        return 0
+    freq = Counter(nums)
+    if k == 0:
+        return sum(v * (v - 1) // 2 for v in freq.values())
+    return sum(freq[num] * freq.get(num + k, 0) for num in freq)",60408.85,109,512,611,720,OK,
+TYR-098,longest_band,o3,hash-map,medium,O(N^2),O(N),"def longest_band(nums):
+    if len(nums) == 0:
+        return 0
+    best = 1
+    n = len(nums)
+    for i in range(n):
+        cur = nums[i]
+        length = 1
+        while True:
+            found = 0
+            for j in range(n):
+                if nums[j] == cur + 1:
+                    found = 1
+                    break
+            if found == 1:
+                cur += 1
+                length += 1
+            else:
+                break
+        if length > best:
+            best = length
+    return best
+","def longest_band(nums):
+    if not nums:
+        return 0
+    num_set = set(nums)
+    best = 0
+    for num in num_set:
+        if num - 1 not in num_set:           # start of a new band
+            length = 1
+            current = num + 1
+            while current in num_set:
+                length += 1
+                current += 1
+            if length > best:
+                best = length
+    return best",53169.35,177,192,317,494,OK,
+TYR-099,find_majority_one_third,o3,hash-map,medium,O(N^2),O(N),"def find_majority_one_third(nums):
+    n = len(nums)
+    for i in range(n):
+        count = 0
+        for j in range(n):
+            if nums[j] == nums[i]:
+                count += 1
+        if count > n // 3:
+            return nums[i]
+    return -1
+","from collections import Counter
+
+def find_majority_one_third(nums):
+    n = len(nums)
+    for num, cnt in Counter(nums).items():
+        if cnt > n // 3:
+            return num
+    return -1",9953.53,119,256,328,447,OK,
+TYR-100,count_subarrays_all_same,o3,hash-map,easy,O(N^2),O(N),"def count_subarrays_all_same(nums):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        for j in range(i, n):
+            all_same = 1
+            for k in range(i + 1, j + 1):
+                if nums[k] != nums[i]:
+                    all_same = 0
+                    break
+            count += all_same
+    return count
+","def count_subarrays_all_same(nums):
+    total = 0
+    i = 0
+    n = len(nums)
+    while i < n:
+        j = i + 1
+        while j < n and nums[j] == nums[i]:
+            j += 1
+        length = j - i
+        total += length * (length + 1) // 2
+        i = j
+    return total",53259.02,137,64,172,309,OK,
+TYR-101,move_zeros_to_end,o3,array-transform,easy,O(N),O(N),"def move_zeros_to_end(nums):
+    result = []
+    for i in range(len(nums)):
+        if nums[i] != 0:
+            result.append(nums[i])
+    for i in range(len(nums)):
+        if nums[i] == 0:
+            result.append(0)
+    return result
+","def move_zeros_to_end(nums):
+    insert_pos = 0
+    for num in nums:
+        if num != 0:
+            nums[insert_pos] = num
+            insert_pos += 1
+    for i in range(insert_pos, len(nums)):
+        nums[i] = 0
+    return nums",57326.22,112,128,218,330,OK,
+TYR-102,rotate_array_by_k,o3,array-transform,medium,O(N),O(N),"def rotate_array_by_k(nums, k):
+    n = len(nums)
+    if n == 0:
+        return []
+    k = k % n
+    result = []
+    for i in range(n - k, n):
+        result.append(nums[i])
+    for i in range(n - k):
+        result.append(nums[i])
+    return result
+","def rotate_array_by_k(nums, k):
+    n = len(nums)
+    if n == 0:
+        return nums
+    k %= n
+    if k == 0:
+        return nums
+
+    def reverse(arr, l, r):
+        while l < r:
+            arr[l], arr[r] = arr[r], arr[l]
+            l += 1
+            r -= 1
+
+    reverse(nums, 0, n - 1)
+    reverse(nums, 0, k - 1)
+    reverse(nums, k, n - 1)
+    return nums",57362.02,122,256,401,523,OK,
+TYR-103,segregate_pos_neg,o3,array-transform,easy,O(N),O(N),"def segregate_pos_neg(nums):
+    result = []
+    for i in range(len(nums)):
+        if nums[i] >= 0:
+            result.append(nums[i])
+    for i in range(len(nums)):
+        if nums[i] < 0:
+            result.append(nums[i])
+    return result
+","def segregate_pos_neg(nums):
+    pos, neg = [], []
+    for num in nums:
+        (pos if num >= 0 else neg).append(num)
+    return pos + neg",59468.74,111,448,506,617,OK,
+TYR-104,replace_with_rank,o3,array-transform,medium,O(N^2),O(N),"def replace_with_rank(nums):
+    result = []
+    n = len(nums)
+    for i in range(n):
+        rank = 1
+        for j in range(n):
+            if nums[j] < nums[i]:
+                rank += 1
+            elif nums[j] == nums[i] and j < i:
+                rank += 0
+        result.append(rank)
+    return result
+","def replace_with_rank(nums):
+    rank = {v: i + 1 for i, v in enumerate(sorted(set(nums)))}
+    return [rank[x] for x in nums]",76357.94,130,2112,2173,2303,OK,
+TYR-105,remove_all_target,o3,array-transform,easy,O(N),O(N),"def remove_all_target(nums, target):
+    result = []
+    for i in range(len(nums)):
+        if nums[i] != target:
+            result.append(nums[i])
+    return result
+","def remove_all_target(nums, target):
+    write = 0
+    for read in range(len(nums)):
+        if nums[read] != target:
+            nums[write] = nums[read]
+            write += 1
+    del nums[write:]
+    return nums",33745.17,88,192,267,355,OK,
+TYR-106,running_sum,o3,array-transform,easy,O(N),O(N),"def running_sum(nums):
+    result = []
+    cur = 0
+    for i in range(len(nums)):
+        cur += nums[i]
+        result.append(cur)
+    return result
+","def running_sum(nums):
+    total = 0
+    for i, num in enumerate(nums):
+        total += num
+        nums[i] = total
+    return nums",57136.42,88,192,251,339,OK,
+TYR-107,find_disappeared_numbers,o3,array-transform,medium,O(N^2),O(N),"def find_disappeared_numbers(nums):
+    n = len(nums)
+    result = []
+    for i in range(1, n + 1):
+        found = 0
+        for j in range(n):
+            if nums[j] == i:
+                found = 1
+        if found == 0:
+            result.append(i)
+    return result
+","def find_disappeared_numbers(nums):
+    for num in nums:
+        idx = abs(num) - 1
+        if nums[idx] > 0:
+            nums[idx] = -nums[idx]
+    return [i + 1 for i, num in enumerate(nums) if num > 0]",53668.56,124,128,210,334,OK,
+TYR-108,find_all_duplicates,o3,array-transform,medium,O(N^2),O(N),"def find_all_duplicates(nums):
+    result = []
+    n = len(nums)
+    for i in range(n):
+        is_first = 1
+        for j in range(i):
+            if nums[j] == nums[i]:
+                is_first = 0
+        if is_first == 0:
+            continue
+        count = 0
+        for j in range(n):
+            if nums[j] == nums[i]:
+                count += 1
+        if count == 2:
+            result.append(nums[i])
+    return result
+","from collections import Counter
+
+def find_all_duplicates(nums):
+    counts = Counter(nums)
+    seen = set()
+    result = []
+    for num in nums:
+        if counts[num] == 2 and num not in seen:
+            result.append(num)
+            seen.add(num)
+    return result",57860.51,159,128,206,365,OK,
+TYR-109,array_sign,o3,array-transform,easy,O(N),O(N),"def array_sign(nums):
+    neg_count = 0
+    for i in range(len(nums)):
+        if nums[i] == 0:
+            return 0
+        if nums[i] < 0:
+            neg_count += 1
+    if neg_count % 2 == 0:
+        return 1
+    return -1
+","def array_sign(nums):
+    sign = 1
+    for n in nums:
+        if n == 0:
+            return 0
+        if n < 0:
+            sign = -sign
+    return sign",13360.17,121,128,192,313,OK,
+TYR-110,max_consecutive_ones,o3,array-transform,easy,O(N),O(N),"def max_consecutive_ones(nums):
+    best = 0
+    cur = 0
+    for i in range(len(nums)):
+        if nums[i] == 1:
+            cur += 1
+            if cur > best:
+                best = cur
+        else:
+            cur = 0
+    return best
+","def max_consecutive_ones(nums):
+    best = cur = 0
+    for n in nums:
+        cur = cur + 1 if n == 1 else 0
+        if cur > best:
+            best = cur
+    return best",66398.43,117,128,204,321,OK,
+TYR-111,check_monotonic,o3,array-transform,easy,O(N),O(N),"def check_monotonic(nums):
+    if len(nums) <= 1:
+        return 1
+    inc = 1
+    dec = 1
+    for i in range(1, len(nums)):
+        if nums[i] > nums[i - 1]:
+            dec = 0
+        if nums[i] < nums[i - 1]:
+            inc = 0
+    if inc == 1 or dec == 1:
+        return 1
+    return 0
+","def check_monotonic(nums):
+    inc = dec = True
+    for i in range(1, len(nums)):
+        if nums[i] > nums[i - 1]:
+            dec = False
+        elif nums[i] < nums[i - 1]:
+            inc = False
+        if not inc and not dec:
+            return 0
+    return 1",66709.86,152,128,223,375,OK,
+TYR-112,third_distinct_max,o3,array-transform,medium,O(N^2),O(N),"def third_distinct_max(nums):
+    distinct = []
+    for i in range(len(nums)):
+        found = 0
+        for j in range(len(distinct)):
+            if distinct[j] == nums[i]:
+                found = 1
+        if found == 0:
+            distinct.append(nums[i])
+    if len(distinct) < 3:
+        best = distinct[0]
+        for v in distinct:
+            if v > best:
+                best = v
+        return best
+    for rank in range(3):
+        mx = distinct[0]
+        mx_idx = 0
+        for i in range(1, len(distinct)):
+            if distinct[i] > mx:
+                mx = distinct[i]
+                mx_idx = i
+        if rank == 2:
+            return mx
+        distinct[mx_idx] = distinct[0] - 1
+    return -1
+","def third_distinct_max(nums):
+    first = second = third = None
+    for n in nums:
+        if n == first or n == second or n == third:
+            continue
+        if first is None or n > first:
+            third = second
+            second = first
+            first = n
+        elif second is None or n > second:
+            third = second
+            second = n
+        elif third is None or n > third:
+            third = n
+    return first if third is None else third",6938.43,235,320,447,682,OK,
+TYR-113,degree_shortest_subarray,o3,array-transform,medium,O(N^2),O(N),"def degree_shortest_subarray(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    max_freq = 0
+    for i in range(n):
+        count = 0
+        for j in range(n):
+            if nums[j] == nums[i]:
+                count += 1
+        if count > max_freq:
+            max_freq = count
+    best = n
+    for i in range(n):
+        count = 0
+        for j in range(n):
+            if nums[j] == nums[i]:
+                count += 1
+        if count == max_freq:
+            first = -1
+            last = -1
+            for j in range(n):
+                if nums[j] == nums[i]:
+                    if first == -1:
+                        first = j
+                    last = j
+            length = last - first + 1
+            if length < best:
+                best = length
+    return best
+","from collections import defaultdict
+
+def degree_shortest_subarray(nums):
+    if not nums:
+        return 0
+    first_index = {}
+    freq = defaultdict(int)
+    degree = 0
+    min_length = len(nums)
+    
+    for i, num in enumerate(nums):
+        if num not in first_index:
+            first_index[num] = i
+        freq[num] += 1
+        
+        if freq[num] > degree:
+            degree = freq[num]
+            min_length = i - first_index[num] + 1
+        elif freq[num] == degree:
+            min_length = min(min_length, i - first_index[num] + 1)
+    
+    return min_length",6489.54,248,192,351,599,OK,
+TYR-114,shortest_unsorted_subarray,o3,array-transform,medium,O(N^2),O(N log N),"def shortest_unsorted_subarray(nums):
+    n = len(nums)
+    sorted_nums = []
+    for v in nums:
+        sorted_nums.append(v)
+    for i in range(n):
+        for j in range(i + 1, n):
+            if sorted_nums[i] > sorted_nums[j]:
+                tmp = sorted_nums[i]
+                sorted_nums[i] = sorted_nums[j]
+                sorted_nums[j] = tmp
+    start = -1
+    end = -1
+    for i in range(n):
+        if nums[i] != sorted_nums[i]:
+            if start == -1:
+                start = i
+            end = i
+    if start == -1:
+        return 0
+    return end - start + 1
+","def shortest_unsorted_subarray(nums):
+    sorted_nums = sorted(nums)
+    start, end = len(nums), 0
+    for i, (a, b) in enumerate(zip(nums, sorted_nums)):
+        if a != b:
+            start = min(start, i)
+            end = max(end, i)
+    return 0 if end < start else end - start + 1",56826.47,205,256,355,560,OK,
+TYR-115,dutch_flag_sort,o3,array-transform,easy,O(N),O(N),"def dutch_flag_sort(nums):
+    result = []
+    for v in range(3):
+        for i in range(len(nums)):
+            if nums[i] == v:
+                result.append(v)
+    return result
+","def dutch_flag_sort(nums):
+    counts = [0, 0, 0]
+    for num in nums:
+        counts[num] += 1
+    return [0] * counts[0] + [1] * counts[1] + [2] * counts[2]",7675.62,94,320,400,494,OK,
+TYR-116,container_with_most_water,o3,competition,medium,O(N^2),O(N),"def container_with_most_water(nums):
+    best = 0
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            h = nums[i]
+            if nums[j] < h:
+                h = nums[j]
+            area = h * (j - i)
+            if area > best:
+                best = area
+    return best
+","def container_with_most_water(nums):
+    left, right = 0, len(nums) - 1
+    best = 0
+    while left < right:
+        height = min(nums[left], nums[right])
+        best = max(best, height * (right - left))
+        if nums[left] < nums[right]:
+            left += 1
+        else:
+            right -= 1
+    return best",53760.52,134,128,237,371,OK,
+TYR-117,best_time_buy_sell,o3,competition,easy,O(N^2),O(N),"def best_time_buy_sell(nums):
+    best = 0
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            profit = nums[j] - nums[i]
+            if profit > best:
+                best = profit
+    return best
+","def best_time_buy_sell(nums):
+    best = 0
+    min_price = float('inf')
+    for price in nums:
+        if price < min_price:
+            min_price = price
+        elif price - min_price > best:
+            best = price - min_price
+    return best",7870.84,113,128,212,325,OK,
+TYR-118,trap_rainwater,o3,competition,medium,O(N^2),O(N),"def trap_rainwater(nums):
+    total = 0
+    n = len(nums)
+    for i in range(1, n - 1):
+        left_max = 0
+        for j in range(i):
+            if nums[j] > left_max:
+                left_max = nums[j]
+        right_max = 0
+        for j in range(i + 1, n):
+            if nums[j] > right_max:
+                right_max = nums[j]
+        water_level = left_max
+        if right_max < water_level:
+            water_level = right_max
+        if water_level > nums[i]:
+            total += water_level - nums[i]
+    return total
+","def trap_rainwater(nums):
+    left, right = 0, len(nums) - 1
+    left_max = right_max = total = 0
+    while left < right:
+        if nums[left] < nums[right]:
+            left_max = max(left_max, nums[left])
+            total += left_max - nums[left]
+            left += 1
+        else:
+            right_max = max(right_max, nums[right])
+            total += right_max - nums[right]
+            right -= 1
+    return total",55892.12,190,192,318,508,OK,
+TYR-119,good_pairs_count,o3,competition,easy,O(N^2),O(N),"def good_pairs_count(nums):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] == nums[j]:
+                count += 1
+    return count
+","from collections import Counter
+
+def good_pairs_count(nums):
+    counts = Counter(nums)
+    return sum(c * (c - 1) // 2 for c in counts.values())",54019.42,102,64,120,222,OK,
+TYR-120,max_chunks_to_sort,o3,competition,medium,O(N^2),O(N),"def max_chunks_to_sort(nums):
+    n = len(nums)
+    chunks = 0
+    for i in range(n):
+        mx = 0
+        for j in range(i + 1):
+            if nums[j] > mx:
+                mx = nums[j]
+        if mx == i:
+            chunks += 1
+    return chunks
+","def max_chunks_to_sort(nums):
+    chunks = 0
+    max_so_far = float('-inf')
+    for i, num in enumerate(nums):
+        if num > max_so_far:
+            max_so_far = num
+        if max_so_far == i:
+            chunks += 1
+    return chunks",60941.72,122,384,471,593,OK,
+TYR-121,find_peak_element_index,o3,competition,easy,O(N),O(log N),"def find_peak_element_index(nums):
+    n = len(nums)
+    if n == 1:
+        return 0
+    if nums[0] > nums[1]:
+        return 0
+    for i in range(1, n - 1):
+        if nums[i] > nums[i - 1] and nums[i] > nums[i + 1]:
+            return i
+    if nums[n - 1] > nums[n - 2]:
+        return n - 1
+    return 0
+","def find_peak_element_index(nums):
+    left, right = 0, len(nums) - 1
+    while left < right:
+        mid = (left + right) // 2
+        if nums[mid] < nums[mid + 1]:
+            left = mid + 1
+        else:
+            right = mid
+    return left",53613.48,159,128,218,377,OK,
+TYR-122,best_sightseeing_pair,o3,competition,medium,O(N^2),O(N),"def best_sightseeing_pair(nums):
+    best = 0
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            score = nums[i] + nums[j] + i - j
+            if score > best:
+                best = score
+    return best
+","def best_sightseeing_pair(nums):
+    best = float('-inf')
+    max_i = nums[0]  # nums[0] + 0
+    for j in range(1, len(nums)):
+        best = max(best, max_i + nums[j] - j)
+        max_i = max(max_i, nums[j] + j)
+    return best",57795.05,119,128,228,347,OK,
+TYR-123,max_turbulence_length,o3,competition,medium,O(N^2),O(N),"def max_turbulence_length(nums):
+    n = len(nums)
+    if n < 2:
+        return n
+    best = 1
+    for i in range(n):
+        length = 1
+        for j in range(i + 1, n):
+            if length == 1:
+                if nums[j] != nums[j - 1]:
+                    length += 1
+                else:
+                    break
+            else:
+                prev_up = nums[j - 1] > nums[j - 2]
+                cur_up = nums[j] > nums[j - 1]
+                if nums[j] == nums[j - 1]:
+                    break
+                if prev_up != cur_up:
+                    length += 1
+                else:
+                    break
+        if length > best:
+            best = length
+    return best
+","def max_turbulence_length(nums):
+    n = len(nums)
+    if n < 2:
+        return n
+    best = 1
+    start = 0
+    prev_cmp = 0
+    for i in range(1, n):
+        diff = nums[i] - nums[i - 1]
+        cmp = (diff > 0) - (diff < 0)   # 1 if up, -1 if down, 0 if equal
+        if cmp == 0:
+            start = i
+            prev_cmp = 0
+        else:
+            if i == 1 or cmp * prev_cmp == -1:
+                best = max(best, i - start + 1)
+            else:
+                start = i - 1
+            prev_cmp = cmp
+    return best",57892.01,221,64,258,479,OK,
+TYR-124,count_arithmetic_subarrays,o3,competition,medium,O(N^2),O(N),"def count_arithmetic_subarrays(nums):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 2, n):
+            is_ap = 1
+            d = nums[i + 1] - nums[i]
+            for k in range(i + 1, j + 1):
+                if nums[k] - nums[k - 1] != d:
+                    is_ap = 0
+                    break
+            count += is_ap
+    return count
+","def count_arithmetic_subarrays(nums):
+    n = len(nums)
+    if n < 3:
+        return 0
+    total = 0
+    run_len = 2
+    diff = nums[1] - nums[0]
+    for i in range(2, n):
+        cur = nums[i] - nums[i - 1]
+        if cur == diff:
+            run_len += 1
+        else:
+            if run_len >= 3:
+                total += (run_len - 1) * (run_len - 2) // 2
+            diff = cur
+            run_len = 2
+    if run_len >= 3:
+        total += (run_len - 1) * (run_len - 2) // 2
+    return total",59592.80,159,256,445,604,OK,
+TYR-125,max_width_ramp,o3,competition,medium,O(N^2),O(N),"def max_width_ramp(nums):
+    best = 0
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            if nums[i] <= nums[j]:
+                d = j - i
+                if d > best:
+                    best = d
+    return best
+","def max_width_ramp(nums):
+    stack = []
+    for i, v in enumerate(nums):
+        if not stack or v < nums[stack[-1]]:
+            stack.append(i)
+    best = 0
+    for j in range(len(nums) - 1, -1, -1):
+        while stack and nums[j] >= nums[stack[-1]]:
+            best = max(best, j - stack.pop())
+    return best",6877.66,119,192,306,425,OK,
+TYR-126,nums_smaller_than_current_sum,o3,competition,easy,O(N^2),O(N),"def nums_smaller_than_current_sum(nums):
+    total = 0
+    n = len(nums)
+    for i in range(n):
+        count = 0
+        for j in range(n):
+            if nums[j] < nums[i]:
+                count += 1
+        total += count
+    return total
+","from collections import Counter
+
+def nums_smaller_than_current_sum(nums):
+    n = len(nums)
+    counts = Counter(nums)
+    equal_pairs = sum(c * (c - 1) // 2 for c in counts.values())
+    return n * (n - 1) // 2 - equal_pairs",86132.34,115,3008,3091,3206,OK,
+TYR-127,longest_harmonious_subsequence,o3,competition,medium,O(N^2),O(N),"def longest_harmonious_subsequence(nums):
+    best = 0
+    n = len(nums)
+    for i in range(n):
+        count_same = 0
+        count_plus = 0
+        for j in range(n):
+            if nums[j] == nums[i]:
+                count_same += 1
+            elif nums[j] == nums[i] + 1:
+                count_plus += 1
+        if count_plus > 0:
+            total = count_same + count_plus
+            if total > best:
+                best = total
+    return best
+","from collections import Counter
+
+def longest_harmonious_subsequence(nums):
+    freq = Counter(nums)
+    best = 0
+    for num in freq:
+        if num + 1 in freq:
+            best = max(best, freq[num] + freq[num + 1])
+    return best",24855.56,167,128,212,379,OK,
+TYR-128,three_sum_closest,o3,competition,medium,O(N^3),O(N^2),"def three_sum_closest(nums, target):
+    n = len(nums)
+    if n < 3:
+        return 0
+    best = nums[0] + nums[1] + nums[2]
+    for i in range(n):
+        for j in range(i + 1, n):
+            for k in range(j + 1, n):
+                s = nums[i] + nums[j] + nums[k]
+                if abs(s - target) < abs(best - target):
+                    best = s
+    return best
+","def three_sum_closest(nums, target):
+    n = len(nums)
+    if n < 3:
+        return 0
+    nums.sort()
+    best = nums[0] + nums[1] + nums[2]
+    for i in range(n - 2):
+        l, r = i + 1, n - 1
+        while l < r:
+            s = nums[i] + nums[l] + nums[r]
+            if abs(s - target) < abs(best - target):
+                best = s
+                if best == target:
+                    return best
+            if s < target:
+                l += 1
+            else:
+                r -= 1
+    return best",56038.41,163,128,292,455,OK,
+TYR-129,max_sum_circular_subarray,o3,competition,medium,O(N^2),O(N),"def max_sum_circular_subarray(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    best = nums[0]
+    for i in range(n):
+        cur = 0
+        for j in range(n):
+            cur += nums[(i + j) % n]
+            if cur > best:
+                best = cur
+    return best
+","def max_sum_circular_subarray(nums):
+    if not nums:
+        return 0
+    total = sum(nums)
+    max_end = min_end = max_so_far = min_so_far = nums[0]
+    for x in nums[1:]:
+        max_end = max(x, max_end + x)
+        max_so_far = max(max_so_far, max_end)
+        min_end = min(x, min_end + x)
+        min_so_far = min(min_so_far, min_end)
+    return max_so_far if max_so_far < 0 else max(max_so_far, total - min_so_far)",58677.32,131,192,342,473,OK,
+TYR-130,minimum_increment_for_unique,o3,competition,medium,O(N^2),O(N log N),"def minimum_increment_for_unique(nums):
+    n = len(nums)
+    arr = []
+    for v in nums:
+        arr.append(v)
+    for i in range(n):
+        for j in range(i + 1, n):
+            if arr[i] > arr[j]:
+                tmp = arr[i]
+                arr[i] = arr[j]
+                arr[j] = tmp
+    moves = 0
+    for i in range(1, n):
+        if arr[i] <= arr[i - 1]:
+            diff = arr[i - 1] - arr[i] + 1
+            arr[i] += diff
+            moves += diff
+    return moves
+","def minimum_increment_for_unique(nums):
+    nums = sorted(nums)
+    moves = 0
+    for i in range(1, len(nums)):
+        if nums[i] <= nums[i - 1]:
+            nums[i] = nums[i - 1] + 1
+            moves += nums[i] - nums[i - 1] - 1
+    return moves",52324.96,190,64,165,355,OK,
+TYR-131,largest_perimeter_triangle,o3,competition,easy,O(N^3),O(N log N),"def largest_perimeter_triangle(nums):
+    n = len(nums)
+    best = 0
+    for i in range(n):
+        for j in range(i + 1, n):
+            for k in range(j + 1, n):
+                a = nums[i]
+                b = nums[j]
+                c = nums[k]
+                if a + b > c and a + c > b and b + c > a:
+                    p = a + b + c
+                    if p > best:
+                        best = p
+    return best
+","def largest_perimeter_triangle(nums):
+    nums.sort(reverse=True)
+    for i in range(len(nums) - 2):
+        if nums[i] < nums[i + 1] + nums[i + 2]:
+            return nums[i] + nums[i + 1] + nums[i + 2]
+    return 0",58003.37,164,128,219,383,OK,
+TYR-132,count_teams,o3,competition,medium,O(N^3),O(N^2),"def count_teams(nums):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            for k in range(j + 1, n):
+                if nums[i] < nums[j] < nums[k]:
+                    count += 1
+                if nums[i] > nums[j] > nums[k]:
+                    count += 1
+    return count
+","def count_teams(nums):
+    n = len(nums)
+    if n < 3:
+        return 0
+    res = 0
+    for j in range(1, n - 1):
+        less_left = greater_left = 0
+        for i in range(j):
+            if nums[i] < nums[j]:
+                less_left += 1
+            elif nums[i] > nums[j]:
+                greater_left += 1
+        less_right = greater_right = 0
+        for k in range(j + 1, n):
+            if nums[k] < nums[j]:
+                less_right += 1
+            elif nums[k] > nums[j]:
+                greater_right += 1
+        res += less_left * greater_right + greater_left * less_right
+    return res",61107.94,143,512,700,843,OK,
+TYR-133,max_score_after_split,o3,competition,easy,O(N^2),O(N),"def max_score_after_split(nums):
+    best = 0
+    n = len(nums)
+    for i in range(1, n):
+        zeros = 0
+        for j in range(i):
+            if nums[j] == 0:
+                zeros += 1
+        ones = 0
+        for j in range(i, n):
+            if nums[j] == 1:
+                ones += 1
+        score = zeros + ones
+        if score > best:
+            best = score
+    return best
+","def max_score_after_split(nums):
+    total_ones = sum(nums)
+    zeros_left = max_score = 0
+    ones_right = total_ones
+    for i in range(len(nums) - 1):  # ensure both parts are non-empty
+        if nums[i] == 0:
+            zeros_left += 1
+        else:
+            ones_right -= 1
+        max_score = max(max_score, zeros_left + ones_right)
+    return max_score",54658.69,159,192,314,473,OK,
+TYR-134,count_special_positions,o3,competition,medium,O(N^2),O(N),"def count_special_positions(nums):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        rest_sum = 0
+        for j in range(n):
+            if j != i:
+                rest_sum += nums[j]
+        if nums[i] == rest_sum:
+            count += 1
+    return count
+","def count_special_positions(nums):
+    total = sum(nums)
+    return sum(1 for x in nums if x == total - x)",52565.34,121,128,175,296,OK,
+TYR-135,jump_game,o3,competition,medium,O(N^2),O(N),"def jump_game(nums):
+    n = len(nums)
+    if n <= 1:
+        return 1
+    reachable = [0] * n
+    reachable[0] = 1
+    for i in range(n):
+        if reachable[i] == 0:
+            continue
+        for j in range(1, nums[i] + 1):
+            if i + j < n:
+                reachable[i + j] = 1
+    return reachable[n - 1]
+","def jump_game(nums):
+    max_reach = 0
+    for i, step in enumerate(nums):
+        if i > max_reach:
+            return 0
+        max_reach = max(max_reach, i + step)
+        if max_reach >= len(nums) - 1:
+            return 1
+    return 1",58399.73,151,256,346,497,OK,
+TYR-136,count_pairs_xor_k,o3,advanced,medium,O(N^2),O(N),"def count_pairs_xor_k(nums, k):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if (nums[i] ^ nums[j]) == k:
+                count += 1
+    return count
+","def count_pairs_xor_k(nums, k):
+    freq = {}
+    count = 0
+    for num in nums:
+        count += freq.get(num ^ k, 0)
+        freq[num] = freq.get(num, 0) + 1
+    return count",54746.85,110,192,273,383,OK,
+TYR-137,count_subarrays_exact_k_distinct,o3,advanced,medium,O(N^3),O(N),"def count_subarrays_exact_k_distinct(nums, k):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        for j in range(i, n):
+            dist = 0
+            for m in range(i, j + 1):
+                is_f = 1
+                for p in range(i, m):
+                    if nums[p] == nums[m]:
+                        is_f = 0
+                dist += is_f
+            if dist == k:
+                count += 1
+    return count
+","from collections import defaultdict
+
+def count_subarrays_exact_k_distinct(nums, k):
+    if k <= 0:
+        return 0
+
+    def at_most(k):
+        freq = defaultdict(int)
+        left = res = 0
+        for right, num in enumerate(nums):
+            freq[num] += 1
+            while len(freq) > k:
+                freq[nums[left]] -= 1
+                if freq[nums[left]] == 0:
+                    del freq[nums[left]]
+                left += 1
+            res += right - left + 1
+        return res
+
+    return at_most(k) - at_most(k - 1)",54652.10,162,192,354,516,OK,
+TYR-138,longest_equal_subarray,o3,advanced,easy,O(N^2),O(N),"def longest_equal_subarray(nums):
+    if len(nums) == 0:
+        return 0
+    best = 1
+    n = len(nums)
+    for i in range(n):
+        length = 1
+        for j in range(i + 1, n):
+            if nums[j] == nums[i]:
+                length += 1
+            else:
+                break
+        if length > best:
+            best = length
+    return best
+","def longest_equal_subarray(nums):
+    if not nums:
+        return 0
+    best = curr = 1
+    for i in range(1, len(nums)):
+        curr = curr + 1 if nums[i] == nums[i - 1] else 1
+        if curr > best:
+            best = curr
+    return best",57343.19,144,192,288,432,OK,
+TYR-139,count_local_inversions,o3,advanced,easy,O(N),O(N),"def count_local_inversions(nums):
+    count = 0
+    for i in range(len(nums) - 1):
+        if nums[i] > nums[i + 1]:
+            count += 1
+    return count
+","def count_local_inversions(nums):
+    return sum(a > b for a, b in zip(nums, nums[1:]))",63669.95,97,896,941,1038,OK,
+TYR-140,largest_rectangle_histogram,o3,advanced,medium,O(N^2),O(N),"def largest_rectangle_histogram(nums):
+    best = 0
+    n = len(nums)
+    for i in range(n):
+        h = nums[i]
+        for j in range(i, n):
+            if nums[j] < h:
+                h = nums[j]
+            area = h * (j - i + 1)
+            if area > best:
+                best = area
+    return best
+","def largest_rectangle_histogram(nums):
+    if not nums:
+        return 0
+    stack = []
+    best = 0
+    nums.append(0)  # sentinel
+    for i, h in enumerate(nums):
+        while stack and h < nums[stack[-1]]:
+            height = nums[stack.pop()]
+            width = i if not stack else i - stack[-1] - 1
+            best = max(best, height * width)
+        stack.append(i)
+    nums.pop()  # remove sentinel
+    return best",50233.00,133,192,322,455,OK,
+TYR-141,count_range_pairs,o3,advanced,medium,O(N^2),O(N),"def count_range_pairs(nums, target, k):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            s = nums[i] + nums[j]
+            if s >= target and s <= target + k:
+                count += 1
+    return count
+","from collections import Counter
+
+def count_range_pairs(nums, target, k):
+    freq = Counter()
+    count = 0
+    for num in nums:
+        low, high = target - num, target + k - num
+        for v in range(low, high + 1):
+            count += freq.get(v, 0)
+        freq[num] += 1
+    return count",75440.06,119,1856,1955,2074,OK,
+TYR-142,max_sum_after_removing_one,o3,advanced,medium,O(N^2),O(N),"def max_sum_after_removing_one(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    best = nums[0]
+    for i in range(n):
+        cur = 0
+        for j in range(n):
+            if j == i:
+                continue
+            cur += nums[j]
+            if cur > best:
+                best = cur
+        cur = 0
+    for i in range(n):
+        cur = 0
+        for j in range(i, n):
+            cur += nums[j]
+            if cur > best:
+                best = cur
+    return best
+","def max_sum_after_removing_one(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    forward = [0] * n
+    backward = [0] * n
+
+    forward[0] = nums[0]
+    for i in range(1, n):
+        forward[i] = max(nums[i], nums[i] + forward[i - 1])
+
+    backward[-1] = nums[-1]
+    for i in range(n - 2, -1, -1):
+        backward[i] = max(nums[i], nums[i] + backward[i + 1])
+
+    best = max(forward)
+    for i in range(1, n - 1):
+        best = max(best, forward[i - 1] + backward[i + 1])
+
+    if n > 1:
+        best = max(best, forward[n - 2], backward[1])
+
+    return best",19764.47,179,1280,1493,1672,OK,
+TYR-143,can_form_arithmetic_from_sequence,o3,advanced,medium,O(N^2),O(N),"def can_form_arithmetic_from_sequence(nums):
+    n = len(nums)
+    if n <= 2:
+        return 1
+    mn = nums[0]
+    mx = nums[0]
+    for i in range(n):
+        if nums[i] < mn:
+            mn = nums[i]
+        if nums[i] > mx:
+            mx = nums[i]
+    if (mx - mn) % (n - 1) != 0:
+        return 0
+    d = (mx - mn) // (n - 1)
+    for step in range(n):
+        target = mn + step * d
+        found = 0
+        for j in range(n):
+            if nums[j] == target:
+                found = 1
+                break
+        if found == 0:
+            return 0
+    return 1
+","def can_form_arithmetic_from_sequence(nums):
+    n = len(nums)
+    if n <= 2:
+        return 1
+    mn = min(nums)
+    mx = max(nums)
+    diff = mx - mn
+    if diff % (n - 1):
+        return 0
+    d = diff // (n - 1)
+    if d == 0:
+        return 1
+    seen = set()
+    for num in nums:
+        offset = num - mn
+        if offset % d:
+            return 0
+        idx = offset // d
+        if idx in seen:
+            return 0
+        seen.add(idx)
+    return 1",53596.43,227,448,607,834,OK,
+TYR-144,max_profit_two_transactions,o3,advanced,medium,O(N^4),O(N),"def max_profit_two_transactions(nums):
+    n = len(nums)
+    if n < 2:
+        return 0
+    best = 0
+    for i in range(n):
+        for j in range(i + 1, n):
+            profit1 = nums[j] - nums[i]
+            if profit1 < 0:
+                profit1 = 0
+            profit2 = 0
+            for k in range(j + 1, n):
+                for l in range(k + 1, n):
+                    p = nums[l] - nums[k]
+                    if p > profit2:
+                        profit2 = p
+            total = profit1 + profit2
+            if total > best:
+                best = total
+    return best
+","def max_profit_two_transactions(prices):
+    n = len(prices)
+    if n < 2:
+        return 0
+
+    # First pass: max profit up to each day with one transaction
+    min_price = prices[0]
+    left_profits = [0] * n
+    for i in range(1, n):
+        min_price = min(min_price, prices[i])
+        left_profits[i] = max(left_profits[i - 1], prices[i] - min_price)
+
+    # Second pass: max profit from each day to the end with one transaction
+    max_price = prices[-1]
+    right_profit = 0
+    best = 0
+    for i in range(n - 2, -1, -1):
+        max_price = max(max_price, prices[i])
+        right_profit = max(right_profit, max_price - prices[i])
+        best = max(best, left_profits[i] + right_profit)
+
+    return best",48383.52,204,128,354,558,OK,
+TYR-145,count_valleys,o3,advanced,easy,O(N),O(N),"def count_valleys(nums):
+    count = 0
+    for i in range(1, len(nums) - 1):
+        if nums[i] < nums[i - 1] and nums[i] < nums[i + 1]:
+            count += 1
+    return count
+","def count_valleys(nums):
+    return sum(
+        nums[i] < nums[i - 1] and nums[i] < nums[i + 1]
+        for i in range(1, len(nums) - 1)
+    )",55363.45,110,384,452,562,OK,
+TYR-146,smallest_difference_pair_abs,o3,advanced,medium,O(N^2),O(N log N),"def smallest_difference_pair_abs(nums):
+    if len(nums) < 2:
+        return 0
+    best = abs(nums[0] - nums[1])
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            d = abs(nums[i] - nums[j])
+            if d < best:
+                best = d
+    return best
+","def smallest_difference_pair_abs(nums):
+    if len(nums) < 2:
+        return 0
+    nums = sorted(nums)
+    best = abs(nums[1] - nums[0])
+    for i in range(2, len(nums)):
+        d = nums[i] - nums[i - 1]
+        if d < best:
+            best = d
+            if best == 0:
+                break
+    return best",5749.98,137,64,176,313,OK,
+TYR-147,count_nice_pairs,o3,advanced,medium,O(N^2),O(N),"def count_nice_pairs(nums):
+    n = len(nums)
+    count = 0
+    diffs = []
+    for i in range(n):
+        x = nums[i]
+        rev = 0
+        tmp = x
+        while tmp > 0:
+            rev = rev * 10 + tmp % 10
+            tmp = tmp // 10
+        diffs.append(x - rev)
+    for i in range(n):
+        for j in range(i + 1, n):
+            if diffs[i] == diffs[j]:
+                count += 1
+    return count
+","from collections import defaultdict
+
+def count_nice_pairs(nums):
+    freq = defaultdict(int)
+    res = 0
+    for x in nums:
+        rev = 0
+        y = x
+        while y:
+            y, d = divmod(y, 10)
+            rev = rev * 10 + d
+        diff = x - rev
+        res += freq[diff]
+        freq[diff] += 1
+    return res",58546.14,174,192,309,483,OK,
+TYR-148,partition_into_min_groups,o3,advanced,medium,O(N^2),O(N log N),"def partition_into_min_groups(nums):
+    n = len(nums)
+    arr = []
+    for v in nums:
+        arr.append(v)
+    for i in range(n):
+        for j in range(i + 1, n):
+            if arr[i] > arr[j]:
+                tmp = arr[i]
+                arr[i] = arr[j]
+                arr[j] = tmp
+    if n == 0:
+        return 0
+    max_freq = 0
+    for i in range(n):
+        count = 0
+        for j in range(n):
+            if arr[j] == arr[i]:
+                count += 1
+        if count > max_freq:
+            max_freq = count
+    return max_freq
+","def partition_into_min_groups(nums):
+    if not nums:
+        return 0
+    nums = sorted(nums)
+    max_freq = cur = 1
+    for i in range(1, len(nums)):
+        cur = cur + 1 if nums[i] == nums[i - 1] else 1
+        if cur > max_freq:
+            max_freq = cur
+    return max_freq",59581.58,201,576,677,878,OK,
+TYR-149,count_subarrays_with_score_less_k,o3,advanced,medium,O(N^2),O(N),"def count_subarrays_with_score_less_k(nums, k):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        cur = 0
+        for j in range(i, n):
+            cur += nums[j]
+            length = j - i + 1
+            if cur * length < k:
+                count += 1
+            else:
+                break
+    return count
+","def count_subarrays_with_score_less_k(nums, k):
+    if k <= 0:
+        return 0
+    total = 0
+    window_sum = 0
+    left = 0
+    for right, val in enumerate(nums):
+        window_sum += val
+        while left <= right and window_sum * (right - left + 1) >= k:
+            window_sum -= nums[left]
+            left += 1
+        total += right - left + 1
+    return total",58471.91,136,704,827,963,OK,
+TYR-150,fair_candy_swap_diff,o3,advanced,medium,O(N^2),O(N),"def fair_candy_swap_diff(nums):
+    mid = len(nums) // 2
+    sum_a = 0
+    for i in range(mid):
+        sum_a += nums[i]
+    sum_b = 0
+    for i in range(mid, len(nums)):
+        sum_b += nums[i]
+    for i in range(mid):
+        for j in range(mid, len(nums)):
+            new_a = sum_a - nums[i] + nums[j]
+            new_b = sum_b - nums[j] + nums[i]
+            if new_a == new_b:
+                return nums[j] - nums[i]
+    return 0
+","def fair_candy_swap_diff(nums):
+    mid = len(nums) // 2
+    sum_a = sum(nums[:mid])
+    sum_b = sum(nums[mid:])
+    diff = sum_b - sum_a
+    if diff % 2:
+        return 0
+    diff //= 2
+    set_b = set(nums[mid:])
+    for x in nums[:mid]:
+        if x + diff in set_b:
+            return diff
+    return 0",55265.03,180,640,755,935,OK,
+TYR-151,count_equal_pairs,o3,pair-finding,easy,O(N^2),O(N),"def count_equal_pairs(nums):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] == nums[j]:
+                count += 1
+    return count
+","def count_equal_pairs(nums):
+    freq = {}
+    pairs = 0
+    for num in nums:
+        pairs += freq.get(num, 0)
+        freq[num] = freq.get(num, 0) + 1
+    return pairs",51427.79,102,192,262,364,OK,
+TYR-152,find_single_element,o3,frequency,easy,O(N^2),O(N),"def find_single_element(nums):
+    for i in range(len(nums)):
+        count = 0
+        for j in range(len(nums)):
+            if nums[j] == nums[i]:
+                count += 1
+        if count == 1:
+            return nums[i]
+    return 0
+","def find_single_element(nums):
+    freq = {}
+    for num in nums:            # O(N) pass to count frequencies
+        freq[num] = freq.get(num, 0) + 1
+    for num in nums:            # O(N) pass to find first unique element
+        if freq[num] == 1:
+            return num
+    return 0",66246.60,110,384,480,590,OK,
+TYR-153,max_sorted_gap,o3,sorting,easy,O(N^2),O(N log N),"def max_sorted_gap(nums):
+    n = len(nums)
+    if n < 2:
+        return 0
+    for i in range(n):
+        for j in range(i + 1, n):
+            if nums[i] > nums[j]:
+                nums[i], nums[j] = nums[j], nums[i]
+    best = 0
+    for i in range(n - 1):
+        diff = nums[i + 1] - nums[i]
+        if diff > best:
+            best = diff
+    return best
+","def max_sorted_gap(nums):
+    if len(nums) < 2:
+        return 0
+    nums = sorted(nums)
+    return max(b - a for a, b in zip(nums, nums[1:]))",59549.54,162,128,196,358,OK,
+TYR-154,arrays_are_permutation,o3,set-operations,easy,O(N^2),O(N),"def arrays_are_permutation(nums, target):
+    if len(nums) != len(target):
+        return 0
+    used = [0] * len(target)
+    for i in range(len(nums)):
+        found = 0
+        for j in range(len(target)):
+            if used[j] == 0 and target[j] == nums[i]:
+                used[j] = 1
+                found = 1
+                break
+        if found == 0:
+            return 0
+    return 1
+","from collections import Counter
+
+def arrays_are_permutation(nums, target):
+    if len(nums) != len(target):
+        return 0
+    return int(Counter(nums) == Counter(target))",56525.32,155,128,186,341,OK,
+TYR-155,count_unique_elements,o3,frequency,easy,O(N^2),O(N),"def count_unique_elements(nums):
+    count = 0
+    for i in range(len(nums)):
+        is_dup = 0
+        for j in range(i):
+            if nums[j] == nums[i]:
+                is_dup = 1
+                break
+        if is_dup == 0:
+            count += 1
+    return count
+","def count_unique_elements(nums):
+    return len(set(nums))",65249.62,121,192,227,348,OK,
+TYR-156,first_non_repeat_index,o3,frequency,easy,O(N^2),O(N),"def first_non_repeat_index(nums):
+    for i in range(len(nums)):
+        count = 0
+        for j in range(len(nums)):
+            if nums[j] == nums[i]:
+                count += 1
+        if count == 1:
+            return i
+    return -1
+","def first_non_repeat_index(nums):
+    counts = {}
+    for num in nums:
+        counts[num] = counts.get(num, 0) + 1
+    for idx, num in enumerate(nums):
+        if counts[num] == 1:
+            return idx
+    return -1",4512.54,110,0,78,188,OK,
+TYR-157,majority_vote,o3,frequency,easy,O(N^2),O(N),"def majority_vote(nums):
+    n = len(nums)
+    for i in range(n):
+        count = 0
+        for j in range(n):
+            if nums[j] == nums[i]:
+                count += 1
+        if count > n // 2:
+            return nums[i]
+    return -21
+","def majority_vote(nums):
+    candidate, count = None, 0
+    for num in nums:
+        if count == 0:
+            candidate, count = num, 1
+        elif num == candidate:
+            count += 1
+        else:
+            count -= 1
+    return candidate if nums.count(candidate) > len(nums) // 2 else -21",58763.35,115,128,224,339,OK,
+TYR-158,max_prefix_sum,o3,prefix-sum,easy,O(N^2),O(N),"def max_prefix_sum(nums):
+    if len(nums) == 0:
+        return 0
+    best = nums[0]
+    for i in range(len(nums)):
+        s = 0
+        for j in range(i + 1):
+            s += nums[j]
+        if s > best:
+            best = s
+    return best
+","def max_prefix_sum(nums):
+    if not nums:
+        return 0
+    best = float('-inf')
+    current = 0
+    for num in nums:
+        current += num
+        if current > best:
+            best = current
+    return best",76432.36,122,384,457,579,OK,
+TYR-159,longest_constant_run,o3,subarray,easy,O(N^2),O(N),"def longest_constant_run(nums):
+    if len(nums) == 0:
+        return 0
+    best = 1
+    for i in range(len(nums)):
+        length = 1
+        for j in range(i + 1, len(nums)):
+            if nums[j] == nums[i]:
+                length += 1
+            else:
+                break
+        if length > best:
+            best = length
+    return best
+","def longest_constant_run(nums):
+    best = curr = 0
+    prev = None
+    for num in nums:
+        curr = curr + 1 if num == prev else 1
+        best = max(best, curr)
+        prev = num
+    return best",47038.51,139,128,208,347,OK,
+TYR-160,second_minimum,o3,order-statistics,easy,O(N^2),O(N),"def second_minimum(nums):
+    if len(nums) < 2:
+        return -21
+    min1 = nums[0]
+    for i in range(1, len(nums)):
+        if nums[i] < min1:
+            min1 = nums[i]
+    min2 = 21
+    found = 0
+    for i in range(len(nums)):
+        if nums[i] != min1:
+            if found == 0 or nums[i] < min2:
+                min2 = nums[i]
+                found = 1
+    if found == 0:
+        return -21
+    return min2
+","def second_minimum(nums):
+    if len(nums) < 2:
+        return -21
+    min1 = float('inf')
+    min2 = float('inf')
+    for x in nums:
+        if x < min1:
+            min2 = min1
+            min1 = x
+        elif min1 < x < min2:
+            min2 = x
+    return min2 if min2 != float('inf') else -21",57137.93,179,192,304,483,OK,
+TYR-161,count_above_average,o3,array-transform,easy,O(N^2),O(N),"def count_above_average(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    total = 0
+    for i in range(n):
+        total += nums[i]
+    avg = total // n
+    count = 0
+    for i in range(n):
+        if nums[i] > avg:
+            count += 1
+    return count
+","def count_above_average(nums):
+    if not nums:
+        return 0
+    avg = sum(nums) // len(nums)
+    return sum(1 for x in nums if x > avg)",6444.37,132,192,256,388,OK,
+TYR-162,parity_sort_check,o3,sorting,easy,O(N^2),O(N),"def parity_sort_check(nums):
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] % 2 != 0 and nums[j] % 2 == 0:
+                return 0
+    return 1
+","def parity_sort_check(nums):
+    seen_odd = False
+    for num in nums:
+        if num & 1:
+            seen_odd = True
+        elif seen_odd:
+            return 0
+    return 1",58264.16,109,256,328,437,OK,
+TYR-163,equilibrium_first,o3,prefix-sum,easy,O(N^2),O(N),"def equilibrium_first(nums):
+    n = len(nums)
+    for i in range(n):
+        left = 0
+        for j in range(i):
+            left += nums[j]
+        right = 0
+        for j in range(i + 1, n):
+            right += nums[j]
+        if left == right:
+            return i
+    return -1
+","def equilibrium_first(nums):
+    total = sum(nums)
+    left = 0
+    for i, val in enumerate(nums):
+        total -= val
+        if left == total:
+            return i
+        left += val
+    return -1",55399.52,126,128,202,328,OK,
+TYR-164,sum_of_leaders,o3,array-transform,easy,O(N^2),O(N),"def sum_of_leaders(nums):
+    total = 0
+    n = len(nums)
+    for i in range(n):
+        is_leader = 1
+        for j in range(i + 1, n):
+            if nums[j] >= nums[i]:
+                is_leader = 0
+                break
+        if is_leader == 1:
+            total += nums[i]
+    return total
+","def sum_of_leaders(nums):
+    total = 0
+    max_so_far = float('-inf')
+    for num in reversed(nums):
+        if num > max_so_far:
+            total += num
+            max_so_far = num
+    return total",56101.96,135,128,204,339,OK,
+TYR-165,min_pair_abs_diff,o3,pair-finding,easy,O(N^2),O(N log N),"def min_pair_abs_diff(nums):
+    if len(nums) < 2:
+        return 0
+    best = abs(nums[0] - nums[1])
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            d = abs(nums[i] - nums[j])
+            if d < best:
+                best = d
+    return best
+","def min_pair_abs_diff(nums):
+    if len(nums) < 2:
+        return 0
+    nums = sorted(nums)
+    best = float('inf')
+    for a, b in zip(nums, nums[1:]):
+        d = b - a
+        if d < best:
+            best = d
+            if best == 0:
+                break
+    return best",7555.93,133,128,231,364,OK,
+TYR-166,max_right_minus_left,o3,subarray,easy,O(N^2),O(N),"def max_right_minus_left(nums):
+    if len(nums) < 2:
+        return 0
+    best = nums[1] - nums[0]
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            d = nums[j] - nums[i]
+            if d > best:
+                best = d
+    return best
+","def max_right_minus_left(nums):
+    if len(nums) < 2:
+        return 0
+    min_so_far = nums[0]
+    best = nums[1] - nums[0]
+    for v in nums[1:]:
+        best = max(best, v - min_so_far)
+        if v < min_so_far:
+            min_so_far = v
+    return best",66940.26,129,192,292,421,OK,
+TYR-167,count_interior_peaks,o3,array-transform,easy,O(N^2),O(N),"def count_interior_peaks(nums):
+    count = 0
+    for i in range(1, len(nums) - 1):
+        left_ok = 1
+        right_ok = 1
+        for j in range(i):
+            if j == i - 1 and nums[j] >= nums[i]:
+                left_ok = 0
+        for j in range(i + 1, len(nums)):
+            if j == i + 1 and nums[j] >= nums[i]:
+                right_ok = 0
+        if left_ok == 1 and right_ok == 1:
+            count += 1
+    return count
+","def count_interior_peaks(nums):
+    n = len(nums)
+    if n < 3:
+        return 0
+    count = 0
+    for i in range(1, n - 1):
+        if nums[i - 1] < nums[i] > nums[i + 1]:
+            count += 1
+    return count",61040.78,183,320,412,595,OK,
+TYR-168,nearby_duplicate,o3,hash-map,easy,O(N^2),O(N),"def nearby_duplicate(nums, k):
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] == nums[j] and j - i <= k:
+                return 1
+    return 0
+","def nearby_duplicate(nums, k):
+    seen = set()
+    for i, num in enumerate(nums):
+        if num in seen:
+            return 1
+        seen.add(num)
+        if i >= k:
+            seen.remove(nums[i - k])
+    return 0",63157.77,104,768,842,946,OK,
+TYR-169,longest_consecutive_len,o3,set-operations,easy,O(N^2),O(N),"def longest_consecutive_len(nums):
+    if len(nums) == 0:
+        return 0
+    best = 1
+    for i in range(len(nums)):
+        length = 1
+        cur = nums[i]
+        while True:
+            found = 0
+            for j in range(len(nums)):
+                if nums[j] == cur + 1:
+                    found = 1
+                    break
+            if found == 1:
+                length += 1
+                cur += 1
+            else:
+                break
+        if length > best:
+            best = length
+    return best
+","def longest_consecutive_len(nums):
+    num_set = set(nums)
+    best = 0
+    for n in num_set:
+        if n - 1 not in num_set:  # start of a sequence
+            cur = n
+            length = 1
+            while cur + 1 in num_set:
+                cur += 1
+                length += 1
+            if length > best:
+                best = length
+    return best",4319.02,175,64,175,350,OK,
+TYR-170,count_with_strictly_greater,o3,order-statistics,easy,O(N^2),O(N),"def count_with_strictly_greater(nums):
+    count = 0
+    for i in range(len(nums)):
+        has_greater = 0
+        for j in range(len(nums)):
+            if nums[j] > nums[i]:
+                has_greater = 1
+                break
+        count += has_greater
+    return count
+","def count_with_strictly_greater(nums):
+    if not nums:
+        return 0
+    m = max(nums)
+    return sum(x < m for x in nums)",4936.88,121,192,252,373,OK,
+TYR-171,top_frequency,o3,frequency,easy,O(N^2),O(N),"def top_frequency(nums):
+    if len(nums) == 0:
+        return 0
+    best = 0
+    for i in range(len(nums)):
+        count = 0
+        for j in range(len(nums)):
+            if nums[j] == nums[i]:
+                count += 1
+        if count > best:
+            best = count
+    return best
+","from collections import Counter
+
+def top_frequency(nums):
+    return max(Counter(nums).values(), default=0)",62733.80,127,128,174,301,OK,
+TYR-172,even_product_pairs,o3,pair-finding,easy,O(N^2),O(N),"def even_product_pairs(nums):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if (nums[i] * nums[j]) % 2 == 0:
+                count += 1
+    return count
+","def even_product_pairs(nums):
+    n = len(nums)
+    odd = sum(num & 1 for num in nums)
+    return n * (n - 1) // 2 - odd * (odd - 1) // 2",6131.07,110,192,261,371,OK,
+TYR-173,total_prefix_sums,o3,prefix-sum,easy,O(N^2),O(N),"def total_prefix_sums(nums):
+    total = 0
+    for i in range(len(nums)):
+        s = 0
+        for j in range(i + 1):
+            s += nums[j]
+        total += s
+    return total
+","def total_prefix_sums(nums):
+    total = 0
+    prefix = 0
+    for num in nums:
+        prefix += num
+        total += prefix
+    return total",6058.08,102,256,313,415,OK,
+TYR-174,dominators_count,o3,array-transform,easy,O(N^2),O(N),"def dominators_count(nums):
+    count = 0
+    for i in range(len(nums)):
+        is_dom = 1
+        for j in range(i):
+            if nums[j] >= nums[i]:
+                is_dom = 0
+                break
+        if is_dom == 1:
+            count += 1
+    return count
+","def dominators_count(nums):
+    count = 0
+    current_max = float('-inf')
+    for num in nums:
+        if num > current_max:
+            count += 1
+            current_max = num
+    return count",68777.66,121,256,328,449,OK,
+TYR-175,max_container_water,o3,two-pointer,easy,O(N^2),O(N),"def max_container_water(nums):
+    best = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            h = nums[i] if nums[i] < nums[j] else nums[j]
+            area = h * (j - i)
+            if area > best:
+                best = area
+    return best
+","def max_container_water(nums):
+    left, right = 0, len(nums) - 1
+    best = 0
+    while left < right:
+        h = min(nums[left], nums[right])
+        best = max(best, h * (right - left))
+        if nums[left] < nums[right]:
+            left += 1
+        else:
+            right -= 1
+    return best",56613.38,126,192,294,420,OK,
+TYR-176,smallest_absent_positive,o3,hash-map,easy,O(N^2),O(N),"def smallest_absent_positive(nums):
+    for v in range(1, len(nums) + 2):
+        found = 0
+        for j in range(len(nums)):
+            if nums[j] == v:
+                found = 1
+                break
+        if found == 0:
+            return v
+    return len(nums) + 1
+","def smallest_absent_positive(nums):
+    s = set(nums)
+    for v in range(1, len(nums) + 2):
+        if v not in s:
+            return v",52867.88,123,192,249,372,OK,
+TYR-177,all_pairs_xor_sum,o3,pair-finding,easy,O(N^2),O(N),"def all_pairs_xor_sum(nums):
+    total = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            total += nums[i] ^ nums[j]
+    return total
+","def all_pairs_xor_sum(nums):
+    n = len(nums)
+    bit_counts = [0] * 64
+    for num in nums:
+        b = 0
+        while num:
+            bit_counts[b] += num & 1
+            num >>= 1
+            b += 1
+    total = 0
+    for b, cnt in enumerate(bit_counts):
+        total += cnt * (n - cnt) * (1 << b)
+    return total",72278.85,99,1216,1334,1433,OK,
+TYR-178,count_equal_triplets,o3,frequency,easy,O(N^3),O(N),"def count_equal_triplets(nums):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            for k in range(j + 1, len(nums)):
+                if nums[i] == nums[j] == nums[k]:
+                    count += 1
+    return count
+","from collections import Counter
+
+def count_equal_triplets(nums):
+    total = 0
+    for f in Counter(nums).values():
+        if f >= 3:
+            total += f * (f - 1) * (f - 2) // 6
+    return total",41297.33,120,128,211,331,OK,
+TYR-179,max_product_two,o3,pair-finding,easy,O(N^2),O(N),"def max_product_two(nums):
+    if len(nums) < 2:
+        return 0
+    best = nums[0] * nums[1]
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            p = nums[i] * nums[j]
+            if p > best:
+                best = p
+    return best
+","def max_product_two(nums):
+    if len(nums) < 2:
+        return 0
+    max1 = max2 = float('-inf')
+    min1 = min2 = float('inf')
+    for n in nums:
+        if n >= max1:
+            max2 = max1
+            max1 = n
+        elif n > max2:
+            max2 = n
+        if n <= min1:
+            min2 = min1
+            min1 = n
+        elif n < min2:
+            min2 = n
+    return max(max1 * max2, min1 * min2)",59842.27,128,320,468,596,OK,
+TYR-180,sum_of_pair_maxes,o3,pair-finding,easy,O(N^2),O(N log N),"def sum_of_pair_maxes(nums):
+    total = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            total += nums[i] if nums[i] > nums[j] else nums[j]
+    return total
+","def sum_of_pair_maxes(nums):
+    nums.sort()
+    return sum(val * i for i, val in enumerate(nums))",59336.70,109,576,621,730,OK,
+TYR-181,count_surpassers_total,o3,pair-finding,easy,O(N^2),O(N log N),"def count_surpassers_total(nums):
+    total = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[j] > nums[i]:
+                total += 1
+    return total
+","from bisect import bisect_left
+
+class Fenwick:
+    def __init__(self, size):
+        self.n = size
+        self.bit = [0] * (size + 1)
+
+    def update(self, i, delta):
+        while i <= self.n:
+            self.bit[i] += delta
+            i += i & -i
+
+    def query(self, i):
+        s = 0
+        while i:
+            s += self.bit[i]
+            i -= i & -i
+        return s
+
+def count_surpassers_total(nums):
+    if not nums:
+        return 0
+    vals = sorted(set(nums))
+    comp = {v: i + 1 for i, v in enumerate(vals)}
+    fenwick = Fenwick(len(vals))
+    total = 0
+    for num in reversed(nums):
+        idx = comp[num]
+        total += fenwick.query(len(vals)) - fenwick.query(idx)
+        fenwick.update(idx, 1)
+    return total",11391.81,106,384,610,716,OK,
+TYR-182,is_sorted_rotation,o3,sorting,easy,O(N^2),O(N),"def is_sorted_rotation(nums):
+    n = len(nums)
+    if n <= 1:
+        return 1
+    for r in range(n):
+        ok = 1
+        for i in range(n - 1):
+            if nums[(r + i) % n] > nums[(r + i + 1) % n]:
+                ok = 0
+                break
+        if ok == 1:
+            return 1
+    return 0
+","def is_sorted_rotation(nums):
+    n = len(nums)
+    if n <= 1:
+        return 1
+    drops = 0
+    for i in range(n):
+        if nums[i] > nums[(i + 1) % n]:
+            drops += 1
+            if drops > 1:
+                return 0
+    return 1",54856.89,147,320,414,561,OK,
+TYR-183,zero_sum_pair_count,o3,pair-finding,easy,O(N^2),O(N),"def zero_sum_pair_count(nums):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] + nums[j] == 0:
+                count += 1
+    return count
+","def zero_sum_pair_count(nums):
+    freq = {}
+    pairs = 0
+    for num in nums:
+        pairs += freq.get(-num, 0)
+        freq[num] = freq.get(num, 0) + 1
+    return pairs",53219.45,107,128,205,312,OK,
+TYR-184,lis_length,o3,dynamic-programming,medium,O(2^N * N),O(N^2),"def lis_length(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    best = 1
+    for mask in range(1, 1 << n):
+        subseq = []
+        for i in range(n):
+            if mask & (1 << i):
+                subseq.append(nums[i])
+        ok = 1
+        for i in range(len(subseq) - 1):
+            if subseq[i] >= subseq[i + 1]:
+                ok = 0
+                break
+        if ok == 1 and len(subseq) > best:
+            best = len(subseq)
+    return best
+","def lis_length(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    dp = [1] * n
+    best = 1
+    for i in range(n):
+        for j in range(i):
+            if nums[j] < nums[i]:
+                dp[i] = max(dp[i], dp[j] + 1)
+        best = max(best, dp[i])
+    return best",60696.89,189,256,364,553,OK,
+TYR-185,max_subarray_kadane,o3,subarray,medium,O(N^3),O(N),"def max_subarray_kadane(nums):
+    if len(nums) == 0:
+        return 0
+    best = nums[0]
+    for i in range(len(nums)):
+        for j in range(i, len(nums)):
+            s = 0
+            for k in range(i, j + 1):
+                s += nums[k]
+            if s > best:
+                best = s
+    return best
+","def max_subarray_kadane(nums):
+    if not nums:
+        return 0
+    current = best = nums[0]
+    for num in nums[1:]:
+        current = num if current < 0 else current + num
+        if current > best:
+            best = current
+    return best",52292.40,137,128,212,349,OK,
+TYR-186,subarrays_with_sum,o3,prefix-sum,medium,O(N^3),O(N),"def subarrays_with_sum(nums, target):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i, len(nums)):
+            s = 0
+            for k in range(i, j + 1):
+                s += nums[k]
+            if s == target:
+                count += 1
+    return count
+","def subarrays_with_sum(nums, target):
+    from collections import defaultdict
+    
+    prefix_counts = defaultdict(int)
+    prefix_counts[0] = 1  # empty subarray prefix sum
+    
+    current_sum = count = 0
+    for num in nums:
+        current_sum += num
+        count += prefix_counts[current_sum - target]
+        prefix_counts[current_sum] += 1
+    return count",55861.49,123,128,230,353,OK,
+TYR-187,lcs_of_arrays,o3,dynamic-programming,medium,O(2^(N+M) * N),O(N*M),"def lcs_of_arrays(a, b):
+    na = len(a)
+    nb = len(b)
+    best = 0
+    for mask in range(1 << na):
+        sub_a = []
+        for i in range(na):
+            if mask & (1 << i):
+                sub_a.append(a[i])
+        for mask2 in range(1 << nb):
+            sub_b = []
+            for j in range(nb):
+                if mask2 & (1 << j):
+                    sub_b.append(b[j])
+            if len(sub_a) == len(sub_b) and len(sub_a) > best:
+                match = 1
+                for k in range(len(sub_a)):
+                    if sub_a[k] != sub_b[k]:
+                        match = 0
+                        break
+                if match == 1:
+                    best = len(sub_a)
+    return best
+","def lcs_of_arrays(a, b):
+    n, m = len(a), len(b)
+    dp = [[0] * (m + 1) for _ in range(n + 1)]
+    for i in range(1, n + 1):
+        ai = a[i - 1]
+        for j in range(1, m + 1):
+            if ai == b[j - 1]:
+                dp[i][j] = dp[i - 1][j - 1] + 1
+            else:
+                dp[i][j] = dp[i - 1][j] if dp[i - 1][j] >= dp[i][j - 1] else dp[i][j - 1]
+    return dp[n][m]",59849.44,229,192,372,601,OK,
+TYR-188,max_product_subarray,o3,subarray,medium,O(N^3),O(N),"def max_product_subarray(nums):
+    if len(nums) == 0:
+        return 0
+    best = nums[0]
+    for i in range(len(nums)):
+        for j in range(i, len(nums)):
+            prod = 1
+            for k in range(i, j + 1):
+                prod *= nums[k]
+            if prod > best:
+                best = prod
+    return best
+","def max_product_subarray(nums):
+    if not nums:
+        return 0
+    current_max = current_min = best = nums[0]
+    for num in nums[1:]:
+        if num < 0:
+            current_max, current_min = current_min, current_max
+        current_max = max(num, current_max * num)
+        current_min = min(num, current_min * num)
+        best = max(best, current_max)
+    return best",54084.21,135,192,306,441,OK,
+TYR-189,count_zero_triplets,o3,pair-finding,medium,O(N^3),O(N^2),"def count_zero_triplets(nums):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            for k in range(j + 1, n):
+                if nums[i] + nums[j] + nums[k] == 0:
+                    count += 1
+    return count
+","def count_zero_triplets(nums):
+    n = len(nums)
+    if n < 3:
+        return 0
+    nums.sort()
+    total = 0
+    for i in range(n - 2):
+        a = nums[i]
+        left, right = i + 1, n - 1
+        while left < right:
+            s = a + nums[left] + nums[right]
+            if s < 0:
+                left += 1
+            elif s > 0:
+                right -= 1
+            else:
+                if nums[left] == nums[right]:
+                    m = right - left + 1
+                    total += m * (m - 1) // 2
+                    break
+                lv, rv = nums[left], nums[right]
+                lc = rc = 0
+                while left < right and nums[left] == lv:
+                    left += 1
+                    lc += 1
+                while right >= left and nums[right] == rv:
+                    right -= 1
+                    rc += 1
+                total += lc * rc
+    return total",77728.74,129,1728,1979,2108,OK,
+TYR-190,can_partition_equal,o3,dynamic-programming,medium,O(2^N * N),O(N*S),"def can_partition_equal(nums):
+    n = len(nums)
+    total = 0
+    for x in nums:
+        total += x
+    if total % 2 != 0:
+        return 0
+    half = total // 2
+    for mask in range(1 << n):
+        s = 0
+        for i in range(n):
+            if mask & (1 << i):
+                s += nums[i]
+        if s == half:
+            return 1
+    return 0
+","def can_partition_equal(nums):
+    total = sum(nums)
+    if total & 1:
+        return 0
+    half = total >> 1
+    dp = [False] * (half + 1)
+    dp[0] = True
+    for num in nums:
+        for s in range(half, num - 1, -1):
+            if dp[s - num]:
+                dp[s] = True
+    return 1 if dp[half] else 0",67953.95,157,192,317,474,OK,
+TYR-191,rob_houses_max,o3,dynamic-programming,medium,O(2^N * N),O(N),"def rob_houses_max(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    best = 0
+    for mask in range(1 << n):
+        ok = 1
+        for i in range(n - 1):
+            if (mask & (1 << i)) and (mask & (1 << (i + 1))):
+                ok = 0
+                break
+        if ok == 1:
+            s = 0
+            for i in range(n):
+                if mask & (1 << i):
+                    s += nums[i]
+            if s > best:
+                best = s
+    return best
+","def rob_houses_max(nums):
+    prev2 = prev1 = 0
+    for num in nums:
+        prev1, prev2 = max(prev1, prev2 + num), prev1
+    return prev1",56289.74,190,128,193,383,OK,
+TYR-192,subset_count_target,o3,dynamic-programming,medium,O(2^N * N),O(N*T),"def subset_count_target(nums, target):
+    n = len(nums)
+    count = 0
+    for mask in range(1 << n):
+        s = 0
+        for i in range(n):
+            if mask & (1 << i):
+                s += nums[i]
+        if s == target:
+            count += 1
+    return count
+","def subset_count_target(nums, target):
+    dp = [0] * (target + 1)
+    dp[0] = 1
+    for num in nums:
+        if num > target:
+            continue
+        for s in range(target, num - 1, -1):
+            dp[s] += dp[s - num]
+    return dp[target]",62701.45,125,384,478,603,OK,
+TYR-193,climb_stairs_min_cost,o3,dynamic-programming,medium,O(2^N * N),O(N),"def climb_stairs_min_cost(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    if n == 1:
+        return nums[0]
+    best = 10000
+    for mask in range(1 << n):
+        steps = []
+        for i in range(n):
+            if mask & (1 << i):
+                steps.append(i)
+        if len(steps) == 0:
+            continue
+        if steps[0] > 1:
+            continue
+        ok = 1
+        for i in range(len(steps) - 1):
+            if steps[i + 1] - steps[i] > 2:
+                ok = 0
+                break
+        if ok == 1 and steps[-1] >= n - 2:
+            cost = 0
+            for s in steps:
+                cost += nums[s]
+            if cost < best:
+                best = cost
+    return best
+","def climb_stairs_min_cost(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    if n == 1:
+        return nums[0]
+    prev2, prev1 = nums[0], nums[1]
+    for i in range(2, n):
+        prev2, prev1 = prev1, nums[i] + min(prev1, prev2)
+    return min(prev1, prev2)",91224.29,251,1472,1589,1840,OK,
+TYR-194,longest_palindrome_subseq_len,o3,dynamic-programming,medium,O(2^N * N),O(N^2),"def longest_palindrome_subseq_len(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    best = 1
+    for mask in range(1, 1 << n):
+        subseq = []
+        for i in range(n):
+            if mask & (1 << i):
+                subseq.append(nums[i])
+        is_pal = 1
+        for i in range(len(subseq) // 2):
+            if subseq[i] != subseq[len(subseq) - 1 - i]:
+                is_pal = 0
+                break
+        if is_pal == 1 and len(subseq) > best:
+            best = len(subseq)
+    return best
+","def longest_palindrome_subseq_len(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    dp = [[0] * n for _ in range(n)]
+    for i in range(n):
+        dp[i][i] = 1
+    for length in range(2, n + 1):
+        for i in range(n - length + 1):
+            j = i + length - 1
+            if nums[i] == nums[j]:
+                dp[i][j] = 2 + (dp[i + 1][j - 1] if length > 2 else 0)
+            else:
+                dp[i][j] = max(dp[i + 1][j], dp[i][j - 1])
+    return dp[0][n - 1]",6459.13,201,128,318,519,OK,
+TYR-195,max_sum_inc_subseq,o3,dynamic-programming,medium,O(2^N * N),O(N^2),"def max_sum_inc_subseq(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    best = nums[0]
+    for mask in range(1, 1 << n):
+        subseq = []
+        s = 0
+        for i in range(n):
+            if mask & (1 << i):
+                subseq.append(nums[i])
+                s += nums[i]
+        ok = 1
+        for i in range(len(subseq) - 1):
+            if subseq[i] >= subseq[i + 1]:
+                ok = 0
+                break
+        if ok == 1 and s > best:
+            best = s
+    return best
+","def max_sum_inc_subseq(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    dp = nums[:]            # dp[i] = max sum of increasing subseq ending at i
+    best = nums[0]
+    for i in range(1, n):
+        for j in range(i):
+            if nums[j] < nums[i] and dp[j] + nums[i] > dp[i]:
+                dp[i] = dp[j] + nums[i]
+        if dp[i] > best:
+            best = dp[i]
+    return best",9340.67,200,320,465,665,OK,
+TYR-196,longest_wiggle_length,o3,dynamic-programming,medium,O(2^N * N),O(N),"def longest_wiggle_length(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    best = 1
+    for mask in range(1, 1 << n):
+        subseq = []
+        for i in range(n):
+            if mask & (1 << i):
+                subseq.append(nums[i])
+        if len(subseq) <= 1:
+            if len(subseq) > best:
+                best = len(subseq)
+            continue
+        ok = 1
+        for i in range(1, len(subseq) - 1):
+            d1 = subseq[i] - subseq[i - 1]
+            d2 = subseq[i + 1] - subseq[i]
+            if d1 == 0 or d2 == 0 or (d1 > 0 and d2 > 0) or (d1 < 0 and d2 < 0):
+                ok = 0
+                break
+        d_first = subseq[1] - subseq[0]
+        if d_first == 0:
+            ok = 0
+        if ok == 1 and len(subseq) > best:
+            best = len(subseq)
+    return best
+","def longest_wiggle_length(nums):
+    if not nums:
+        return 0
+    up = down = 1
+    prev = nums[0]
+    for num in nums[1:]:
+        if num > prev:
+            up = down + 1
+        elif num < prev:
+            down = up + 1
+        prev = num
+    return max(up, down)",7522.09,310,256,361,671,OK,
+TYR-197,min_jumps_to_end,o3,dynamic-programming,medium,O(2^N * N),O(N),"def min_jumps_to_end(nums):
+    n = len(nums)
+    if n <= 1:
+        return 0
+    best = n + 1
+    for mask in range(1 << n):
+        if not (mask & 1):
+            continue
+        if not (mask & (1 << (n - 1))):
+            continue
+        steps = []
+        for i in range(n):
+            if mask & (1 << i):
+                steps.append(i)
+        ok = 1
+        for i in range(len(steps) - 1):
+            gap = steps[i + 1] - steps[i]
+            if gap > nums[steps[i]]:
+                ok = 0
+                break
+        if ok == 1 and len(steps) - 1 < best:
+            best = len(steps) - 1
+    if best > n:
+        return -1
+    return best
+","def min_jumps_to_end(nums):
+    n = len(nums)
+    if n <= 1:
+        return 0
+    if nums[0] == 0:
+        return -1
+    jumps = 0
+    current_end = 0
+    farthest = 0
+    for i in range(n - 1):
+        farthest = max(farthest, i + nums[i])
+        if i == current_end:
+            if current_end == farthest:
+                return -1
+            jumps += 1
+            current_end = farthest
+            if current_end >= n - 1:
+                return jumps
+    return -1",61359.51,243,768,923,1166,OK,
+TYR-198,target_sum_ways,o3,dynamic-programming,medium,O(2^N),O(N*S),"def target_sum_ways(nums, target):
+    n = len(nums)
+    count = 0
+    for mask in range(1 << n):
+        s = 0
+        for i in range(n):
+            if mask & (1 << i):
+                s += nums[i]
+            else:
+                s -= nums[i]
+        if s == target:
+            count += 1
+    return count
+","def target_sum_ways(nums, target):
+    total = sum(nums)
+    if abs(target) > total:
+        return 0
+    offset = total
+    size = 2 * total + 1
+    dp = [0] * size
+    dp[offset] = 1
+    for num in nums:
+        ndp = [0] * size
+        for s in range(size):
+            if dp[s]:
+                ndp[s + num] += dp[s]
+                ndp[s - num] += dp[s]
+        dp = ndp
+    return dp[target + offset] if -total <= target <= total else 0",70616.90,135,384,537,672,OK,
+TYR-199,decode_digit_ways,o3,dynamic-programming,medium,O(2^N),O(N),"def decode_digit_ways(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    count = 0
+    for mask in range(1, 1 << (n - 1) + 1):
+        groups = []
+        start = 0
+        for i in range(n - 1):
+            if mask & (1 << i):
+                groups.append(nums[start:i + 1])
+                start = i + 1
+        groups.append(nums[start:n])
+        ok = 1
+        for g in groups:
+            if len(g) == 1:
+                if g[0] == 0:
+                    ok = 0
+                    break
+            elif len(g) == 2:
+                val = g[0] * 10 + g[1]
+                if val < 10 or val > 26:
+                    ok = 0
+                    break
+            else:
+                ok = 0
+                break
+        if ok == 1:
+            count += 1
+    return count
+","def decode_digit_ways(nums):
+    n = len(nums)
+    if n == 0 or nums[0] == 0:
+        return 0
+
+    prev, curr = 1, 1  # dp[-1], dp[0]
+
+    for i in range(1, n):
+        ways = 0
+        if nums[i] != 0:                 # single digit decode
+            ways += curr
+        two_digit = nums[i - 1] * 10 + nums[i]
+        if 10 <= two_digit <= 26:        # two digit decode
+            ways += prev
+        prev, curr = curr, ways
+
+    return curr",9510.76,270,448,612,882,OK,
+TYR-200,max_chain_pairs,o3,greedy,medium,O(2^N * N^2),O(N log N),"def max_chain_pairs(nums):
+    n = len(nums) // 2
+    if n == 0:
+        return 0
+    pairs = []
+    for i in range(n):
+        pairs.append((nums[2 * i], nums[2 * i + 1]))
+    best = 1
+    for mask in range(1, 1 << n):
+        sel = []
+        for i in range(n):
+            if mask & (1 << i):
+                sel.append(pairs[i])
+        for i in range(len(sel)):
+            for j in range(i + 1, len(sel)):
+                if sel[i][1] > sel[j][1]:
+                    sel[i], sel[j] = sel[j], sel[i]
+        ok = 1
+        for i in range(len(sel) - 1):
+            if sel[i][1] >= sel[i + 1][0]:
+                ok = 0
+                break
+        if ok == 1 and len(sel) > best:
+            best = len(sel)
+    return best
+","def max_chain_pairs(nums):
+    n = len(nums) // 2
+    if n == 0:
+        return 0
+
+    pairs = [(nums[2 * i], nums[2 * i + 1]) for i in range(n)]
+    pairs.sort(key=lambda x: x[1])  # sort by end value
+
+    longest = 0
+    last_end = float('-inf')
+    for start, end in pairs:
+        if start > last_end:
+            longest += 1
+            last_end = end
+    return longest",59588.70,270,704,843,1113,OK,
+TYR-201,min_partition_diff,o3,dynamic-programming,hard,O(2^N * N),O(N*S),"def min_partition_diff(nums):
+    n = len(nums)
+    total = 0
+    for x in nums:
+        total += x
+    best = abs(total)
+    for mask in range(1 << n):
+        s = 0
+        for i in range(n):
+            if mask & (1 << i):
+                s += nums[i]
+        diff = abs(total - 2 * s)
+        if diff < best:
+            best = diff
+    return best
+","def min_partition_diff(nums):
+    if not nums:
+        return 0
+    total = sum(nums)
+    target = total // 2
+    dp = [False] * (target + 1)
+    dp[0] = True
+    for num in nums:
+        for s in range(target, num - 1, -1):
+            if dp[s - num]:
+                dp[s] = True
+    for s in range(target, -1, -1):
+        if dp[s]:
+            return total - 2 * s",10398.38,150,512,648,798,OK,
+TYR-202,palindrome_min_cuts,o3,dynamic-programming,hard,O(2^N * N),O(N^2),"def palindrome_min_cuts(nums):
+    n = len(nums)
+    if n <= 1:
+        return 0
+    best = n - 1
+    for mask in range(1 << (n - 1)):
+        cuts = []
+        for i in range(n - 1):
+            if mask & (1 << i):
+                cuts.append(i + 1)
+        parts = []
+        prev = 0
+        for c in cuts:
+            parts.append(nums[prev:c])
+            prev = c
+        parts.append(nums[prev:n])
+        ok = 1
+        for p in parts:
+            for i in range(len(p) // 2):
+                if p[i] != p[len(p) - 1 - i]:
+                    ok = 0
+                    break
+            if ok == 0:
+                break
+        if ok == 1 and len(parts) - 1 < best:
+            best = len(parts) - 1
+    return best
+","def palindrome_min_cuts(nums):
+    n = len(nums)
+    if n <= 1:
+        return 0
+
+    dp = [i for i in range(n)]           # dp[i]: min cuts for nums[0..i]
+    pal = [[False] * n for _ in range(n)]  # pal[i][j]: nums[i..j] is palindrome
+
+    for end in range(n):
+        for start in range(end, -1, -1):
+            if nums[start] == nums[end] and (end - start <= 2 or pal[start + 1][end - 1]):
+                pal[start][end] = True
+                if start == 0:
+                    dp[end] = 0
+                else:
+                    dp[end] = min(dp[end], dp[start - 1] + 1)
+    return dp[-1]",56609.06,256,448,647,903,OK,
+TYR-203,knapsack_max_value,o3,dynamic-programming,hard,O(2^N * N),O(N*W),"def knapsack_max_value(nums, capacity):
+    n = len(nums) // 2
+    best = 0
+    for mask in range(1 << n):
+        w = 0
+        v = 0
+        for i in range(n):
+            if mask & (1 << i):
+                w += nums[2 * i]
+                v += nums[2 * i + 1]
+        if w <= capacity and v > best:
+            best = v
+    return best
+","def knapsack_max_value(nums, capacity):
+    n = len(nums) // 2
+    dp = [0] * (capacity + 1)
+    for i in range(n):
+        w, v = nums[2 * i], nums[2 * i + 1]
+        for c in range(capacity, w - 1, -1):
+            if dp[c - w] + v > dp[c]:
+                dp[c] = dp[c - w] + v
+    return max(dp)",9210.93,155,448,577,732,OK,
+TYR-204,shortest_superseq_len,o3,dynamic-programming,hard,O(2^(N+M) * (N+M)),O(N*M),"def shortest_superseq_len(a, b):
+    na = len(a)
+    nb = len(b)
+    best = na + nb
+    for mask_a in range(1 << na):
+        for mask_b in range(1 << nb):
+            merged = []
+            ia = 0
+            ib = 0
+            ok = 1
+            while ia < na or ib < nb:
+                use_a = ia < na and (mask_a & (1 << ia))
+                use_b = ib < nb and (mask_b & (1 << ib))
+                if use_a and use_b and a[ia] == b[ib]:
+                    merged.append(a[ia])
+                    ia += 1
+                    ib += 1
+                elif use_a:
+                    merged.append(a[ia])
+                    ia += 1
+                elif use_b:
+                    merged.append(b[ib])
+                    ib += 1
+                else:
+                    ia += 1 if ia < na else 0
+                    ib += 1 if ib < nb else 0
+            check_a = []
+            check_b = []
+            for x in merged:
+                if len(check_a) < na and x == a[len(check_a)]:
+                    check_a.append(x)
+                if len(check_b) < nb and x == b[len(check_b)]:
+                    check_b.append(x)
+            if len(check_a) == na and len(check_b) == nb and len(merged) < best:
+                best = len(merged)
+    return best
+","def shortest_superseq_len(a, b):
+    n, m = len(a), len(b)
+    dp = [0] * (m + 1)
+    for i in range(1, n + 1):
+        prev = 0
+        for j in range(1, m + 1):
+            temp = dp[j]
+            if a[i - 1] == b[j - 1]:
+                dp[j] = prev + 1
+            else:
+                dp[j] = max(dp[j], dp[j - 1])
+            prev = temp
+    return n + m - dp[m]",72217.78,364,320,467,831,OK,
+TYR-205,max_sum_no_three_adjacent,o3,dynamic-programming,hard,O(2^N * N),O(N),"def max_sum_no_three_adjacent(nums):
+    n = len(nums)
+    best = 0
+    for mask in range(1 << n):
+        ok = 1
+        for i in range(n - 2):
+            if (mask >> i) & 7 == 7:
+                ok = 0
+                break
+        if ok == 1:
+            s = 0
+            for i in range(n):
+                if mask & (1 << i):
+                    s += nums[i]
+            if s > best:
+                best = s
+    return best
+","def max_sum_no_three_adjacent(nums):
+    dp0 = 0                    # last element NOT taken
+    dp1 = dp2 = float('-inf')  # last run length 1 or 2 (taken)
+    for x in nums:
+        dp0, dp1, dp2 = (
+            max(dp0, dp1, dp2),  # skip current
+            dp0 + x,             # take current, previous not taken
+            dp1 + x              # take current, previous taken once
+        )
+    return max(0, dp0, dp1, dp2)",19052.68,170,1408,1567,1737,OK,
+TYR-206,count_inc_subsequences,o3,dynamic-programming,hard,O(2^N * N),O(N^2),"def count_inc_subsequences(nums):
+    n = len(nums)
+    count = 0
+    for mask in range(1, 1 << n):
+        subseq = []
+        for i in range(n):
+            if mask & (1 << i):
+                subseq.append(nums[i])
+        ok = 1
+        for i in range(len(subseq) - 1):
+            if subseq[i] >= subseq[i + 1]:
+                ok = 0
+                break
+        if ok == 1:
+            count += 1
+    return count
+","def count_inc_subsequences(nums):
+    n = len(nums)
+    dp = [0] * n
+    total = 0
+    for i in range(n):
+        dp[i] = 1  # subsequence containing only nums[i]
+        for j in range(i):
+            if nums[j] < nums[i]:
+                dp[i] += dp[j]
+        total += dp[i]
+    return total",48799.48,172,640,767,939,OK,
+TYR-207,longest_bitonic_subseq,o3,dynamic-programming,hard,O(2^N * N^2),O(N^2),"def longest_bitonic_subseq(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    best = 1
+    for mask in range(1, 1 << n):
+        subseq = []
+        for i in range(n):
+            if mask & (1 << i):
+                subseq.append(nums[i])
+        if len(subseq) <= best:
+            continue
+        peak = -1
+        for p in range(len(subseq)):
+            inc = 1
+            for i in range(p):
+                if subseq[i] >= subseq[i + 1]:
+                    inc = 0
+                    break
+            dec = 1
+            for i in range(p, len(subseq) - 1):
+                if subseq[i] <= subseq[i + 1]:
+                    dec = 0
+                    break
+            if inc == 1 and dec == 1:
+                peak = p
+                break
+        if peak >= 0 and len(subseq) > best:
+            best = len(subseq)
+    return best
+","def longest_bitonic_subseq(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+
+    inc = [1] * n
+    for i in range(n):
+        for j in range(i):
+            if nums[j] < nums[i] and inc[j] + 1 > inc[i]:
+                inc[i] = inc[j] + 1
+
+    dec = [1] * n
+    for i in range(n - 1, -1, -1):
+        for j in range(i + 1, n):
+            if nums[j] < nums[i] and dec[j] + 1 > dec[i]:
+                dec[i] = dec[j] + 1
+
+    return max(inc[i] + dec[i] - 1 for i in range(n))",6858.09,277,256,445,722,OK,
+TYR-208,min_adjacent_swaps_sort,o3,sorting,hard,O(N^2),O(N log N),"def min_adjacent_swaps_sort(nums):
+    arr = nums[:]
+    swaps = 0
+    n = len(arr)
+    for i in range(n):
+        for j in range(n - 1):
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+                swaps += 1
+    return swaps
+","def min_adjacent_swaps_sort(nums):
+    def merge_sort(arr):
+        if len(arr) <= 1:
+            return arr, 0
+        mid = len(arr) // 2
+        left, inv_left = merge_sort(arr[:mid])
+        right, inv_right = merge_sort(arr[mid:])
+        merged, i, j, inv_count = [], 0, 0, inv_left + inv_right
+        while i < len(left) and j < len(right):
+            if left[i] <= right[j]:
+                merged.append(left[i])
+                i += 1
+            else:
+                merged.append(right[j])
+                inv_count += len(left) - i
+                j += 1
+        merged.extend(left[i:])
+        merged.extend(right[j:])
+        return merged, inv_count
+    return merge_sort(list(nums))[1]",58472.45,138,576,774,912,OK
+TYR-209,count_subseq_target_sum,o3,dynamic-programming,hard,O(2^N * N),O(N*T),"def count_subseq_target_sum(nums, target):
+    n = len(nums)
+    count = 0
+    for mask in range(1 << n):
+        s = 0
+        for i in range(n):
+            if mask & (1 << i):
+                s += nums[i]
+        if s == target:
+            count += 1
+    return count
+","def count_subseq_target_sum(nums, target):
+    dp = {0: 1}
+    for num in nums:
+        for s, c in list(dp.items()):
+            dp[s + num] = dp.get(s + num, 0) + c
+    return dp.get(target, 0)",57942.67,127,384,466,593,OK,
+TYR-210,burst_balloon_coins,o3,dynamic-programming,hard,O(N!),O(N^3),"def burst_balloon_coins(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    arr = [1] + nums[:] + [1]
+
+    def solve(balloons):
+        if len(balloons) == 2:
+            return 0
+        best = 0
+        for i in range(1, len(balloons) - 1):
+            coins = balloons[i - 1] * balloons[i] * balloons[i + 1]
+            remaining = balloons[:i] + balloons[i + 1:]
+            coins += solve(remaining)
+            if coins > best:
+                best = coins
+        return best
+
+    return solve(arr)
+","def burst_balloon_coins(nums):
+    if not nums:
+        return 0
+    nums = [1] + nums + [1]
+    n = len(nums)
+    dp = [[0] * n for _ in range(n)]
+    for length in range(2, n):
+        for left in range(n - length):
+            right = left + length
+            best = 0
+            for k in range(left + 1, right):
+                coins = nums[left] * nums[k] * nums[right] + dp[left][k] + dp[k][right]
+                if coins > best:
+                    best = coins
+            dp[left][right] = best
+    return dp[0][n - 1]",52022.29,198,192,362,560,OK,
+TYR-211,edit_distance_arrays,o3,dynamic-programming,hard,O(3^(N+M)),O(N*M),"def edit_distance_arrays(a, b):
+    na = len(a)
+    nb = len(b)
+
+    def helper(i, j):
+        if i == 0:
+            return j
+        if j == 0:
+            return i
+        if a[i - 1] == b[j - 1]:
+            return helper(i - 1, j - 1)
+        ins = helper(i, j - 1) + 1
+        delete = helper(i - 1, j) + 1
+        replace = helper(i - 1, j - 1) + 1
+        best = ins
+        if delete < best:
+            best = delete
+        if replace < best:
+            best = replace
+        return best
+
+    return helper(na, nb)
+","def edit_distance_arrays(a, b):
+    na, nb = len(a), len(b)
+    if nb == 0:
+        return na
+    if na == 0:
+        return nb
+
+    prev = list(range(nb + 1))
+    for i in range(1, na + 1):
+        curr = [i] + [0] * nb
+        ai = a[i - 1]
+        for j in range(1, nb + 1):
+            if ai == b[j - 1]:
+                curr[j] = prev[j - 1]
+            else:
+                curr[j] = 1 + min(prev[j], curr[j - 1], prev[j - 1])
+        prev = curr
+    return prev[nb]",59495.86,215,320,501,716,OK,
+TYR-212,interleave_possible,o3,dynamic-programming,hard,O(2^(N+M)),O(N*M),"def interleave_possible(a, b, c):
+    na = len(a)
+    nb = len(b)
+    if na + nb != len(c):
+        return 0
+
+    def helper(i, j, k):
+        if k == len(c):
+            return 1 if i == na and j == nb else 0
+        if i < na and c[k] == a[i]:
+            if helper(i + 1, j, k + 1) == 1:
+                return 1
+        if j < nb and c[k] == b[j]:
+            if helper(i, j + 1, k + 1) == 1:
+                return 1
+        return 0
+
+    return helper(0, 0, 0)
+","def interleave_possible(a, b, c):
+    na, nb = len(a), len(b)
+    if na + nb != len(c):
+        return 0
+
+    dp = [[False] * (nb + 1) for _ in range(na + 1)]
+    dp[0][0] = True
+
+    for i in range(na + 1):
+        for j in range(nb + 1):
+            if i == 0 and j == 0:
+                continue
+            k = i + j - 1
+            if i > 0 and dp[i - 1][j] and a[i - 1] == c[k]:
+                dp[i][j] = True
+            elif j > 0 and dp[i][j - 1] and b[j - 1] == c[k]:
+                dp[i][j] = True
+
+    return 1 if dp[na][nb] else 0",57240.16,210,448,665,875,OK,
+TYR-213,max_rob_circular,o3,dynamic-programming,hard,O(2^N * N),O(N),"def max_rob_circular(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    if n == 1:
+        return nums[0]
+    best = 0
+    for mask in range(1 << n):
+        ok = 1
+        for i in range(n):
+            nxt = (i + 1) % n
+            if (mask & (1 << i)) and (mask & (1 << nxt)):
+                ok = 0
+                break
+        if ok == 1:
+            s = 0
+            for i in range(n):
+                if mask & (1 << i):
+                    s += nums[i]
+            if s > best:
+                best = s
+    return best
+","def max_rob_circular(nums):
+    def rob_line(houses):
+        prev = curr = 0
+        for money in houses:
+            prev, curr = curr, max(curr, prev + money)
+        return curr
+
+    n = len(nums)
+    if n == 0:
+        return 0
+    if n == 1:
+        return nums[0]
+
+    return max(rob_line(nums[:-1]), rob_line(nums[1:]))",53247.19,208,192,310,518,OK,
+TYR-214,count_distinct_subseq,o3,dynamic-programming,hard,O(2^N * N),O(N*M),"def count_distinct_subseq(a, b):
+    na = len(a)
+    nb = len(b)
+    count = 0
+    for mask in range(1 << na):
+        subseq = []
+        for i in range(na):
+            if mask & (1 << i):
+                subseq.append(a[i])
+        if len(subseq) == nb:
+            match = 1
+            for i in range(nb):
+                if subseq[i] != b[i]:
+                    match = 0
+                    break
+            if match == 1:
+                count += 1
+    return count
+","def count_distinct_subseq(a, b):
+    n, m = len(a), len(b)
+    if m == 0:
+        return 1
+    if n == 0 or m > n:
+        return 0
+    dp = [0] * (m + 1)
+    dp[0] = 1
+    for ch in a:
+        for j in range(m, 0, -1):
+            if ch == b[j - 1]:
+                dp[j] += dp[j - 1]
+    return dp[m]",58676.28,176,384,519,695,OK,
+TYR-215,optimal_game_score,o3,dynamic-programming,hard,O(2^N),O(N^2),"def optimal_game_score(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+
+    def solve(l, r, is_first):
+        if l > r:
+            return 0
+        if is_first:
+            pick_l = nums[l] + solve(l + 1, r, 0)
+            pick_r = nums[r] + solve(l, r - 1, 0)
+            return pick_l if pick_l > pick_r else pick_r
+        else:
+            pick_l = -nums[l] + solve(l + 1, r, 1)
+            pick_r = -nums[r] + solve(l, r - 1, 1)
+            return pick_l if pick_l < pick_r else pick_r
+
+    return solve(0, n - 1, 1)
+","def optimal_game_score(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+
+    dp = [[0] * n for _ in range(n)]
+    
+    for i in range(n):
+        dp[i][i] = nums[i]
+    
+    for length in range(2, n + 1):
+        for l in range(n - length + 1):
+            r = l + length - 1
+            dp[l][r] = max(nums[l] - dp[l + 1][r],
+                           nums[r] - dp[l][r - 1])
+    
+    return dp[0][n - 1]",53556.52,225,256,416,641,OK,
+TYR-216,min_insertions_palindrome,o3,dynamic-programming,hard,O(2^N),O(N^2),"def min_insertions_palindrome(nums):
+    n = len(nums)
+
+    def helper(l, r):
+        if l >= r:
+            return 0
+        if nums[l] == nums[r]:
+            return helper(l + 1, r - 1)
+        opt1 = helper(l + 1, r) + 1
+        opt2 = helper(l, r - 1) + 1
+        return opt1 if opt1 < opt2 else opt2
+
+    return helper(0, n - 1)
+","def min_insertions_palindrome(nums):
+    n = len(nums)
+    if n < 2:
+        return 0
+
+    dp = [[0] * n for _ in range(n)]
+
+    for length in range(2, n + 1):
+        for l in range(0, n - length + 1):
+            r = l + length - 1
+            if nums[l] == nums[r]:
+                dp[l][r] = dp[l + 1][r - 1] if length > 2 else 0
+            else:
+                dp[l][r] = 1 + min(dp[l + 1][r], dp[l][r - 1])
+
+    return dp[0][n - 1]",56218.48,163,128,302,465,OK,
+TYR-217,count_subsets_xor,o3,dynamic-programming,hard,O(2^N * N),O(N*MAX),"def count_subsets_xor(nums, target):
+    n = len(nums)
+    count = 0
+    for mask in range(1, 1 << n):
+        xor_val = 0
+        for i in range(n):
+            if mask & (1 << i):
+                xor_val ^= nums[i]
+        if xor_val == target:
+            count += 1
+    return count
+","def count_subsets_xor(nums, target):
+    if not nums:
+        return 0
+    max_val = 1 << (max(nums + [target]).bit_length() or 1)
+    dp = [1] + [0] * (max_val - 1)
+    for num in nums:
+        nxt = dp[:]
+        for x in range(max_val):
+            if dp[x]:
+                nxt[x ^ num] += dp[x]
+        dp = nxt
+    res = dp[target]
+    if target == 0:
+        res -= 1
+    return res",88062.13,134,3264,3409,3543,OK,
+TYR-218,max_profit_cooldown,o3,dynamic-programming,hard,O(2^N * N),O(N),"def max_profit_cooldown(nums):
+    n = len(nums)
+    if n < 2:
+        return 0
+    best = 0
+    for mask in range(1 << n):
+        buys = []
+        sells = []
+        for i in range(n):
+            if mask & (1 << i):
+                if len(buys) == len(sells):
+                    buys.append(i)
+                else:
+                    sells.append(i)
+        if len(buys) != len(sells):
+            continue
+        ok = 1
+        for i in range(len(buys)):
+            if buys[i] >= sells[i]:
+                ok = 0
+                break
+        for i in range(len(sells) - 1):
+            if buys[i + 1] <= sells[i] + 1:
+                ok = 0
+                break
+        if ok == 1:
+            profit = 0
+            for i in range(len(buys)):
+                profit += nums[sells[i]] - nums[buys[i]]
+            if profit > best:
+                best = profit
+    return best
+","def max_profit_cooldown(prices):
+    if len(prices) < 2:
+        return 0
+    hold = -prices[0]     # Max profit holding a stock
+    sold = 0              # Max profit in cooldown (just sold)
+    rest = 0              # Max profit doing nothing
+    for price in prices[1:]:
+        prev_hold = hold
+        hold = max(hold, rest - price)
+        rest = max(rest, sold)
+        sold = prev_hold + price
+    return max(sold, rest)",27546.76,281,320,456,737,OK,
+TYR-219,rod_cutting_max,o3,dynamic-programming,hard,O(2^N * N),O(N^2),"def rod_cutting_max(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    best = 0
+    for mask in range(1, 1 << n):
+        total_len = 0
+        revenue = 0
+        for i in range(n):
+            if mask & (1 << i):
+                total_len += i + 1
+                revenue += nums[i]
+        if total_len <= n and revenue > best:
+            best = revenue
+    return best
+","def rod_cutting_max(nums):
+    n = len(nums)
+    dp = [0] * (n + 1)
+    for i, price in enumerate(nums, 1):
+        for length in range(n, i - 1, -1):
+            dp[length] = max(dp[length], dp[length - i] + price)
+    return max(dp)",7790.10,160,384,478,638,OK,
+TYR-220,count_unique_bst,o3,dynamic-programming,hard,O(4^N / N^(3/2)),O(N^2),"def count_unique_bst(nums):
+    n = nums[0] if len(nums) > 0 else 0
+    if n <= 0:
+        return 0
+
+    def count(lo, hi):
+        if lo >= hi:
+            return 1
+        total = 0
+        for root in range(lo, hi + 1):
+            left = count(lo, root - 1)
+            right = count(root + 1, hi)
+            total += left * right
+        return total
+
+    return count(1, n)
+","def count_unique_bst(nums):
+    n = nums[0] if nums else 0
+    if n <= 0:
+        return 0
+
+    dp = [1] + [0] * n  # dp[i] stores number of unique BSTs with i nodes
+    for nodes in range(1, n + 1):
+        total = 0
+        for left in range(nodes):
+            total += dp[left] * dp[nodes - 1 - left]
+        dp[nodes] = total
+    return dp[n]",56013.15,166,256,393,559,OK,
+TYR-221,longest_arith_subseq_len,o3,dynamic-programming,hard,O(2^N * N),O(N^2),"def longest_arith_subseq_len(nums):
+    n = len(nums)
+    if n <= 2:
+        return n
+    best = 2
+    for mask in range(1, 1 << n):
+        subseq = []
+        for i in range(n):
+            if mask & (1 << i):
+                subseq.append(nums[i])
+        if len(subseq) <= best:
+            continue
+        if len(subseq) < 2:
+            continue
+        diff = subseq[1] - subseq[0]
+        ok = 1
+        for i in range(1, len(subseq) - 1):
+            if subseq[i + 1] - subseq[i] != diff:
+                ok = 0
+                break
+        if ok == 1 and len(subseq) > best:
+            best = len(subseq)
+    return best
+","from collections import defaultdict
+
+def longest_arith_subseq_len(nums):
+    n = len(nums)
+    if n < 2:
+        return n
+    dp = [defaultdict(int) for _ in range(n)]
+    best = 2
+    for i in range(n):
+        for j in range(i):
+            d = nums[i] - nums[j]
+            dp[i][d] = dp[j][d] + 1 if dp[j][d] else 2
+            if dp[i][d] > best:
+                best = dp[i][d]
+    return best",62876.54,237,128,268,505,OK,
+TYR-222,coin_change_min,o3,dynamic-programming,hard,O(S^N),O(N*S),"def coin_change_min(nums, target):
+    if target == 0:
+        return 0
+    if len(nums) == 0:
+        return -1
+    best = target + 1
+
+    def solve(remaining, count):
+        nonlocal best
+        if remaining == 0:
+            if count < best:
+                best = count
+            return
+        if remaining < 0 or count >= best:
+            return
+        for c in nums:
+            solve(remaining - c, count + 1)
+
+    solve(target, 0)
+    return best if best <= target else -1
+","def coin_change_min(nums, target):
+    if target == 0:
+        return 0
+    max_val = target + 1
+    dp = [max_val] * (target + 1)
+    dp[0] = 0
+    for coin in nums:
+        for amt in range(coin, target + 1):
+            dp[amt] = min(dp[amt], dp[amt - coin] + 1)
+    return dp[target] if dp[target] != max_val else -1",58930.46,177,320,451,628,OK,
+TYR-223,coin_change_ways,o3,dynamic-programming,hard,O(S^N),O(N*S),"def coin_change_ways(nums, target):
+    if target == 0:
+        return 1
+
+    def solve(idx, remaining):
+        if remaining == 0:
+            return 1
+        if remaining < 0 or idx >= len(nums):
+            return 0
+        return solve(idx, remaining - nums[idx]) + solve(idx + 1, remaining)
+
+    return solve(0, target)
+","def coin_change_ways(nums, target):
+    dp = [0] * (target + 1)
+    dp[0] = 1
+    for coin in nums:
+        for amt in range(coin, target + 1):
+            dp[amt] += dp[amt - coin]
+    return dp[target]",52280.06,135,192,282,417,OK,
+TYR-224,longest_common_subarray_len,o3,dynamic-programming,hard,"O(N^2 * min(N,M))",O(N*M),"def longest_common_subarray_len(a, b):
+    best = 0
+    for i in range(len(a)):
+        for j in range(len(b)):
+            length = 0
+            while i + length < len(a) and j + length < len(b):
+                if a[i + length] == b[j + length]:
+                    length += 1
+                else:
+                    break
+            if length > best:
+                best = length
+    return best
+","def longest_common_subarray_len(a, b):
+    if not a or not b:
+        return 0
+    if len(a) < len(b):
+        a, b = b, a
+    n = len(b)
+    dp = [0] * (n + 1)
+    best = 0
+    for x in a:
+        for j in range(n, 0, -1):
+            if x == b[j - 1]:
+                dp[j] = dp[j - 1] + 1
+                if dp[j] > best:
+                    best = dp[j]
+            else:
+                dp[j] = 0
+    return best",59493.23,146,448,610,756,OK,
+TYR-225,min_cost_grid_path,o3,dynamic-programming,hard,O(2^(R+C)),O(R*C),"def min_cost_grid_path(nums, cols):
+    rows = len(nums) // cols if cols > 0 else 0
+    if rows == 0 or cols == 0:
+        return 0
+
+    def solve(r, c):
+        if r == rows - 1 and c == cols - 1:
+            return nums[r * cols + c]
+        if r >= rows or c >= cols:
+            return 10000
+        return nums[r * cols + c] + min(solve(r + 1, c), solve(r, c + 1))
+
+    return solve(0, 0)
+","def min_cost_grid_path(nums, cols):
+    if cols <= 0 or not nums:
+        return 0
+    rows = len(nums) // cols
+    dp = [0] * cols
+    dp[0] = nums[0]
+
+    for c in range(1, cols):
+        dp[c] = dp[c - 1] + nums[c]
+
+    for r in range(1, rows):
+        base = r * cols
+        dp[0] += nums[base]
+        for c in range(1, cols):
+            dp[c] = nums[base + c] + min(dp[c], dp[c - 1])
+
+    return dp[-1]",55909.75,179,192,357,536,OK,
+TYR-226,count_grid_paths_obstacles,o3,dynamic-programming,hard,O(2^(R+C)),O(R*C),"def count_grid_paths_obstacles(nums, cols):
+    rows = len(nums) // cols if cols > 0 else 0
+    if rows == 0 or cols == 0:
+        return 0
+    if nums[0] == 1 or nums[-1] == 1:
+        return 0
+
+    def solve(r, c):
+        if r == rows - 1 and c == cols - 1:
+            return 1
+        if r >= rows or c >= cols:
+            return 0
+        if nums[r * cols + c] == 1:
+            return 0
+        return solve(r + 1, c) + solve(r, c + 1)
+
+    return solve(0, 0)
+","def count_grid_paths_obstacles(nums, cols):
+    if cols <= 0 or not nums:
+        return 0
+    rows = len(nums) // cols
+    if nums[0] == 1 or nums[-1] == 1:
+        return 0
+
+    dp = [0] * cols
+    dp[0] = 1
+
+    for r in range(rows):
+        base = r * cols
+        for c in range(cols):
+            if nums[base + c] == 1:
+                dp[c] = 0
+            elif c > 0:
+                dp[c] += dp[c - 1]
+    return dp[-1]",57856.98,207,256,419,626,OK,
+TYR-227,max_earn_delete,o3,dynamic-programming,hard,O(2^N * N^2),O(N),"def max_earn_delete(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    best = 0
+    for mask in range(1 << n):
+        selected = []
+        for i in range(n):
+            if mask & (1 << i):
+                selected.append(nums[i])
+        ok = 1
+        for i in range(len(selected)):
+            for j in range(n):
+                if not (mask & (1 << j)):
+                    diff = abs(nums[j] - selected[i])
+                    if diff == 1:
+                        ok = 0
+                        break
+            if ok == 0:
+                break
+        if ok == 0:
+            continue
+        vals_ok = 1
+        for i in range(len(selected)):
+            for j in range(i + 1, len(selected)):
+                if abs(selected[i] - selected[j]) == 1:
+                    vals_ok = 0
+                    break
+            if vals_ok == 0:
+                break
+        if vals_ok == 1:
+            s = 0
+            for v in selected:
+                s += v
+            if s > best:
+                best = s
+    return best
+","from collections import Counter
+
+def max_earn_delete(nums):
+    if not nums:
+        return 0
+    freq = Counter(nums)
+    present = set(freq)
+    total = 0
+    for val, cnt in freq.items():
+        if val - 1 not in present and val + 1 not in present:
+            gain = val * cnt
+            if gain > 0:
+                total += gain
+    return total",116633.07,299,5440,5553,5852,OK,
+TYR-228,falling_path_min,o3,dynamic-programming,hard,O(3^R * C),O(R*C),"def falling_path_min(nums, cols):
+    rows = len(nums) // cols if cols > 0 else 0
+    if rows == 0:
+        return 0
+
+    def solve(r, c):
+        if r == rows:
+            return 0
+        if c < 0 or c >= cols:
+            return 10000
+        val = nums[r * cols + c]
+        best = solve(r + 1, c)
+        left = solve(r + 1, c - 1)
+        right = solve(r + 1, c + 1)
+        if left < best:
+            best = left
+        if right < best:
+            best = right
+        return val + best
+
+    result = 10000
+    for c in range(cols):
+        v = solve(0, c)
+        if v < result:
+            result = v
+    return result
+","def falling_path_min(nums, cols):
+    rows = len(nums) // cols if cols else 0
+    if rows == 0 or cols == 0:
+        return 0
+    dp = [nums[(rows - 1) * cols + c] for c in range(cols)]
+    for r in range(rows - 2, -1, -1):
+        base = r * cols
+        new_dp = [0] * cols
+        for c in range(cols):
+            best = dp[c]
+            if c:
+                best = min(best, dp[c - 1])
+            if c + 1 < cols:
+                best = min(best, dp[c + 1])
+            new_dp[c] = nums[base + c] + best
+        dp = new_dp
+    return min(dp)",70553.93,238,384,573,811,OK,
+TYR-229,max_square_side,o3,dynamic-programming,hard,"O(R*C*min(R,C)^2)",O(R*C),"def max_square_side(nums, cols):
+    rows = len(nums) // cols if cols > 0 else 0
+    best = 0
+    for r in range(rows):
+        for c in range(cols):
+            for s in range(1, min(rows - r, cols - c) + 1):
+                ok = 1
+                for dr in range(s):
+                    for dc in range(s):
+                        if nums[(r + dr) * cols + (c + dc)] != 1:
+                            ok = 0
+                            break
+                    if ok == 0:
+                        break
+                if ok == 1 and s > best:
+                    best = s
+                else:
+                    break
+    return best
+","def max_square_side(nums, cols):
+    if cols <= 0 or not nums:
+        return 0
+    rows = len(nums) // cols
+    dp = [0] * (cols + 1)
+    best = 0
+    for r in range(1, rows + 1):
+        prev_diag = 0
+        for c in range(1, cols + 1):
+            idx = (r - 1) * cols + (c - 1)
+            temp = dp[c]
+            if nums[idx] == 1:
+                dp[c] = 1 + min(dp[c], dp[c - 1], prev_diag)
+                if dp[c] > best:
+                    best = dp[c]
+            else:
+                dp[c] = 0
+            prev_diag = temp
+    return best",58728.93,202,640,836,1038,OK,
+TYR-230,count_square_submatrices,o3,dynamic-programming,hard,"O(R*C*min(R,C)^2)",O(R*C),"def count_square_submatrices(nums, cols):
+    rows = len(nums) // cols if cols > 0 else 0
+    total = 0
+    for r in range(rows):
+        for c in range(cols):
+            for s in range(1, min(rows - r, cols - c) + 1):
+                ok = 1
+                for dr in range(s):
+                    for dc in range(s):
+                        if nums[(r + dr) * cols + (c + dc)] != 1:
+                            ok = 0
+                            break
+                    if ok == 0:
+                        break
+                if ok == 1:
+                    total += 1
+                else:
+                    break
+    return total
+","def count_square_submatrices(nums, cols):
+    if cols <= 0:
+        return 0
+    rows = len(nums) // cols
+    dp = [0] * cols
+    total = 0
+    for r in range(rows):
+        prev = 0
+        for c in range(cols):
+            idx = r * cols + c
+            temp = dp[c]
+            if nums[idx] == 1:
+                if r == 0 or c == 0:
+                    dp[c] = 1
+                else:
+                    dp[c] = 1 + min(dp[c], dp[c - 1], prev)
+            else:
+                dp[c] = 0
+            total += dp[c]
+            prev = temp
+    return total",56988.13,201,576,753,954,OK,
+TYR-231,can_jump_end,o3,dynamic-programming,hard,O(2^N * N),O(N),"def can_jump_end(nums):
+    n = len(nums)
+    if n <= 1:
+        return 1
+    for mask in range(1 << n):
+        if not (mask & 1):
+            continue
+        if not (mask & (1 << (n - 1))):
+            continue
+        steps = []
+        for i in range(n):
+            if mask & (1 << i):
+                steps.append(i)
+        ok = 1
+        for i in range(len(steps) - 1):
+            if steps[i + 1] - steps[i] > nums[steps[i]]:
+                ok = 0
+                break
+        if ok == 1:
+            return 1
+    return 0
+","def can_jump_end(nums):
+    farthest = 0
+    for i, jump in enumerate(nums):
+        if i > farthest:
+            return 0
+        farthest = max(farthest, i + jump)
+        if farthest >= len(nums) - 1:
+            return 1
+    return 1",48186.73,203,128,215,418,OK,
+TYR-232,max_product_cut,o3,dynamic-programming,hard,O(N^N),O(N^2),"def max_product_cut(nums):
+    n = nums[0] if len(nums) > 0 else 0
+    if n <= 1:
+        return 0
+
+    def solve(remaining):
+        if remaining <= 0:
+            return 1
+        best = 0
+        for cut in range(1, remaining + 1):
+            val = cut * solve(remaining - cut)
+            if val > best:
+                best = val
+        return best
+
+    best = 0
+    for first_cut in range(1, n):
+        val = first_cut * solve(n - first_cut)
+        if val > best:
+            best = val
+    return best
+","def max_product_cut(nums):
+    if not nums:
+        return 0
+    n = nums[0]
+    if n <= 1:
+        return 0
+
+    dp = [0] * (n + 1)
+    for i in range(2, n + 1):
+        best = 0
+        for j in range(1, i):
+            best = max(best, max(j, dp[j]) * max(i - j, dp[i - j]))
+        dp[i] = best
+    return dp[n]",16764.57,195,960,1114,1309,OK,
+TYR-233,paint_fence_ways,o3,dynamic-programming,hard,O(K^N),O(N*K),"def paint_fence_ways(nums):
+    n = nums[0] if len(nums) > 0 else 0
+    k = nums[1] if len(nums) > 1 else 0
+    if n == 0 or k == 0:
+        return 0
+
+    def solve(pos, prev1, prev2):
+        if pos == n:
+            return 1
+        total = 0
+        for color in range(k):
+            if pos >= 2 and color == prev1 and color == prev2:
+                continue
+            total += solve(pos + 1, color, prev1)
+        return total
+
+    return solve(0, -1, -1)
+","def paint_fence_ways(nums):
+    if len(nums) < 2:
+        return 0
+    n, k = nums[0], nums[1]
+    if n == 0 or k == 0:
+        return 0
+    if n == 1:
+        return k
+
+    same = k            # ways where last two posts have the same color (for n=2)
+    diff = k * (k - 1)  # ways where last two posts have different colors (for n=2)
+
+    for _ in range(3, n + 1):
+        same, diff = diff, (same + diff) * (k - 1)
+
+    return same + diff",53862.93,197,768,935,1132,OK,
+TYR-234,count_derangements,o3,combinatorics,hard,O(N! * N),O(N),"def count_derangements(nums):
+    n = nums[0] if len(nums) > 0 else 0
+    if n <= 0:
+        return 0
+    if n == 1:
+        return 0
+    arr = list(range(n))
+
+    def permutations(lst):
+        if len(lst) <= 1:
+            return [lst[:]]
+        result = []
+        for i in range(len(lst)):
+            rest = lst[:i] + lst[i + 1:]
+            for p in permutations(rest):
+                result.append([lst[i]] + p)
+        return result
+
+    count = 0
+    for perm in permutations(arr):
+        ok = 1
+        for i in range(n):
+            if perm[i] == i:
+                ok = 0
+                break
+        if ok == 1:
+            count += 1
+    return count
+","def count_derangements(nums):
+    n = nums[0] if nums else 0
+    if n <= 0 or n == 1:
+        return 0
+    prev2, prev1 = 1, 0  # D(0), D(1)
+    for i in range(2, n + 1):
+        prev2, prev1 = prev1, (i - 1) * (prev1 + prev2)
+    return prev1",55201.34,232,704,822,1054,OK,
+TYR-235,mcm_min_cost,o3,dynamic-programming,hard,O(2^N),O(N^3),"def mcm_min_cost(nums):
+    n = len(nums) - 1
+    if n <= 1:
+        return 0
+
+    def solve(i, j):
+        if i == j:
+            return 0
+        best = 999999
+        for k in range(i, j):
+            cost = solve(i, k) + solve(k + 1, j) + nums[i] * nums[k + 1] * nums[j + 1]
+            if cost < best:
+                best = cost
+        return best
+
+    return solve(0, n - 1)
+","def mcm_min_cost(nums):
+    n = len(nums) - 1
+    if n <= 1:
+        return 0
+
+    dp = [[0] * n for _ in range(n)]
+
+    for length in range(2, n + 1):          # current chain length
+        for i in range(n - length + 1):     # starting index
+            j = i + length - 1              # ending index
+            best = float('inf')
+            for k in range(i, j):           # possible split point
+                cost = dp[i][k] + dp[k + 1][j] + nums[i] * nums[k + 1] * nums[j + 1]
+                if cost < best:
+                    best = cost
+            dp[i][j] = best
+
+    return dp[0][n - 1]",61929.24,176,192,396,572,OK,
+TYR-236,longest_repeating_subarray,o3,dynamic-programming,hard,O(N^3),O(N^2),"def longest_repeating_subarray(nums):
+    n = len(nums)
+    best = 0
+    for i in range(n):
+        for j in range(i + 1, n):
+            length = 0
+            while j + length < n and nums[i + length] == nums[j + length]:
+                length += 1
+            if length > best:
+                best = length
+    return best
+","def longest_repeating_subarray(nums):
+    n = len(nums)
+    best = 0
+    prev = [0] * (n + 1)
+    curr = [0] * (n + 1)
+    for i in range(1, n):
+        for j in range(i + 1, n + 1):
+            if nums[i - 1] == nums[j - 1]:
+                curr[j] = prev[j - 1] + 1
+                if curr[j] > best:
+                    best = curr[j]
+            else:
+                curr[j] = 0
+        prev, curr = curr, [0] * (n + 1)
+    return best",59977.11,137,512,677,814,OK,
+TYR-237,max_profit_two_tx,o3,dynamic-programming,hard,O(N^4),O(N),"def max_profit_two_tx(nums):
+    n = len(nums)
+    best = 0
+    for b1 in range(n):
+        for s1 in range(b1 + 1, n):
+            for b2 in range(s1 + 1, n):
+                for s2 in range(b2 + 1, n):
+                    profit = (nums[s1] - nums[b1]) + (nums[s2] - nums[b2])
+                    if profit > best:
+                        best = profit
+            profit1 = nums[s1] - nums[b1]
+            if profit1 > best:
+                best = profit1
+    return best
+","def max_profit_two_tx(prices):
+    if not prices:
+        return 0
+    n = len(prices)
+    
+    # Max profit with one transaction up to each day
+    left_profits = [0] * n
+    min_price = prices[0]
+    for i in range(1, n):
+        min_price = min(min_price, prices[i])
+        left_profits[i] = max(left_profits[i - 1], prices[i] - min_price)
+    
+    # Max profit with one transaction from each day to the end
+    right_profits = [0] * n
+    max_price = prices[-1]
+    for i in range(n - 2, -1, -1):
+        max_price = max(max_price, prices[i])
+        right_profits[i] = max(right_profits[i + 1], max_price - prices[i])
+    
+    # Combine the two profits
+    best = 0
+    for i in range(n):
+        best = max(best, left_profits[i] + right_profits[i])
+    
+    return best",55473.79,184,320,570,754,OK,
+TYR-238,egg_drop_two,o3,dynamic-programming,hard,O(N^2),O(N log N),"def egg_drop_two(nums):
+    n = nums[0] if len(nums) > 0 else 0
+    if n <= 0:
+        return 0
+
+    def solve(eggs, floors):
+        if floors <= 1 or eggs == 1:
+            return floors
+        best = floors
+        for x in range(1, floors + 1):
+            breaks = solve(eggs - 1, x - 1)
+            survives = solve(eggs, floors - x)
+            worst = 1 + (breaks if breaks > survives else survives)
+            if worst < best:
+                best = worst
+        return best
+
+    return solve(2, n)
+","import math
+
+def egg_drop_two(nums):
+    n = nums[0] if nums else 0
+    return 0 if n <= 0 else math.ceil((math.sqrt(8 * n + 1) - 1) / 2)",58908.09,198,576,657,855,OK,
+TYR-239,all_subsets_range_sum,o3,combinatorics,hard,O(2^N * N),O(N * 2^N),"def all_subsets_range_sum(nums):
+    n = len(nums)
+    total = 0
+    for mask in range(1, 1 << n):
+        subset = []
+        for i in range(n):
+            if mask & (1 << i):
+                subset.append(nums[i])
+        mx = subset[0]
+        mn = subset[0]
+        for v in subset:
+            if v > mx:
+                mx = v
+            if v < mn:
+                mn = v
+        total += mx - mn
+    return total
+","def all_subsets_range_sum(nums):
+    n = len(nums)
+    size = 1 << n
+    min_val = [0] * size
+    max_val = [0] * size
+    total = 0
+    for mask in range(1, size):
+        lsb = mask & -mask
+        idx = (lsb.bit_length() - 1)
+        prev = mask ^ lsb
+        if prev == 0:
+            min_val[mask] = max_val[mask] = nums[idx]
+        else:
+            min_val[mask] = min(min_val[prev], nums[idx])
+            max_val[mask] = max(max_val[prev], nums[idx])
+        total += max_val[mask] - min_val[mask]
+    return total",74452.52,167,1920,2107,2274,OK,
+TYR-240,max_and_pair,o3,bitmasking,hard,O(N^2),O(N*B),"def max_and_pair(nums):
+    n = len(nums)
+    if n < 2:
+        return 0
+    best = 0
+    for i in range(n):
+        for j in range(i + 1, n):
+            val = nums[i] & nums[j]
+            if val > best:
+                best = val
+    return best
+","def max_and_pair(nums):
+    n = len(nums)
+    if n < 2:
+        return 0
+    candidate = 0
+    max_bit = max(nums).bit_length()
+    for bit in range(max_bit - 1, -1, -1):
+        trial = candidate | (1 << bit)
+        count = 0
+        for num in nums:
+            if num & trial == trial:
+                count += 1
+                if count == 2:
+                    candidate = trial
+                    break
+    return candidate",33173.85,126,320,450,576,OK,
+TYR-241,count_valid_triangles,o3,combinatorics,hard,O(N^3),O(N^2 log N),"def count_valid_triangles(nums):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            for k in range(j + 1, n):
+                a = nums[i]
+                b = nums[j]
+                c = nums[k]
+                if a + b > c and a + c > b and b + c > a:
+                    count += 1
+    return count
+","def count_valid_triangles(nums):
+    nums.sort()
+    n = len(nums)
+    count = 0
+    for k in range(n - 1, 1, -1):
+        i, j = 0, k - 1
+        while i < j:
+            if nums[i] + nums[j] > nums[k]:
+                count += j - i
+                j -= 1
+            else:
+                i += 1
+    return count",55295.51,152,192,312,464,OK,
+TYR-242,min_moves_equalize,o3,math,hard,O(N * MAX),O(N),"def min_moves_equalize(nums):
+    n = len(nums)
+    if n <= 1:
+        return 0
+    best = 999999
+    mx = nums[0]
+    for v in nums:
+        if v > mx:
+            mx = v
+    for target in range(mx, mx + n * 20 + 1):
+        moves = 0
+        ok = 1
+        for v in nums:
+            diff = target - v
+            if diff < 0:
+                ok = 0
+                break
+            moves += diff
+        if ok == 1 and moves % (n - 1) == 0:
+            total_moves = moves // (n - 1)
+            if total_moves < best:
+                best = total_moves
+    return best
+","def min_moves_equalize(nums):
+    n = len(nums)
+    if n <= 1:
+        return 0
+    s = sum(nums)
+    mx = max(nums)
+    r = s % n
+    base_moves = r
+    target = s // n + r
+    if target >= mx:
+        return base_moves
+    need = mx - target
+    k = (need + (n - 2)) // (n - 1)
+    return base_moves + k * n",218882.37,217,12544,12690,12907,OK,
+TYR-243,longest_zigzag_subseq,o3,dynamic-programming,hard,O(2^N * N),O(N),"def longest_zigzag_subseq(nums):
+    n = len(nums)
+    if n <= 1:
+        return n
+    best = 1
+    for mask in range(1, 1 << n):
+        subseq = []
+        for i in range(n):
+            if mask & (1 << i):
+                subseq.append(nums[i])
+        if len(subseq) <= best:
+            continue
+        if len(subseq) < 2:
+            continue
+        ok = 1
+        for i in range(len(subseq) - 1):
+            if subseq[i] == subseq[i + 1]:
+                ok = 0
+                break
+        if ok == 0:
+            continue
+        for i in range(len(subseq) - 2):
+            d1 = subseq[i + 1] - subseq[i]
+            d2 = subseq[i + 2] - subseq[i + 1]
+            if (d1 > 0 and d2 > 0) or (d1 < 0 and d2 < 0):
+                ok = 0
+                break
+        if ok == 1 and len(subseq) > best:
+            best = len(subseq)
+    return best
+","def longest_zigzag_subseq(nums):
+    n = len(nums)
+    if n <= 1:
+        return n
+    prev_diff = nums[1] - nums[0]
+    count = 1 + (prev_diff != 0)
+    for i in range(2, n):
+        diff = nums[i] - nums[i - 1]
+        if (diff > 0 and prev_diff <= 0) or (diff < 0 and prev_diff >= 0):
+            count += 1
+            prev_diff = diff
+        elif prev_diff == 0:
+            prev_diff = diff
+    return count",8808.95,311,320,470,781,OK,
+TYR-244,max_alternating_sum,o3,dynamic-programming,hard,O(2^N * N),O(N),"def max_alternating_sum(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    best = 0
+    for mask in range(1, 1 << n):
+        subseq = []
+        for i in range(n):
+            if mask & (1 << i):
+                subseq.append(nums[i])
+        s = 0
+        for i in range(len(subseq)):
+            if i % 2 == 0:
+                s += subseq[i]
+            else:
+                s -= subseq[i]
+        if s > best:
+            best = s
+    return best
+","def max_alternating_sum(nums):
+    best_even = 0
+    best_odd = float('-inf')
+    for x in nums:
+        best_even, best_odd = max(best_even, best_odd + x), max(best_odd, best_even - x)
+    return best_even",68407.41,180,192,273,453,OK,
+TYR-245,count_bitonic_subseqs,o3,dynamic-programming,hard,O(2^N * N^2),O(N^2),"def count_bitonic_subseqs(nums):
+    n = len(nums)
+    count = 0
+    for mask in range(1, 1 << n):
+        subseq = []
+        for i in range(n):
+            if mask & (1 << i):
+                subseq.append(nums[i])
+        if len(subseq) < 3:
+            continue
+        for p in range(1, len(subseq) - 1):
+            inc = 1
+            for i in range(p):
+                if subseq[i] >= subseq[i + 1]:
+                    inc = 0
+                    break
+            dec = 1
+            for i in range(p, len(subseq) - 1):
+                if subseq[i] <= subseq[i + 1]:
+                    dec = 0
+                    break
+            if inc == 1 and dec == 1:
+                count += 1
+                break
+    return count
+","def count_bitonic_subseqs(nums):
+    n = len(nums)
+    if n < 3:
+        return 0
+
+    inc = [1] * n
+    for i in range(n):
+        for j in range(i):
+            if nums[j] < nums[i]:
+                inc[i] += inc[j]
+
+    dec = [1] * n
+    for i in range(n - 1, -1, -1):
+        for j in range(i + 1, n):
+            if nums[j] < nums[i]:
+                dec[i] += dec[j]
+
+    count = 0
+    for i in range(n):
+        if inc[i] > 1 and dec[i] > 1:
+            count += (inc[i] - 1) * (dec[i] - 1)
+    return count",58790.41,248,4224,4431,4679,OK,
+TYR-246,kth_smallest_subset_sum,o3,combinatorics,hard,O(2^N * N + 4^N),O(2^N log 2^N),"def kth_smallest_subset_sum(nums, k):
+    n = len(nums)
+    sums = []
+    for mask in range(1 << n):
+        s = 0
+        for i in range(n):
+            if mask & (1 << i):
+                s += nums[i]
+        sums.append(s)
+    for i in range(len(sums)):
+        for j in range(i + 1, len(sums)):
+            if sums[i] > sums[j]:
+                sums[i], sums[j] = sums[j], sums[i]
+    if k <= len(sums):
+        return sums[k - 1]
+    return -1
+","def kth_smallest_subset_sum(nums, k):
+    sums = [0]
+    for num in nums:
+        sums += [num + s for s in sums]
+    if 1 <= k <= len(sums):
+        return sorted(sums)[k - 1]
+    return -1",7666.52,188,256,340,528,OK,
+TYR-247,min_deletions_sorted,o3,dynamic-programming,hard,O(2^N * N),O(N^2),"def min_deletions_sorted(nums):
+    n = len(nums)
+    if n <= 1:
+        return 0
+    best_lis = 1
+    for mask in range(1, 1 << n):
+        subseq = []
+        for i in range(n):
+            if mask & (1 << i):
+                subseq.append(nums[i])
+        ok = 1
+        for i in range(len(subseq) - 1):
+            if subseq[i] >= subseq[i + 1]:
+                ok = 0
+                break
+        if ok == 1 and len(subseq) > best_lis:
+            best_lis = len(subseq)
+    return n - best_lis
+","def min_deletions_sorted(nums):
+    n = len(nums)
+    if n <= 1:
+        return 0
+    lis = [1] * n
+    for i in range(n):
+        for j in range(i):
+            if nums[j] < nums[i]:
+                lis[i] = max(lis[i], lis[j] + 1)
+    return n - max(lis)",17026.05,202,192,294,496,OK,
+TYR-248,count_palindrome_subarrays,o3,subarray,hard,O(N^3),O(N^2),"def count_palindrome_subarrays(nums):
+    n = len(nums)
+    count = 0
+    for i in range(n):
+        for j in range(i, n):
+            is_pal = 1
+            l = i
+            r = j
+            while l < r:
+                if nums[l] != nums[r]:
+                    is_pal = 0
+                    break
+                l += 1
+                r -= 1
+            if is_pal == 1:
+                count += 1
+    return count
+","def count_palindrome_subarrays(nums):
+    n = len(nums)
+    count = 0
+    for c in range(n):
+        # odd-length palindromes
+        l = r = c
+        while l >= 0 and r < n and nums[l] == nums[r]:
+            count += 1
+            l -= 1
+            r += 1
+        # even-length palindromes
+        l, r = c, c + 1
+        while l >= 0 and r < n and nums[l] == nums[r]:
+            count += 1
+            l -= 1
+            r += 1
+    return count",10903.00,160,512,673,833,OK,
+TYR-249,max_nonoverlap_pair_sum,o3,subarray,hard,O(N^4),O(N),"def max_nonoverlap_pair_sum(nums):
+    n = len(nums)
+    if n < 2:
+        return 0
+    best = nums[0] + nums[1]
+    for i in range(n):
+        for j in range(i, n):
+            s1 = 0
+            for k in range(i, j + 1):
+                s1 += nums[k]
+            for p in range(j + 1, n):
+                for q in range(p, n):
+                    s2 = 0
+                    for k in range(p, q + 1):
+                        s2 += nums[k]
+                    if s1 + s2 > best:
+                        best = s1 + s2
+    return best
+","def max_nonoverlap_pair_sum(nums):
+    n = len(nums)
+    if n < 2:
+        return 0
+
+    left = [0] * n
+    right = [0] * n
+
+    cur = left[0] = nums[0]
+    for i in range(1, n):
+        cur = max(nums[i], cur + nums[i])
+        left[i] = max(left[i - 1], cur)
+
+    cur = right[-1] = nums[-1]
+    for i in range(n - 2, -1, -1):
+        cur = max(nums[i], cur + nums[i])
+        right[i] = max(right[i + 1], cur)
+
+    best = float('-inf')
+    for i in range(n - 1):
+        best = max(best, left[i] + right[i + 1])
+    return best",37666.52,201,960,1167,1368,OK,
+TYR-250,subset_max_gcd,o3,math,hard,O(2^N * N),O(N * MAX),"def subset_max_gcd(nums):
+    n = len(nums)
+    if n < 2:
+        return 0
+
+    def gcd(a, b):
+        a = abs(a)
+        b = abs(b)
+        while b:
+            a, b = b, a % b
+        return a
+
+    best = 0
+    for mask in range(1, 1 << n):
+        subset = []
+        for i in range(n):
+            if mask & (1 << i):
+                subset.append(nums[i])
+        if len(subset) < 2:
+            continue
+        g = subset[0]
+        for v in subset[1:]:
+            g = gcd(g, v)
+        if g > best:
+            best = g
+    return best
+","def subset_max_gcd(nums):
+    if len(nums) < 2:
+        return 0
+    nums = [abs(x) for x in nums]
+    max_val = max(nums)
+    freq = [0] * (max_val + 1)
+    for x in nums:
+        if x:
+            freq[x] += 1
+    for d in range(max_val, 0, -1):
+        count = 0
+        for multiple in range(d, max_val + 1, d):
+            count += freq[multiple]
+            if count >= 2:
+                return d
+    return 0",16324.59,212,1024,1177,1389,OK,

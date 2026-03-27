@@ -1,0 +1,6360 @@
+id,name,model_name,category,difficulty,original_complexity,target_complexity,original_code,generated_code,latency_ms,prompt_tokens,reasoning_tokens,completion_tokens,total_tokens,api_status,error_detail
+TYR-001,two_sum_exists,Codestral-2501,pair-finding,easy,O(N^2),O(N),"def two_sum_exists(nums, target):
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] + nums[j] == target:
+                return 1
+    return 0
+","def two_sum_exists(nums, target):
+    seen = set()
+    for num in nums:
+        if target - num in seen:
+            return 1
+        seen.add(num)
+    return 0",3342.56,97,0,47,144,OK,
+TYR-002,count_pairs_with_sum,Codestral-2501,pair-finding,easy,O(N^2),O(N),"def count_pairs_with_sum(nums, target):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] + nums[j] == target:
+                count += 1
+    return count
+","def count_pairs_with_sum(nums, target):
+    count = 0
+    seen = {}
+    for num in nums:
+        complement = target - num
+        if complement in seen:
+            count += seen[complement]
+        if num in seen:
+            seen[num] += 1
+        else:
+            seen[num] = 1
+    return count",2510.56,105,0,81,186,OK,
+TYR-003,has_pair_with_diff,Codestral-2501,pair-finding,easy,O(N^2),O(N),"def has_pair_with_diff(nums, target):
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if abs(nums[i] - nums[j]) == target:
+                return 1
+    return 0
+","def has_pair_with_diff(nums, target):
+    seen = set()
+    for num in nums:
+        if num - target in seen or num + target in seen:
+            return 1
+        seen.add(num)
+    return 0",1901.78,99,0,54,153,OK,
+TYR-004,count_equal_pairs,Codestral-2501,pair-finding,easy,O(N^2),O(N),"def count_equal_pairs(nums):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] == nums[j]:
+                count += 1
+    return count
+","def count_equal_pairs(nums):
+    count = 0
+    num_count = {}
+    for num in nums:
+        if num in num_count:
+            count += num_count[num]
+            num_count[num] += 1
+        else:
+            num_count[num] = 1
+    return count",1221.20,99,0,68,167,OK,
+TYR-005,closest_pair_sum,Codestral-2501,pair-finding,medium,O(N^2),O(N),"def closest_pair_sum(nums, target):
+    if len(nums) < 2:
+        return 0
+    best = nums[0] + nums[1]
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            s = nums[i] + nums[j]
+            if abs(s - target) < abs(best - target):
+                best = s
+    return best
+","def closest_pair_sum(nums, target):
+    if len(nums) < 2:
+        return 0
+    nums.sort()
+    best = nums[0] + nums[1]
+    left, right = 0, len(nums) - 1
+    while left < right:
+        s = nums[left] + nums[right]
+        if abs(s - target) < abs(best - target):
+            best = s
+        if s < target:
+            left += 1
+        else:
+            right -= 1
+    return best",16517.09,134,0,120,254,OK,
+TYR-006,count_pairs_divisible_sum,Codestral-2501,pair-finding,medium,O(N^2),O(N),"def count_pairs_divisible_sum(nums, k):
+    if k == 0:
+        return 0
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if (nums[i] + nums[j]) % k == 0:
+                count += 1
+    return count
+","def count_pairs_divisible_sum(nums, k):
+    if k == 0:
+        return 0
+    count = 0
+    remainder_count = [0] * k
+    for num in nums:
+        remainder = num % k
+        count += remainder_count[(k - remainder) % k]
+        remainder_count[remainder] += 1
+    return count",1373.38,123,0,87,210,OK,
+TYR-007,max_pair_sum,Codestral-2501,pair-finding,easy,O(N^2),O(N),"def max_pair_sum(nums):
+    if len(nums) < 2:
+        return 0
+    best = nums[0] + nums[1]
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            s = nums[i] + nums[j]
+            if s > best:
+                best = s
+    return best
+","def max_pair_sum(nums):
+    if len(nums) < 2:
+        return 0
+    max1 = max(nums)
+    nums.remove(max1)
+    max2 = max(nums)
+    return max1 + max2",1137.82,124,0,53,177,OK,
+TYR-008,count_pairs_sum_less,Codestral-2501,pair-finding,easy,O(N^2),O(N),"def count_pairs_sum_less(nums, target):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] + nums[j] < target:
+                count += 1
+    return count
+","def count_pairs_sum_less(nums, target):
+    nums.sort()
+    count = 0
+    left, right = 0, len(nums) - 1
+    while left < right:
+        if nums[left] + nums[right] < target:
+            count += right - left
+            left += 1
+        else:
+            right -= 1
+    return count",1987.35,106,0,87,193,OK,
+TYR-009,count_pairs_sum_greater,Codestral-2501,pair-finding,easy,O(N^2),O(N),"def count_pairs_sum_greater(nums, target):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] + nums[j] > target:
+                count += 1
+    return count
+","def count_pairs_sum_greater(nums, target):
+    count = 0
+    nums.sort()
+    left, right = 0, len(nums) - 1
+    while left < right:
+        if nums[left] + nums[right] > target:
+            count += right - left
+            right -= 1
+        else:
+            left += 1
+    return count",1339.38,107,0,88,195,OK,
+TYR-010,has_pair_product,Codestral-2501,pair-finding,easy,O(N^2),O(N),"def has_pair_product(nums, target):
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] * nums[j] == target:
+                return 1
+    return 0
+","def has_pair_product(nums, target):
+    seen = set()
+    for num in nums:
+        if target / num in seen:
+            return 1
+        seen.add(num)
+    return 0",1902.52,97,0,47,144,OK,
+TYR-011,min_abs_pair_diff,Codestral-2501,pair-finding,easy,O(N^2),O(N log N),"def min_abs_pair_diff(nums):
+    if len(nums) < 2:
+        return 0
+    best = abs(nums[0] - nums[1])
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            d = abs(nums[i] - nums[j])
+            if d < best:
+                best = d
+    return best
+","def min_abs_pair_diff(nums):
+    if len(nums) < 2:
+        return 0
+    nums.sort()
+    best = abs(nums[0] - nums[1])
+    for i in range(1, len(nums)):
+        d = abs(nums[i] - nums[i - 1])
+        if d < best:
+            best = d
+    return best",1416.99,130,0,84,214,OK,
+TYR-012,count_reverse_pairs,Codestral-2501,pair-finding,medium,O(N^2),O(N log N),"def count_reverse_pairs(nums):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] > 2 * nums[j]:
+                count += 1
+    return count
+","def count_reverse_pairs(nums):
+    def merge_sort_and_count(arr):
+        if len(arr) <= 1:
+            return arr, 0
+
+        mid = len(arr) // 2
+        left, left_count = merge_sort_and_count(arr[:mid])
+        right, right_count = merge_sort_and_count(arr[mid:])
+
+        merged, split_count = merge_and_count(left, right)
+        return merged, left_count + right_count + split_count
+
+    def merge_and_count(left, right):
+        i, j, count = 0, 0, 0
+        merged = []
+
+        while i < len(left) and j < len(right):
+            if left[i] > 2 * right[j]:
+                count += len(left) - i
+                j += 1
+            else:
+                i += 1
+
+        i, j = 0, 0
+        while i < len(left) and j < len(right):
+            if left[i] <= right[j]:
+                merged.append(left[i])
+                i += 1
+            else:
+                merged.append(right[j])
+                j += 1
+
+        merged.extend(left[i:])
+        merged.extend(right[j:])
+        return merged, count
+
+    _, count = merge_sort_and_count(nums)
+    return count",2869.23,105,0,273,378,OK,
+TYR-013,count_pairs_abs_diff_k,Codestral-2501,pair-finding,easy,O(N^2),O(N),"def count_pairs_abs_diff_k(nums, k):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if abs(nums[i] - nums[j]) == k:
+                count += 1
+    return count
+","def count_pairs_abs_diff_k(nums, k):
+    count = 0
+    seen = {}
+    for num in nums:
+        if num - k in seen:
+            count += seen[num - k]
+        if num + k in seen:
+            count += seen[num + k]
+        if num in seen:
+            seen[num] += 1
+        else:
+            seen[num] = 1
+    return count",10483.47,108,0,94,202,OK,
+TYR-014,count_distinct_pair_sums,Codestral-2501,pair-finding,medium,O(N^2),O(N),"def count_distinct_pair_sums(nums):
+    seen = {}
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            s = nums[i] + nums[j]
+            seen[s] = 1
+    total = 0
+    for k in seen:
+        total += 1
+    return total
+","def count_distinct_pair_sums(nums):
+    seen = set()
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            seen.add(nums[i] + nums[j])
+    return len(seen)",1839.59,120,0,56,176,OK,
+TYR-015,two_sum_less_than_k,Codestral-2501,pair-finding,medium,O(N^2),O(N log N),"def two_sum_less_than_k(nums, k):
+    best = -1
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            s = nums[i] + nums[j]
+            if s < k and s > best:
+                best = s
+    return best
+","def two_sum_less_than_k(nums, k):
+    nums.sort()
+    left, right = 0, len(nums) - 1
+    best = -1
+    while left < right:
+        s = nums[left] + nums[right]
+        if s < k:
+            best = max(best, s)
+            left += 1
+        else:
+            right -= 1
+    return best",2152.57,116,0,94,210,OK,
+TYR-016,most_frequent_element,Codestral-2501,frequency,easy,O(N^2),O(N),"def most_frequent_element(nums):
+    if len(nums) == 0:
+        return -1
+    best = nums[0]
+    best_count = 0
+    for i in range(len(nums)):
+        count = 0
+        for j in range(len(nums)):
+            if nums[j] == nums[i]:
+                count += 1
+        if count > best_count:
+            best_count = count
+            best = nums[i]
+    return best
+","def most_frequent_element(nums):
+    if len(nums) == 0:
+        return -1
+    frequency = {}
+    for num in nums:
+        if num in frequency:
+            frequency[num] += 1
+        else:
+            frequency[num] = 1
+    best = nums[0]
+    best_count = 0
+    for num, count in frequency.items():
+        if count > best_count:
+            best_count = count
+            best = num
+    return best",2117.29,142,0,107,249,OK,
+TYR-017,has_duplicate,Codestral-2501,frequency,easy,O(N^2),O(N),"def has_duplicate(nums):
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] == nums[j]:
+                return 1
+    return 0
+","def has_duplicate(nums):
+    seen = set()
+    for num in nums:
+        if num in seen:
+            return 1
+        seen.add(num)
+    return 0",1577.46,92,0,43,135,OK,
+TYR-018,first_non_repeating,Codestral-2501,frequency,easy,O(N^2),O(N),"def first_non_repeating(nums):
+    for i in range(len(nums)):
+        found_dup = 0
+        for j in range(len(nums)):
+            if i != j and nums[i] == nums[j]:
+                found_dup = 1
+        if found_dup == 0:
+            return nums[i]
+    return -1
+","def first_non_repeating(nums):
+    from collections import Counter
+    count = Counter(nums)
+    for num in nums:
+        if count[num] == 1:
+            return num
+    return -1",1453.90,119,0,50,169,OK,
+TYR-019,count_distinct,Codestral-2501,frequency,easy,O(N^2),O(N),"def count_distinct(nums):
+    count = 0
+    for i in range(len(nums)):
+        is_first = 1
+        for j in range(i):
+            if nums[j] == nums[i]:
+                is_first = 0
+        count += is_first
+    return count
+","def count_distinct(nums):
+    seen = set()
+    count = 0
+    for num in nums:
+        if num not in seen:
+            seen.add(num)
+            count += 1
+    return count",2165.16,106,0,50,156,OK,
+TYR-020,majority_element,Codestral-2501,frequency,easy,O(N^2),O(N),"def majority_element(nums):
+    n = len(nums)
+    for i in range(n):
+        count = 0
+        for j in range(n):
+            if nums[j] == nums[i]:
+                count += 1
+        if count > n // 2:
+            return nums[i]
+    return -1
+","def majority_element(nums):
+    count = 0
+    candidate = None
+
+    for num in nums:
+        if count == 0:
+            candidate = num
+        count += (1 if num == candidate else -1)
+
+    return candidate",1137.55,111,0,56,167,OK,
+TYR-021,find_first_duplicate,Codestral-2501,frequency,easy,O(N^2),O(N),"def find_first_duplicate(nums):
+    for i in range(len(nums)):
+        for j in range(i):
+            if nums[j] == nums[i]:
+                return nums[i]
+    return -1
+","def find_first_duplicate(nums):
+    seen = set()
+    for num in nums:
+        if num in seen:
+            return num
+        seen.add(num)
+    return -1",7537.72,87,0,43,130,OK,
+TYR-022,count_elements_appearing_twice,Codestral-2501,frequency,medium,O(N^2),O(N),"def count_elements_appearing_twice(nums):
+    result = 0
+    for i in range(len(nums)):
+        is_first = 1
+        for k in range(i):
+            if nums[k] == nums[i]:
+                is_first = 0
+        if is_first == 0:
+            continue
+        count = 0
+        for j in range(len(nums)):
+            if nums[j] == nums[i]:
+                count += 1
+        if count == 2:
+            result += 1
+    return result
+","def count_elements_appearing_twice(nums):
+    from collections import Counter
+    counter = Counter(nums)
+    return sum(1 for count in counter.values() if count == 2)",1143.06,158,0,45,203,OK,
+TYR-023,count_inversions,Codestral-2501,frequency,medium,O(N^2),O(N log N),"def count_inversions(nums):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] > nums[j]:
+                count += 1
+    return count
+","def count_inversions(nums):
+    def merge_sort_and_count(arr):
+        if len(arr) <= 1:
+            return arr, 0
+        mid = len(arr) // 2
+        left, left_count = merge_sort_and_count(arr[:mid])
+        right, right_count = merge_sort_and_count(arr[mid:])
+        merged, split_count = merge_and_count(left, right)
+        return merged, left_count + right_count + split_count
+
+    def merge_and_count(left, right):
+        merged = []
+        count = 0
+        i = j = 0
+        while i < len(left) and j < len(right):
+            if left[i] <= right[j]:
+                merged.append(left[i])
+                i += 1
+            else:
+                merged.append(right[j])
+                j += 1
+                count += len(left) - i
+        merged.extend(left[i:])
+        merged.extend(right[j:])
+        return merged, count
+
+    _, inversions = merge_sort_and_count(nums)
+    return inversions",2358.73,100,0,220,320,OK,
+TYR-024,missing_number,Codestral-2501,frequency,easy,O(N^2),O(N),"def missing_number(nums):
+    n = len(nums)
+    for i in range(n + 1):
+        found = 0
+        for j in range(n):
+            if nums[j] == i:
+                found = 1
+        if found == 0:
+            return i
+    return -1
+","def missing_number(nums):
+    n = len(nums)
+    total_sum = n * (n + 1) // 2
+    array_sum = sum(nums)
+    return total_sum - array_sum",2678.88,110,0,47,157,OK,
+TYR-025,count_matching_last_digit_pairs,Codestral-2501,frequency,easy,O(N^2),O(N),"def count_matching_last_digit_pairs(nums):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] % 10 == nums[j] % 10:
+                count += 1
+    return count
+","def count_matching_last_digit_pairs(nums):
+    from collections import defaultdict
+    last_digit_count = defaultdict(int)
+    count = 0
+    for num in nums:
+        last_digit = num % 10
+        count += last_digit_count[last_digit]
+        last_digit_count[last_digit] += 1
+    return count",2688.04,112,0,86,198,OK,
+TYR-026,count_unique_elements,Codestral-2501,frequency,easy,O(N^2),O(N),"def count_unique_elements(nums):
+    count = 0
+    for i in range(len(nums)):
+        freq = 0
+        for j in range(len(nums)):
+            if nums[j] == nums[i]:
+                freq += 1
+        if freq == 1:
+            count += 1
+    return count
+","def count_unique_elements(nums):
+    freq = {}
+    for num in nums:
+        if num in freq:
+            freq[num] += 1
+        else:
+            freq[num] = 1
+    count = 0
+    for value in freq.values():
+        if value == 1:
+            count += 1
+    return count",1260.75,112,0,76,188,OK,
+TYR-027,single_number,Codestral-2501,frequency,easy,O(N^2),O(N),"def single_number(nums):
+    for i in range(len(nums)):
+        count = 0
+        for j in range(len(nums)):
+            if nums[j] == nums[i]:
+                count += 1
+        if count == 1:
+            return nums[i]
+    return -1
+","def single_number(nums):
+    result = 0
+    for num in nums:
+        result ^= num
+    return result",936.56,105,0,32,137,OK,
+TYR-028,count_greater_than_all_right,Codestral-2501,frequency,medium,O(N^2),O(N),"def count_greater_than_all_right(nums):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        is_leader = 1
+        for j in range(i + 1, n):
+            if nums[j] >= nums[i]:
+                is_leader = 0
+        count += is_leader
+    return count
+","def count_greater_than_all_right(nums):
+    if not nums:
+        return 0
+    max_right = [0] * len(nums)
+    max_right[-1] = nums[-1]
+    for i in range(len(nums) - 2, -1, -1):
+        max_right[i] = max(nums[i], max_right[i + 1])
+    count = 0
+    for i in range(len(nums) - 1):
+        if nums[i] > max_right[i + 1]:
+            count += 1
+    return count",1678.96,124,0,124,248,OK,
+TYR-029,kth_largest,Codestral-2501,frequency,medium,O(N^2),O(N log N),"def kth_largest(nums, k):
+    n = len(nums)
+    for target_rank in range(k):
+        max_val = nums[0]
+        max_idx = 0
+        for i in range(1, n):
+            if nums[i] > max_val:
+                max_val = nums[i]
+                max_idx = i
+        if target_rank == k - 1:
+            return max_val
+        nums[max_idx] = nums[0] - 1
+    return -1
+","def kth_largest(nums, k):
+    import heapq
+    return heapq.nlargest(k, nums)[-1]",2753.82,153,0,32,185,OK,
+TYR-030,frequency_of_max,Codestral-2501,frequency,easy,O(N),O(N),"def frequency_of_max(nums):
+    if len(nums) == 0:
+        return 0
+    max_val = nums[0]
+    for i in range(len(nums)):
+        if nums[i] > max_val:
+            max_val = nums[i]
+    count = 0
+    for i in range(len(nums)):
+        if nums[i] == max_val:
+            count += 1
+    return count
+","def frequency_of_max(nums):
+    if len(nums) == 0:
+        return 0
+    max_val = nums[0]
+    count = 1
+    for i in range(1, len(nums)):
+        if nums[i] > max_val:
+            max_val = nums[i]
+            count = 1
+        elif nums[i] == max_val:
+            count += 1
+    return count",1426.95,131,0,91,222,OK,
+TYR-031,max_subarray_sum,Codestral-2501,subarray,medium,O(N^2),O(N),"def max_subarray_sum(nums):
+    if len(nums) == 0:
+        return 0
+    best = nums[0]
+    n = len(nums)
+    for i in range(n):
+        cur = 0
+        for j in range(i, n):
+            cur += nums[j]
+            if cur > best:
+                best = cur
+    return best
+","def max_subarray_sum(nums):
+    if len(nums) == 0:
+        return 0
+    best = nums[0]
+    cur = 0
+    for num in nums:
+        cur = max(num, cur + num)
+        best = max(best, cur)
+    return best",1905.81,123,0,68,191,OK,
+TYR-032,has_subarray_with_sum,Codestral-2501,subarray,medium,O(N^2),O(N),"def has_subarray_with_sum(nums, target):
+    n = len(nums)
+    for i in range(n):
+        cur = 0
+        for j in range(i, n):
+            cur += nums[j]
+            if cur == target:
+                return 1
+    return 0
+","def has_subarray_with_sum(nums, target):
+    prefix_sum = 0
+    seen = {0}
+    for num in nums:
+        prefix_sum += num
+        if prefix_sum - target in seen:
+            return 1
+        seen.add(prefix_sum)
+    return 0",1728.83,106,0,65,171,OK,
+TYR-033,count_subarrays_with_sum,Codestral-2501,subarray,medium,O(N^2),O(N),"def count_subarrays_with_sum(nums, k):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        cur = 0
+        for j in range(i, n):
+            cur += nums[j]
+            if cur == k:
+                count += 1
+    return count
+","def count_subarrays_with_sum(nums, k):
+    count = 0
+    prefix_sum = 0
+    sum_count = {0: 1}
+
+    for num in nums:
+        prefix_sum += num
+        if prefix_sum - k in sum_count:
+            count += sum_count[prefix_sum - k]
+        if prefix_sum in sum_count:
+            sum_count[prefix_sum] += 1
+        else:
+            sum_count[prefix_sum] = 1
+
+    return count",12906.31,112,0,108,220,OK,
+TYR-034,longest_subarray_sum_k,Codestral-2501,subarray,medium,O(N^2),O(N),"def longest_subarray_sum_k(nums, k):
+    best = 0
+    n = len(nums)
+    for i in range(n):
+        cur = 0
+        for j in range(i, n):
+            cur += nums[j]
+            if cur == k:
+                length = j - i + 1
+                if length > best:
+                    best = length
+    return best
+","def longest_subarray_sum_k(nums, k):
+    best = 0
+    prefix_sum = 0
+    sum_index = {0: -1}
+    for i, num in enumerate(nums):
+        prefix_sum += num
+        if prefix_sum - k in sum_index:
+            best = max(best, i - sum_index[prefix_sum - k])
+        if prefix_sum not in sum_index:
+            sum_index[prefix_sum] = i
+    return best",1976.56,127,0,103,230,OK,
+TYR-035,max_window_sum_size_k,Codestral-2501,subarray,easy,O(N^2),O(N),"def max_window_sum_size_k(nums, k):
+    if len(nums) == 0 or k <= 0:
+        return 0
+    best = 0
+    n = len(nums)
+    for i in range(n - k + 1):
+        cur = 0
+        for j in range(i, i + k):
+            cur += nums[j]
+        if i == 0 or cur > best:
+            best = cur
+    return best
+","def max_window_sum_size_k(nums, k):
+    if len(nums) == 0 or k <= 0:
+        return 0
+    best = sum(nums[:k])
+    current_sum = best
+    for i in range(k, len(nums)):
+        current_sum += nums[i] - nums[i - k]
+        best = max(best, current_sum)
+    return best",1795.23,142,0,85,227,OK,
+TYR-036,min_subarray_len_ge_target,Codestral-2501,subarray,medium,O(N^2),O(N),"def min_subarray_len_ge_target(nums, target):
+    best = 0
+    n = len(nums)
+    for i in range(n):
+        cur = 0
+        for j in range(i, n):
+            cur += nums[j]
+            if cur >= target:
+                length = j - i + 1
+                if best == 0 or length < best:
+                    best = length
+                break
+    return best
+","def min_subarray_len_ge_target(nums, target):
+    best = float('inf')
+    n = len(nums)
+    left = 0
+    current_sum = 0
+
+    for right in range(n):
+        current_sum += nums[right]
+        while current_sum >= target:
+            best = min(best, right - left + 1)
+            current_sum -= nums[left]
+            left += 1
+
+    return 0 if best == float('inf') else best",1580.28,137,0,107,244,OK,
+TYR-037,max_product_pair,Codestral-2501,subarray,easy,O(N^2),O(N),"def max_product_pair(nums):
+    if len(nums) < 2:
+        return 0
+    best = nums[0] * nums[1]
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            p = nums[i] * nums[j]
+            if p > best:
+                best = p
+    return best
+","def max_product_pair(nums):
+    if len(nums) < 2:
+        return 0
+    max1 = max(nums[0], nums[1])
+    max2 = min(nums[0], nums[1])
+    for i in range(2, len(nums)):
+        if nums[i] > max1:
+            max2 = max1
+            max1 = nums[i]
+        elif nums[i] > max2:
+            max2 = nums[i]
+    return max1 * max2",9882.74,124,0,109,233,OK,
+TYR-038,longest_increasing_run,Codestral-2501,subarray,easy,O(N^2),O(N),"def longest_increasing_run(nums):
+    if len(nums) == 0:
+        return 0
+    best = 1
+    n = len(nums)
+    for i in range(n):
+        length = 1
+        for j in range(i + 1, n):
+            if nums[j] > nums[j - 1]:
+                length += 1
+            else:
+                break
+        if length > best:
+            best = length
+    return best
+","def longest_increasing_run(nums):
+    if len(nums) == 0:
+        return 0
+    best = 1
+    length = 1
+    for i in range(1, len(nums)):
+        if nums[i] > nums[i - 1]:
+            length += 1
+        else:
+            best = max(best, length)
+            length = 1
+    return max(best, length)",5835.06,143,0,93,236,OK,
+TYR-039,max_diff_ordered,Codestral-2501,subarray,easy,O(N^2),O(N),"def max_diff_ordered(nums):
+    if len(nums) < 2:
+        return 0
+    best = nums[1] - nums[0]
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            d = nums[j] - nums[i]
+            if d > best:
+                best = d
+    return best
+","def max_diff_ordered(nums):
+    if len(nums) < 2:
+        return 0
+    min_val = nums[0]
+    max_diff = 0
+    for num in nums[1:]:
+        max_diff = max(max_diff, num - min_val)
+        min_val = min(min_val, num)
+    return max_diff",1208.20,129,0,78,207,OK,
+TYR-040,equilibrium_index,Codestral-2501,subarray,easy,O(N^2),O(N),"def equilibrium_index(nums):
+    n = len(nums)
+    for i in range(n):
+        left_sum = 0
+        for j in range(i):
+            left_sum += nums[j]
+        right_sum = 0
+        for j in range(i + 1, n):
+            right_sum += nums[j]
+        if left_sum == right_sum:
+            return i
+    return -1
+","def equilibrium_index(nums):
+    n = len(nums)
+    total_sum = sum(nums)
+    left_sum = 0
+    for i in range(n):
+        total_sum -= nums[i]
+        if left_sum == total_sum:
+            return i
+        left_sum += nums[i]
+    return -1",1589.14,128,0,68,196,OK,
+TYR-041,product_except_self,Codestral-2501,subarray,medium,O(N^2),O(N),"def product_except_self(nums):
+    n = len(nums)
+    result = []
+    for i in range(n):
+        prod = 1
+        for j in range(n):
+            if j != i:
+                prod = prod * nums[j]
+        result.append(prod)
+    return result
+","def product_except_self(nums):
+    n = len(nums)
+    left_products = [1] * n
+    right_products = [1] * n
+    result = [1] * n
+
+    for i in range(1, n):
+        left_products[i] = left_products[i - 1] * nums[i - 1]
+
+    for i in range(n - 2, -1, -1):
+        right_products[i] = right_products[i + 1] * nums[i + 1]
+
+    for i in range(n):
+        result[i] = left_products[i] * right_products[i]
+
+    return result",1821.91,107,0,138,245,OK,
+TYR-042,count_positive_subarrays,Codestral-2501,subarray,medium,O(N^2),O(N),"def count_positive_subarrays(nums):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        cur = 0
+        for j in range(i, n):
+            cur += nums[j]
+            if cur > 0:
+                count += 1
+    return count
+","def count_positive_subarrays(nums):
+    count = 0
+    n = len(nums)
+    prefix_sum = 0
+    prefix_sums = {0: 1}
+
+    for num in nums:
+        prefix_sum += num
+        if prefix_sum in prefix_sums:
+            count += prefix_sums[prefix_sum]
+            prefix_sums[prefix_sum] += 1
+        else:
+            prefix_sums[prefix_sum] = 1
+
+    return count",1547.61,111,0,105,216,OK,
+TYR-043,min_subarray_sum,Codestral-2501,subarray,medium,O(N^2),O(N),"def min_subarray_sum(nums):
+    if len(nums) == 0:
+        return 0
+    best = nums[0]
+    n = len(nums)
+    for i in range(n):
+        cur = 0
+        for j in range(i, n):
+            cur += nums[j]
+            if cur < best:
+                best = cur
+    return best
+","def min_subarray_sum(nums):
+    if len(nums) == 0:
+        return 0
+    best = nums[0]
+    cur = 0
+    for num in nums:
+        cur += num
+        if cur < best:
+            best = cur
+        if cur > 0:
+            cur = 0
+    return best",1478.25,123,0,78,201,OK,
+TYR-044,count_subarrays_max_le_k,Codestral-2501,subarray,medium,O(N^2),O(N),"def count_subarrays_max_le_k(nums, k):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        ok = 1
+        for j in range(i, n):
+            if nums[j] > k:
+                ok = 0
+            if ok == 1:
+                count += 1
+            else:
+                break
+    return count
+","def count_subarrays_max_le_k(nums, k):
+    count = 0
+    n = len(nums)
+    j = 0
+    for i in range(n):
+        while j < n and nums[j] <= k:
+            j += 1
+        count += j - i
+        if j <= i:
+            j = i + 1
+    return count",1258.44,128,0,84,212,OK,
+TYR-045,sum_of_all_subarray_sums,Codestral-2501,subarray,medium,O(N^2),O(N),"def sum_of_all_subarray_sums(nums):
+    total = 0
+    n = len(nums)
+    for i in range(n):
+        cur = 0
+        for j in range(i, n):
+            cur += nums[j]
+            total += cur
+    return total
+","def sum_of_all_subarray_sums(nums):
+    total = 0
+    n = len(nums)
+    for i in range(n):
+        total += nums[i] * (i + 1) * (n - i)
+    return total",1670.41,105,0,57,162,OK,
+TYR-046,remove_duplicates_preserve_order,Codestral-2501,set-operations,easy,O(N^2),O(N),"def remove_duplicates_preserve_order(nums):
+    result = []
+    for i in range(len(nums)):
+        found = 0
+        for j in range(i):
+            if nums[j] == nums[i]:
+                found = 1
+        if found == 0:
+            result.append(nums[i])
+    return result
+","def remove_duplicates_preserve_order(nums):
+    seen = set()
+    result = []
+    for num in nums:
+        if num not in seen:
+            seen.add(num)
+            result.append(num)
+    return result",8943.25,114,0,52,166,OK,
+TYR-047,symmetric_difference_count,Codestral-2501,set-operations,medium,O(N^2),O(N),"def symmetric_difference_count(nums):
+    mid = len(nums) // 2
+    count = 0
+    for i in range(mid):
+        found = 0
+        for j in range(mid, len(nums)):
+            if nums[i] == nums[j]:
+                found = 1
+        if found == 0:
+            count += 1
+    for i in range(mid, len(nums)):
+        found = 0
+        for j in range(mid):
+            if nums[i] == nums[j]:
+                found = 1
+        if found == 0:
+            count += 1
+    return count
+","def symmetric_difference_count(nums):
+    mid = len(nums) // 2
+    set1 = set(nums[:mid])
+    set2 = set(nums[mid:])
+    return len(set1.symmetric_difference(set2))",1330.37,179,0,51,230,OK,
+TYR-048,count_common_elements,Codestral-2501,set-operations,easy,O(N^2),O(N),"def count_common_elements(nums):
+    mid = len(nums) // 2
+    count = 0
+    for i in range(mid):
+        for j in range(mid, len(nums)):
+            if nums[i] == nums[j]:
+                count += 1
+                break
+    return count
+","def count_common_elements(nums):
+    mid = len(nums) // 2
+    count = 0
+    seen = set(nums[:mid])
+    for num in nums[mid:]:
+        if num in seen:
+            count += 1
+            seen.remove(num)
+    return count",1348.29,109,0,64,173,OK,
+TYR-049,is_subset_first_half,Codestral-2501,set-operations,easy,O(N^2),O(N),"def is_subset_first_half(nums):
+    mid = len(nums) // 2
+    for i in range(mid):
+        found = 0
+        for j in range(mid, len(nums)):
+            if nums[i] == nums[j]:
+                found = 1
+        if found == 0:
+            return 0
+    return 1
+","def is_subset_first_half(nums):
+    mid = len(nums) // 2
+    first_half_set = set(nums[:mid])
+    for i in range(mid, len(nums)):
+        if nums[i] in first_half_set:
+            first_half_set.remove(nums[i])
+    return len(first_half_set) == 0",12722.35,121,0,77,198,OK,
+TYR-050,remove_if_more_than_two,Codestral-2501,set-operations,medium,O(N^2),O(N),"def remove_if_more_than_two(nums):
+    result = []
+    for i in range(len(nums)):
+        count = 0
+        for j in range(len(result)):
+            if result[j] == nums[i]:
+                count += 1
+        if count < 2:
+            result.append(nums[i])
+    return result
+","def remove_if_more_than_two(nums):
+    count_dict = {}
+    result = []
+    for num in nums:
+        if num in count_dict:
+            if count_dict[num] < 2:
+                result.append(num)
+            count_dict[num] += 1
+        else:
+            result.append(num)
+            count_dict[num] = 1
+    return result",1673.75,114,0,82,196,OK,
+TYR-051,first_missing_positive,Codestral-2501,set-operations,medium,O(N^2),O(N),"def first_missing_positive(nums):
+    candidate = 1
+    while candidate < len(nums) + 2:
+        found = 0
+        for i in range(len(nums)):
+            if nums[i] == candidate:
+                found = 1
+        if found == 0:
+            return candidate
+        candidate += 1
+    return candidate
+","def first_missing_positive(nums):
+    n = len(nums)
+    for i in range(n):
+        while 1 <= nums[i] <= n and nums[nums[i] - 1] != nums[i]:
+            nums[nums[i] - 1], nums[i] = nums[i], nums[nums[i] - 1]
+    for i in range(n):
+        if nums[i] != i + 1:
+            return i + 1
+    return n + 1",1851.01,120,0,108,228,OK,
+TYR-052,is_permutation_of_other_half,Codestral-2501,set-operations,easy,O(N^2),O(N),"def is_permutation_of_other_half(nums):
+    mid = len(nums) // 2
+    for i in range(mid):
+        found = 0
+        used = []
+        for j in range(mid, len(nums)):
+            skip = 0
+            for u in range(len(used)):
+                if used[u] == j:
+                    skip = 1
+            if skip == 0 and nums[j] == nums[i]:
+                found = 1
+                used.append(j)
+                break
+        if found == 0:
+            return 0
+    return 1
+","def is_permutation_of_other_half(nums):
+    mid = len(nums) // 2
+    count = {}
+    for i in range(mid):
+        if nums[i] in count:
+            count[nums[i]] += 1
+        else:
+            count[nums[i]] = 1
+    for i in range(mid, len(nums)):
+        if nums[i] in count:
+            count[nums[i]] -= 1
+            if count[nums[i]] == 0:
+                del count[nums[i]]
+        else:
+            return 0
+    return len(count) == 0",2823.64,169,0,132,301,OK,
+TYR-053,count_elements_in_range,Codestral-2501,set-operations,easy,O(N),O(N),"def count_elements_in_range(nums):
+    if len(nums) < 2:
+        return len(nums)
+    lo = nums[0]
+    hi = nums[len(nums) - 1]
+    if lo > hi:
+        lo, hi = hi, lo
+    count = 0
+    for i in range(len(nums)):
+        if nums[i] >= lo and nums[i] <= hi:
+            count += 1
+    return count
+","def count_elements_in_range(nums):
+    if len(nums) < 2:
+        return len(nums)
+    lo = nums[0]
+    hi = nums[-1]
+    if lo > hi:
+        lo, hi = hi, lo
+    count = 0
+    for num in nums:
+        if lo <= num <= hi:
+            count += 1
+    return count",1291.19,138,0,85,223,OK,
+TYR-054,deduplicate_sorted_count,Codestral-2501,set-operations,easy,O(N^2),O(N),"def deduplicate_sorted_count(nums):
+    if len(nums) == 0:
+        return 0
+    count = 1
+    for i in range(1, len(nums)):
+        is_dup = 0
+        for j in range(i):
+            if nums[j] == nums[i]:
+                is_dup = 1
+        if is_dup == 0:
+            count += 1
+    return count
+","def deduplicate_sorted_count(nums):
+    if len(nums) == 0:
+        return 0
+    count = 1
+    for i in range(1, len(nums)):
+        if nums[i] != nums[i - 1]:
+            count += 1
+    return count",11377.08,136,0,66,202,OK,
+TYR-055,count_pairs_from_halves,Codestral-2501,set-operations,medium,O(N^2),O(N),"def count_pairs_from_halves(nums):
+    if len(nums) == 0:
+        return 0
+    target = nums[0]
+    mid = len(nums) // 2
+    count = 0
+    for i in range(mid):
+        for j in range(mid, len(nums)):
+            if nums[i] + nums[j] == target:
+                count += 1
+    return count
+","def count_pairs_from_halves(nums):
+    if len(nums) == 0:
+        return 0
+    target = nums[0]
+    mid = len(nums) // 2
+    count = 0
+    seen = set()
+    for i in range(mid, len(nums)):
+        seen.add(target - nums[i])
+    for i in range(mid):
+        if nums[i] in seen:
+            count += 1
+    return count",11729.96,134,0,102,236,OK,
+TYR-056,count_smaller_before,Codestral-2501,order-statistics,medium,O(N^2),O(N),"def count_smaller_before(nums):
+    total = 0
+    for i in range(len(nums)):
+        for j in range(i):
+            if nums[j] < nums[i]:
+                total += 1
+    return total
+","def count_smaller_before(nums):
+    from sortedcontainers import SortedList
+
+    sorted_list = SortedList()
+    total = 0
+
+    for num in nums:
+        total += sorted_list.bisect_left(num)
+        sorted_list.add(num)
+
+    return total",1213.29,93,0,63,156,OK,
+TYR-057,kth_smallest,Codestral-2501,order-statistics,medium,O(N^2),O(N log N),"def kth_smallest(nums, k):
+    n = len(nums)
+    for rank in range(k):
+        min_val = nums[0]
+        min_idx = 0
+        for i in range(1, n):
+            if nums[i] < min_val:
+                min_val = nums[i]
+                min_idx = i
+        if rank == k - 1:
+            return min_val
+        nums[min_idx] = nums[0] + 1
+    return -1
+","def kth_smallest(nums, k):
+    return sorted(nums)[k-1]",1191.56,151,0,23,174,OK,
+TYR-058,sort_binary_array,Codestral-2501,order-statistics,easy,O(N),O(N),"def sort_binary_array(nums):
+    result = []
+    for i in range(len(nums)):
+        if nums[i] == 0:
+            result.append(0)
+    for i in range(len(nums)):
+        if nums[i] == 1:
+            result.append(1)
+    return result
+","def sort_binary_array(nums):
+    count_zeros = nums.count(0)
+    return [0] * count_zeros + [1] * (len(nums) - count_zeros)",1103.16,106,0,44,150,OK,
+TYR-059,second_largest,Codestral-2501,order-statistics,easy,O(N),O(N),"def second_largest(nums):
+    if len(nums) < 2:
+        return -1
+    first = nums[0]
+    for i in range(len(nums)):
+        if nums[i] > first:
+            first = nums[i]
+    second = -1
+    found = 0
+    for i in range(len(nums)):
+        if nums[i] != first:
+            if found == 0 or nums[i] > second:
+                second = nums[i]
+                found = 1
+    if found == 0:
+        return -1
+    return second
+","def second_largest(nums):
+    if len(nums) < 2:
+        return -1
+    first = second = float('-inf')
+    for num in nums:
+        if num > first:
+            first, second = num, first
+        elif first > num > second:
+            second = num
+    return second if second != float('-inf') else -1",2049.16,164,0,82,246,OK,
+TYR-060,count_peaks,Codestral-2501,order-statistics,easy,O(N),O(N),"def count_peaks(nums):
+    count = 0
+    for i in range(1, len(nums) - 1):
+        if nums[i] > nums[i - 1] and nums[i] > nums[i + 1]:
+            count += 1
+    return count
+","def count_peaks(nums):
+    count = 0
+    n = len(nums)
+    if n < 3:
+        return 0
+    for i in range(1, n - 1):
+        if nums[i] > nums[i - 1] and nums[i] > nums[i + 1]:
+            count += 1
+    return count",2065.18,107,0,82,189,OK,
+TYR-061,find_leaders,Codestral-2501,order-statistics,medium,O(N^2),O(N),"def find_leaders(nums):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        is_leader = 1
+        for j in range(i + 1, n):
+            if nums[j] >= nums[i]:
+                is_leader = 0
+                break
+        count += is_leader
+    return count
+","def find_leaders(nums):
+    count = 0
+    n = len(nums)
+    if n == 0:
+        return 0
+    max_right = nums[-1]
+    count = 1
+    for i in range(n - 2, -1, -1):
+        if nums[i] >= max_right:
+            count += 1
+            max_right = nums[i]
+    return count",2052.92,122,0,91,213,OK,
+TYR-062,rank_elements_sum,Codestral-2501,order-statistics,medium,O(N^2),O(N),"def rank_elements_sum(nums):
+    total = 0
+    n = len(nums)
+    for i in range(n):
+        rank = 1
+        for j in range(n):
+            if nums[j] < nums[i]:
+                rank += 1
+        total += rank
+    return total
+","def rank_elements_sum(nums):
+    n = len(nums)
+    sorted_nums = sorted(nums)
+    rank_sum = 0
+    for i in range(n):
+        rank = sorted_nums.index(nums[i]) + 1
+        rank_sum += rank
+    return rank_sum",1257.23,108,0,64,172,OK,
+TYR-063,closest_to_zero,Codestral-2501,order-statistics,easy,O(N),O(N),"def closest_to_zero(nums):
+    if len(nums) == 0:
+        return 0
+    best = nums[0]
+    for i in range(len(nums)):
+        a = abs(nums[i])
+        b = abs(best)
+        if a < b:
+            best = nums[i]
+        elif a == b and nums[i] > best:
+            best = nums[i]
+    return best
+","def closest_to_zero(nums):
+    if not nums:
+        return 0
+    best = nums[0]
+    for num in nums:
+        if abs(num) < abs(best) or (abs(num) == abs(best) and num > best):
+            best = num
+    return best",1258.90,129,0,68,197,OK,
+TYR-064,count_out_of_place,Codestral-2501,order-statistics,medium,O(N^2),O(N log N),"def count_out_of_place(nums):
+    n = len(nums)
+    sorted_nums = []
+    for v in nums:
+        sorted_nums.append(v)
+    for i in range(n):
+        for j in range(i + 1, n):
+            if sorted_nums[i] > sorted_nums[j]:
+                tmp = sorted_nums[i]
+                sorted_nums[i] = sorted_nums[j]
+                sorted_nums[j] = tmp
+    count = 0
+    for i in range(n):
+        if nums[i] != sorted_nums[i]:
+            count += 1
+    return count
+","def count_out_of_place(nums):
+    n = len(nums)
+    sorted_nums = sorted(nums)
+    count = sum(1 for i in range(n) if nums[i] != sorted_nums[i])
+    return count",3778.56,176,0,53,229,OK,
+TYR-065,element_rank_product,Codestral-2501,order-statistics,medium,O(N^2),O(N),"def element_rank_product(nums):
+    total = 0
+    n = len(nums)
+    for i in range(n):
+        rank = 1
+        for j in range(n):
+            if nums[j] < nums[i]:
+                rank += 1
+        total += nums[i] * rank
+    return total
+","def element_rank_product(nums):
+    n = len(nums)
+    sorted_nums = sorted(nums)
+    rank_map = {num: i + 1 for i, num in enumerate(sorted_nums)}
+    return sum(num * rank_map[num] for num in nums)",1952.70,112,0,61,173,OK,
+TYR-066,prefix_sum_total,Codestral-2501,prefix-sum,easy,O(N),O(N),"def prefix_sum_total(nums):
+    total = 0
+    running = 0
+    for i in range(len(nums)):
+        running += nums[i]
+        total += running
+    return total
+","def prefix_sum_total(nums):
+    total = 0
+    running = 0
+    for num in nums:
+        running += num
+        total += running
+    return total",1065.06,87,0,43,130,OK,
+TYR-067,range_sum_brute,Codestral-2501,prefix-sum,easy,O(N),O(N),"def range_sum_brute(nums, k):
+    total = 0
+    for i in range(len(nums)):
+        if i <= k:
+            total += nums[i]
+    return total
+","def range_sum_brute(nums, k):
+    return sum(nums[:k+1])",1289.50,86,0,24,110,OK,
+TYR-068,count_equilibrium_indices,Codestral-2501,prefix-sum,medium,O(N^2),O(N),"def count_equilibrium_indices(nums):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        left = 0
+        for j in range(i):
+            left += nums[j]
+        right = 0
+        for j in range(i + 1, n):
+            right += nums[j]
+        if left == right:
+            count += 1
+    return count
+","def count_equilibrium_indices(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+
+    total_sum = sum(nums)
+    left_sum = 0
+    count = 0
+
+    for i in range(n):
+        total_sum -= nums[i]
+        if left_sum == total_sum:
+            count += 1
+        left_sum += nums[i]
+
+    return count",1424.92,132,0,90,222,OK,
+TYR-069,max_prefix_sum,Codestral-2501,prefix-sum,easy,O(N),O(N),"def max_prefix_sum(nums):
+    if len(nums) == 0:
+        return 0
+    best = nums[0]
+    cur = 0
+    for i in range(len(nums)):
+        cur += nums[i]
+        if cur > best:
+            best = cur
+    return best
+","def max_prefix_sum(nums):
+    if not nums:
+        return 0
+    best = cur = nums[0]
+    for num in nums[1:]:
+        cur = max(num, cur + num)
+        best = max(best, cur)
+    return best",1534.73,108,0,62,170,OK,
+TYR-070,left_max_minus_right_min,Codestral-2501,prefix-sum,medium,O(N^2),O(N),"def left_max_minus_right_min(nums):
+    if len(nums) < 2:
+        return 0
+    best = nums[0] - nums[1]
+    n = len(nums)
+    for i in range(n - 1):
+        left_max = nums[0]
+        for j in range(1, i + 1):
+            if nums[j] > left_max:
+                left_max = nums[j]
+        right_min = nums[i + 1]
+        for j in range(i + 2, n):
+            if nums[j] < right_min:
+                right_min = nums[j]
+        d = left_max - right_min
+        if d > best:
+            best = d
+    return best
+","def left_max_minus_right_min(nums):
+    if len(nums) < 2:
+        return 0
+    n = len(nums)
+    left_max = [0] * n
+    right_min = [0] * n
+
+    left_max[0] = nums[0]
+    for i in range(1, n):
+        left_max[i] = max(left_max[i - 1], nums[i])
+
+    right_min[n - 1] = nums[n - 1]
+    for i in range(n - 2, -1, -1):
+        right_min[i] = min(right_min[i + 1], nums[i])
+
+    best = nums[0] - nums[1]
+    for i in range(n - 1):
+        d = left_max[i] - right_min[i + 1]
+        if d > best:
+            best = d
+
+    return best",8550.92,196,0,192,388,OK,
+TYR-071,count_subarrays_divisible_by_k,Codestral-2501,prefix-sum,medium,O(N^2),O(N),"def count_subarrays_divisible_by_k(nums, k):
+    if k == 0:
+        return 0
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        cur = 0
+        for j in range(i, n):
+            cur += nums[j]
+            if cur % k == 0:
+                count += 1
+    return count
+","def count_subarrays_divisible_by_k(nums, k):
+    if k == 0:
+        return 0
+    count = 0
+    prefix_sum = 0
+    remainder_count = {0: 1}
+    for num in nums:
+        prefix_sum += num
+        remainder = prefix_sum % k
+        if remainder in remainder_count:
+            count += remainder_count[remainder]
+            remainder_count[remainder] += 1
+        else:
+            remainder_count[remainder] = 1
+    return count",1609.71,130,0,121,251,OK,
+TYR-072,sum_of_all_subarrays,Codestral-2501,prefix-sum,medium,O(N^2),O(N),"def sum_of_all_subarrays(nums):
+    total = 0
+    n = len(nums)
+    for i in range(n):
+        cur = 0
+        for j in range(i, n):
+            cur += nums[j]
+            total += cur
+    return total
+","def sum_of_all_subarrays(nums):
+    total = 0
+    n = len(nums)
+    for i in range(n):
+        total += nums[i] * (i + 1) * (n - i)
+    return total",1375.12,103,0,55,158,OK,
+TYR-073,count_subarrays_odd_sum,Codestral-2501,prefix-sum,medium,O(N^2),O(N),"def count_subarrays_odd_sum(nums):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        cur = 0
+        for j in range(i, n):
+            cur += nums[j]
+            if cur % 2 != 0:
+                count += 1
+    return count
+","def count_subarrays_odd_sum(nums):
+    count = 0
+    n = len(nums)
+    prefix_sum = 0
+    odd_count = 0
+    even_count = 1
+
+    for num in nums:
+        prefix_sum += num
+        if prefix_sum % 2 == 0:
+            count += odd_count
+            even_count += 1
+        else:
+            count += even_count
+            odd_count += 1
+
+    return count",1530.32,115,0,103,218,OK,
+TYR-074,count_zero_sum_subarrays,Codestral-2501,prefix-sum,medium,O(N^2),O(N),"def count_zero_sum_subarrays(nums):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        cur = 0
+        for j in range(i, n):
+            cur += nums[j]
+            if cur == 0:
+                count += 1
+    return count
+","def count_zero_sum_subarrays(nums):
+    count = 0
+    prefix_sum = 0
+    sum_count = {0: 1}
+
+    for num in nums:
+        prefix_sum += num
+        if prefix_sum in sum_count:
+            count += sum_count[prefix_sum]
+            sum_count[prefix_sum] += 1
+        else:
+            sum_count[prefix_sum] = 1
+
+    return count",1337.28,111,0,94,205,OK,
+TYR-075,max_sum_two_non_overlapping,Codestral-2501,prefix-sum,medium,O(N^2),O(N),"def max_sum_two_non_overlapping(nums):
+    if len(nums) < 2:
+        return 0
+    best = nums[0] + nums[1]
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            s = nums[i] + nums[j]
+            if s > best:
+                best = s
+    return best
+","def max_sum_two_non_overlapping(nums):
+    if len(nums) < 2:
+        return 0
+    n = len(nums)
+    left_max = [0] * n
+    right_max = [0] * n
+    current_max = 0
+    for i in range(n):
+        current_max = max(current_max, nums[i])
+        left_max[i] = current_max
+    current_max = 0
+    for i in range(n - 1, -1, -1):
+        current_max = max(current_max, nums[i])
+        right_max[i] = current_max
+    best = 0
+    for i in range(1, n - 1):
+        best = max(best, left_max[i - 1] + right_max[i + 1])
+    return best",2004.43,133,0,178,311,OK,
+TYR-076,max_of_all_windows,Codestral-2501,sliding-window,medium,O(N^2),O(N),"def max_of_all_windows(nums, k):
+    result = []
+    n = len(nums)
+    for i in range(n - k + 1):
+        mx = nums[i]
+        for j in range(i + 1, i + k):
+            if nums[j] > mx:
+                mx = nums[j]
+        result.append(mx)
+    return result
+","from collections import deque
+
+def max_of_all_windows(nums, k):
+    result = []
+    n = len(nums)
+    dq = deque()
+
+    for i in range(n):
+        while dq and dq[0] <= i - k:
+            dq.popleft()
+        while dq and nums[dq[-1]] < nums[i]:
+            dq.pop()
+        dq.append(i)
+        if i >= k - 1:
+            result.append(nums[dq[0]])
+
+    return result",1504.85,122,0,114,236,OK,
+TYR-077,min_of_all_windows,Codestral-2501,sliding-window,medium,O(N^2),O(N),"def min_of_all_windows(nums, k):
+    result = []
+    n = len(nums)
+    for i in range(n - k + 1):
+        mn = nums[i]
+        for j in range(i + 1, i + k):
+            if nums[j] < mn:
+                mn = nums[j]
+        result.append(mn)
+    return result
+","from collections import deque
+
+def min_of_all_windows(nums, k):
+    result = []
+    n = len(nums)
+    dq = deque()
+
+    for i in range(n):
+        while dq and dq[0] <= i - k:
+            dq.popleft()
+        while dq and nums[dq[-1]] > nums[i]:
+            dq.pop()
+        dq.append(i)
+        if i >= k - 1:
+            result.append(nums[dq[0]])
+
+    return result",1812.60,122,0,114,236,OK,
+TYR-078,count_distinct_in_windows,Codestral-2501,sliding-window,medium,O(N^2),O(N),"def count_distinct_in_windows(nums, k):
+    if len(nums) < k or k <= 0:
+        return 0
+    count = 0
+    for i in range(k):
+        is_first = 1
+        for j in range(i):
+            if nums[j] == nums[i]:
+                is_first = 0
+        count += is_first
+    return count
+","def count_distinct_in_windows(nums, k):
+    if len(nums) < k or k <= 0:
+        return 0
+    count = 0
+    seen = set()
+    for i in range(k):
+        if nums[i] not in seen:
+            count += 1
+            seen.add(nums[i])
+    return count",1881.99,128,0,77,205,OK,
+TYR-079,sum_of_all_windows,Codestral-2501,sliding-window,easy,O(N^2),O(N),"def sum_of_all_windows(nums, k):
+    total = 0
+    n = len(nums)
+    for i in range(n - k + 1):
+        cur = 0
+        for j in range(i, i + k):
+            cur += nums[j]
+        total += cur
+    return total
+","def sum_of_all_windows(nums, k):
+    total = sum(nums[:k])
+    current_sum = total
+    n = len(nums)
+    for i in range(1, n - k + 1):
+        current_sum = current_sum - nums[i - 1] + nums[i + k - 1]
+        total += current_sum
+    return total",1977.97,112,0,82,194,OK,
+TYR-080,has_duplicate_within_k,Codestral-2501,sliding-window,easy,O(N^2),O(N),"def has_duplicate_within_k(nums, k):
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, min(i + k + 1, n)):
+            if nums[i] == nums[j]:
+                return 1
+    return 0
+","def has_duplicate_within_k(nums, k):
+    seen = {}
+    for i, num in enumerate(nums):
+        if num in seen and i - seen[num] <= k:
+            return 1
+        seen[num] = i
+    return 0",1715.16,109,0,60,169,OK,
+TYR-081,max_sum_window,Codestral-2501,sliding-window,easy,O(N^2),O(N),"def max_sum_window(nums, k):
+    if len(nums) < k:
+        return 0
+    best = 0
+    n = len(nums)
+    for i in range(n - k + 1):
+        cur = 0
+        for j in range(i, i + k):
+            cur += nums[j]
+        if i == 0 or cur > best:
+            best = cur
+    return best
+","def max_sum_window(nums, k):
+    if len(nums) < k:
+        return 0
+    best = sum(nums[:k])
+    current_sum = best
+    for i in range(k, len(nums)):
+        current_sum += nums[i] - nums[i - k]
+        if current_sum > best:
+            best = current_sum
+    return best",6108.73,134,0,80,214,OK,
+TYR-082,min_sum_window,Codestral-2501,sliding-window,easy,O(N^2),O(N),"def min_sum_window(nums, k):
+    if len(nums) < k:
+        return 0
+    best = 0
+    n = len(nums)
+    for i in range(n - k + 1):
+        cur = 0
+        for j in range(i, i + k):
+            cur += nums[j]
+        if i == 0 or cur < best:
+            best = cur
+    return best
+","def min_sum_window(nums, k):
+    if len(nums) < k:
+        return 0
+    current_sum = sum(nums[:k])
+    best = current_sum
+    for i in range(k, len(nums)):
+        current_sum += nums[i] - nums[i - k]
+        if current_sum < best:
+            best = current_sum
+    return best",2006.91,134,0,81,215,OK,
+TYR-083,count_windows_all_positive,Codestral-2501,sliding-window,easy,O(N^2),O(N),"def count_windows_all_positive(nums, k):
+    count = 0
+    n = len(nums)
+    for i in range(n - k + 1):
+        all_pos = 1
+        for j in range(i, i + k):
+            if nums[j] <= 0:
+                all_pos = 0
+        count += all_pos
+    return count
+","def count_windows_all_positive(nums, k):
+    count = 0
+    n = len(nums)
+    if n == 0 or k > n:
+        return 0
+
+    positive_count = 0
+    for i in range(k):
+        if nums[i] > 0:
+            positive_count += 1
+
+    if positive_count == k:
+        count += 1
+
+    for i in range(k, n):
+        if nums[i - k] > 0:
+            positive_count -= 1
+        if nums[i] > 0:
+            positive_count += 1
+        if positive_count == k:
+            count += 1
+
+    return count",1942.48,125,0,147,272,OK,
+TYR-084,max_window_range,Codestral-2501,sliding-window,medium,O(N^2),O(N),"def max_window_range(nums, k):
+    if len(nums) < k:
+        return 0
+    best = 0
+    n = len(nums)
+    for i in range(n - k + 1):
+        mx = nums[i]
+        mn = nums[i]
+        for j in range(i + 1, i + k):
+            if nums[j] > mx:
+                mx = nums[j]
+            if nums[j] < mn:
+                mn = nums[j]
+        d = mx - mn
+        if d > best:
+            best = d
+    return best
+","def max_window_range(nums, k):
+    if len(nums) < k:
+        return 0
+    best = 0
+    n = len(nums)
+    for i in range(n - k + 1):
+        mx = max(nums[i:i + k])
+        mn = min(nums[i:i + k])
+        d = mx - mn
+        if d > best:
+            best = d
+    return best",1471.24,167,0,92,259,OK,
+TYR-085,count_windows_with_target_sum,Codestral-2501,sliding-window,easy,O(N^2),O(N),"def count_windows_with_target_sum(nums, k, target):
+    count = 0
+    n = len(nums)
+    for i in range(n - k + 1):
+        cur = 0
+        for j in range(i, i + k):
+            cur += nums[j]
+        if cur == target:
+            count += 1
+    return count
+","def count_windows_with_target_sum(nums, k, target):
+    count = 0
+    n = len(nums)
+    cur_sum = sum(nums[:k])
+    if cur_sum == target:
+        count += 1
+    for i in range(1, n - k + 1):
+        cur_sum = cur_sum - nums[i - 1] + nums[i + k - 1]
+        if cur_sum == target:
+            count += 1
+    return count",15106.94,122,0,106,228,OK,
+TYR-086,first_recurring_element,Codestral-2501,hash-map,easy,O(N^2),O(N),"def first_recurring_element(nums):
+    for i in range(len(nums)):
+        for j in range(i):
+            if nums[j] == nums[i]:
+                return nums[i]
+    return -1
+","def first_recurring_element(nums):
+    seen = set()
+    for num in nums:
+        if num in seen:
+            return num
+        seen.add(num)
+    return -1",1459.02,87,0,43,130,OK,
+TYR-087,same_frequency_distribution,Codestral-2501,hash-map,medium,O(N^2),O(N),"def same_frequency_distribution(nums):
+    mid = len(nums) // 2
+    for i in range(mid):
+        count_a = 0
+        for j in range(mid):
+            if nums[j] == nums[i]:
+                count_a += 1
+        count_b = 0
+        for j in range(mid, len(nums)):
+            if nums[j] == nums[i]:
+                count_b += 1
+        if count_a != count_b:
+            return 0
+    return 1
+","def same_frequency_distribution(nums):
+    mid = len(nums) // 2
+    count_a = {}
+    count_b = {}
+
+    for i in range(mid):
+        if nums[i] in count_a:
+            count_a[nums[i]] += 1
+        else:
+            count_a[nums[i]] = 1
+
+    for i in range(mid, len(nums)):
+        if nums[i] in count_b:
+            count_b[nums[i]] += 1
+        else:
+            count_b[nums[i]] = 1
+
+    for key in count_a:
+        if count_a[key] != count_b.get(key, 0):
+            return 0
+
+    return 1",1871.63,155,0,152,307,OK,
+TYR-088,longest_consecutive_sequence,Codestral-2501,hash-map,medium,O(N^2),O(N),"def longest_consecutive_sequence(nums):
+    if len(nums) == 0:
+        return 0
+    best = 1
+    n = len(nums)
+    for i in range(n):
+        cur = nums[i]
+        length = 1
+        while True:
+            found = 0
+            for j in range(n):
+                if nums[j] == cur + 1:
+                    found = 1
+                    break
+            if found == 1:
+                cur += 1
+                length += 1
+            else:
+                break
+        if length > best:
+            best = length
+    return best
+","def longest_consecutive_sequence(nums):
+    if not nums:
+        return 0
+    num_set = set(nums)
+    best = 0
+    for num in num_set:
+        if num - 1 not in num_set:
+            current_num = num
+            current_streak = 1
+            while current_num + 1 in num_set:
+                current_num += 1
+                current_streak += 1
+            best = max(best, current_streak)
+    return best",1602.80,176,0,109,285,OK,
+TYR-089,top_k_frequent_sum,Codestral-2501,hash-map,medium,O(N^2),O(N),"def top_k_frequent_sum(nums, k):
+    if len(nums) == 0 or k <= 0:
+        return 0
+    n = len(nums)
+    used = []
+    result_sum = 0
+    for rank in range(k):
+        best_val = 0
+        best_count = -1
+        for i in range(n):
+            skip = 0
+            for u in range(len(used)):
+                if used[u] == nums[i]:
+                    skip = 1
+            if skip == 1:
+                continue
+            count = 0
+            for j in range(n):
+                if nums[j] == nums[i]:
+                    count += 1
+            if count > best_count:
+                best_count = count
+                best_val = nums[i]
+        if best_count > 0:
+            used.append(best_val)
+            result_sum += best_val
+    return result_sum
+","def top_k_frequent_sum(nums, k):
+    if len(nums) == 0 or k <= 0:
+        return 0
+
+    from collections import Counter
+
+    freq = Counter(nums)
+    sorted_freq = sorted(freq.items(), key=lambda x: (-x[1], x[0]))
+
+    result_sum = 0
+    for i in range(min(k, len(sorted_freq))):
+        result_sum += sorted_freq[i][0]
+
+    return result_sum",1464.30,236,0,105,341,OK,
+TYR-090,group_count_by_remainder,Codestral-2501,hash-map,easy,O(N),O(N),"def group_count_by_remainder(nums, k):
+    if k == 0:
+        return 0
+    count = 0
+    for i in range(len(nums)):
+        if nums[i] % k == 0:
+            count += 1
+    return count
+","def group_count_by_remainder(nums, k):
+    if k == 0:
+        return 0
+    return sum(1 for num in nums if num % k == 0)",972.00,105,0,46,151,OK,
+TYR-091,count_triplets_with_sum,Codestral-2501,hash-map,medium,O(N^3),O(N^2),"def count_triplets_with_sum(nums, target):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            for k in range(j + 1, n):
+                if nums[i] + nums[j] + nums[k] == target:
+                    count += 1
+    return count
+","def count_triplets_with_sum(nums, target):
+    count = 0
+    n = len(nums)
+    nums.sort()
+    for i in range(n - 2):
+        left, right = i + 1, n - 1
+        while left < right:
+            current_sum = nums[i] + nums[left] + nums[right]
+            if current_sum == target:
+                count += 1
+                left += 1
+                right -= 1
+            elif current_sum < target:
+                left += 1
+            else:
+                right -= 1
+    return count",1694.04,128,0,131,259,OK,
+TYR-092,longest_subarray_all_distinct,Codestral-2501,hash-map,medium,O(N^2),O(N),"def longest_subarray_all_distinct(nums):
+    best = 0
+    n = len(nums)
+    for i in range(n):
+        length = 0
+        has_dup = 0
+        for j in range(i, n):
+            for k in range(i, j):
+                if nums[k] == nums[j]:
+                    has_dup = 1
+            if has_dup == 1:
+                break
+            length += 1
+        if length > best:
+            best = length
+    return best
+","def longest_subarray_all_distinct(nums):
+    best = 0
+    n = len(nums)
+    seen = {}
+    start = 0
+
+    for end in range(n):
+        if nums[end] in seen:
+            start = max(start, seen[nums[end]] + 1)
+        seen[nums[end]] = end
+        best = max(best, end - start + 1)
+
+    return best",1568.32,156,0,96,252,OK,
+TYR-093,count_four_sum,Codestral-2501,hash-map,medium,O(N^4),O(N^2),"def count_four_sum(nums, target):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            for k in range(j + 1, n):
+                for l in range(k + 1, n):
+                    if nums[i] + nums[j] + nums[k] + nums[l] == target:
+                        count += 1
+    return count
+","def count_four_sum(nums, target):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            for k in range(j + 1, n):
+                for l in range(k + 1, n):
+                    if nums[i] + nums[j] + nums[k] + nums[l] == target:
+                        count += 1
+    return count",1401.52,142,0,99,241,OK,
+TYR-094,has_zero_sum_subarray,Codestral-2501,hash-map,easy,O(N^2),O(N),"def has_zero_sum_subarray(nums):
+    n = len(nums)
+    for i in range(n):
+        cur = 0
+        for j in range(i, n):
+            cur += nums[j]
+            if cur == 0:
+                return 1
+    return 0
+","def has_zero_sum_subarray(nums):
+    prefix_sum = 0
+    seen = {0}
+    for num in nums:
+        prefix_sum += num
+        if prefix_sum in seen:
+            return 1
+        seen.add(prefix_sum)
+    return 0",1122.95,105,0,61,166,OK,
+TYR-095,count_complete_subarrays,Codestral-2501,hash-map,medium,O(N^3),O(N),"def count_complete_subarrays(nums):
+    n = len(nums)
+    total_distinct = 0
+    for i in range(n):
+        is_first = 1
+        for j in range(i):
+            if nums[j] == nums[i]:
+                is_first = 0
+        total_distinct += is_first
+    count = 0
+    for i in range(n):
+        for j in range(i, n):
+            dist = 0
+            for k in range(i, j + 1):
+                is_f = 1
+                for m in range(i, k):
+                    if nums[m] == nums[k]:
+                        is_f = 0
+                dist += is_f
+            if dist == total_distinct:
+                count += 1
+    return count
+","def count_complete_subarrays(nums):
+    n = len(nums)
+    distinct_count = len(set(nums))
+    count = 0
+    for i in range(n):
+        seen = set()
+        for j in range(i, n):
+            if nums[j] not in seen:
+                seen.add(nums[j])
+            if len(seen) == distinct_count:
+                count += n - j
+                break
+    return count",2566.60,208,0,92,300,OK,
+TYR-096,longest_equal_01_subarray,Codestral-2501,hash-map,medium,O(N^2),O(N),"def longest_equal_01_subarray(nums):
+    best = 0
+    n = len(nums)
+    for i in range(n):
+        zeros = 0
+        ones = 0
+        for j in range(i, n):
+            if nums[j] == 0:
+                zeros += 1
+            else:
+                ones += 1
+            if zeros == ones and zeros + ones > best:
+                best = zeros + ones
+    return best
+","def longest_equal_01_subarray(nums):
+    best = 0
+    count = 0
+    n = len(nums)
+    count_map = {0: -1}
+
+    for i in range(n):
+        count += 1 if nums[i] == 1 else -1
+        if count in count_map:
+            best = max(best, i - count_map[count])
+        else:
+            count_map[count] = i
+
+    return best",2482.85,143,0,101,244,OK,
+TYR-097,count_pairs_diff_k,Codestral-2501,hash-map,easy,O(N^2),O(N),"def count_pairs_diff_k(nums, k):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if abs(nums[i] - nums[j]) == k:
+                count += 1
+    return count
+","def count_pairs_diff_k(nums, k):
+    count = 0
+    num_count = {}
+    for num in nums:
+        if num in num_count:
+            num_count[num] += 1
+        else:
+            num_count[num] = 1
+
+    for num in nums:
+        if num - k in num_count:
+            count += num_count[num - k]
+        if num + k in num_count:
+            count += num_count[num + k]
+        if k == 0:
+            count -= 1
+
+    return count // 2",2401.57,106,0,122,228,OK,
+TYR-098,longest_band,Codestral-2501,hash-map,medium,O(N^2),O(N),"def longest_band(nums):
+    if len(nums) == 0:
+        return 0
+    best = 1
+    n = len(nums)
+    for i in range(n):
+        cur = nums[i]
+        length = 1
+        while True:
+            found = 0
+            for j in range(n):
+                if nums[j] == cur + 1:
+                    found = 1
+                    break
+            if found == 1:
+                cur += 1
+                length += 1
+            else:
+                break
+        if length > best:
+            best = length
+    return best
+","def longest_band(nums):
+    if len(nums) == 0:
+        return 0
+    nums_set = set(nums)
+    best = 1
+    for num in nums_set:
+        if num - 1 not in nums_set:
+            cur = num
+            length = 1
+            while cur + 1 in nums_set:
+                cur += 1
+                length += 1
+            best = max(best, length)
+    return best",1553.14,174,0,102,276,OK,
+TYR-099,find_majority_one_third,Codestral-2501,hash-map,medium,O(N^2),O(N),"def find_majority_one_third(nums):
+    n = len(nums)
+    for i in range(n):
+        count = 0
+        for j in range(n):
+            if nums[j] == nums[i]:
+                count += 1
+        if count > n // 3:
+            return nums[i]
+    return -1
+","def find_majority_one_third(nums):
+    if not nums:
+        return -1
+
+    candidate1, candidate2, count1, count2 = None, None, 0, 0
+
+    for num in nums:
+        if candidate1 == num:
+            count1 += 1
+        elif candidate2 == num:
+            count2 += 1
+        elif count1 == 0:
+            candidate1, count1 = num, 1
+        elif count2 == 0:
+            candidate2, count2 = num, 1
+        else:
+            count1 -= 1
+            count2 -= 1
+
+    count1 = count2 = 0
+    for num in nums:
+        if num == candidate1:
+            count1 += 1
+        elif num == candidate2:
+            count2 += 1
+
+    n = len(nums)
+    result = []
+    if count1 > n // 3:
+        result.append(candidate1)
+    if count2 > n // 3:
+        result.append(candidate2)
+
+    return result if result else -1",2809.11,116,0,236,352,OK,
+TYR-100,count_subarrays_all_same,Codestral-2501,hash-map,easy,O(N^2),O(N),"def count_subarrays_all_same(nums):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        for j in range(i, n):
+            all_same = 1
+            for k in range(i + 1, j + 1):
+                if nums[k] != nums[i]:
+                    all_same = 0
+                    break
+            count += all_same
+    return count
+","def count_subarrays_all_same(nums):
+    count = 0
+    n = len(nums)
+    i = 0
+    while i < n:
+        j = i
+        while j < n and nums[j] == nums[i]:
+            j += 1
+        length = j - i
+        count += length * (length + 1) // 2
+        i = j
+    return count",1587.57,137,0,93,230,OK,
+TYR-101,move_zeros_to_end,Codestral-2501,array-transform,easy,O(N),O(N),"def move_zeros_to_end(nums):
+    result = []
+    for i in range(len(nums)):
+        if nums[i] != 0:
+            result.append(nums[i])
+    for i in range(len(nums)):
+        if nums[i] == 0:
+            result.append(0)
+    return result
+","def move_zeros_to_end(nums):
+    result = [num for num in nums if num != 0]
+    result.extend([0] * (len(nums) - len(result)))
+    return result",5023.45,108,0,47,155,OK,
+TYR-102,rotate_array_by_k,Codestral-2501,array-transform,medium,O(N),O(N),"def rotate_array_by_k(nums, k):
+    n = len(nums)
+    if n == 0:
+        return []
+    k = k % n
+    result = []
+    for i in range(n - k, n):
+        result.append(nums[i])
+    for i in range(n - k):
+        result.append(nums[i])
+    return result
+","def rotate_array_by_k(nums, k):
+    n = len(nums)
+    if n == 0:
+        return []
+    k = k % n
+    return nums[-k:] + nums[:-k]",1763.21,118,0,48,166,OK,
+TYR-103,segregate_pos_neg,Codestral-2501,array-transform,easy,O(N),O(N),"def segregate_pos_neg(nums):
+    result = []
+    for i in range(len(nums)):
+        if nums[i] >= 0:
+            result.append(nums[i])
+    for i in range(len(nums)):
+        if nums[i] < 0:
+            result.append(nums[i])
+    return result
+","def segregate_pos_neg(nums):
+    result = []
+    for num in nums:
+        if num >= 0:
+            result.append(num)
+    for num in nums:
+        if num < 0:
+            result.append(num)
+    return result",1250.29,108,0,57,165,OK,
+TYR-104,replace_with_rank,Codestral-2501,array-transform,medium,O(N^2),O(N),"def replace_with_rank(nums):
+    result = []
+    n = len(nums)
+    for i in range(n):
+        rank = 1
+        for j in range(n):
+            if nums[j] < nums[i]:
+                rank += 1
+            elif nums[j] == nums[i] and j < i:
+                rank += 0
+        result.append(rank)
+    return result
+","def replace_with_rank(nums):
+    sorted_nums = sorted(nums)
+    rank_map = {}
+    for i, num in enumerate(sorted_nums):
+        if num not in rank_map:
+            rank_map[num] = i + 1
+    return [rank_map[num] for num in nums]",1238.67,127,0,67,194,OK,
+TYR-105,remove_all_target,Codestral-2501,array-transform,easy,O(N),O(N),"def remove_all_target(nums, target):
+    result = []
+    for i in range(len(nums)):
+        if nums[i] != target:
+            result.append(nums[i])
+    return result
+","def remove_all_target(nums, target):
+    return [num for num in nums if num != target]",1303.49,84,0,26,110,OK,
+TYR-106,running_sum,Codestral-2501,array-transform,easy,O(N),O(N),"def running_sum(nums):
+    result = []
+    cur = 0
+    for i in range(len(nums)):
+        cur += nums[i]
+        result.append(cur)
+    return result
+","def running_sum(nums):
+    for i in range(1, len(nums)):
+        nums[i] += nums[i - 1]
+    return nums",1386.38,84,0,36,120,OK,
+TYR-107,find_disappeared_numbers,Codestral-2501,array-transform,medium,O(N^2),O(N),"def find_disappeared_numbers(nums):
+    n = len(nums)
+    result = []
+    for i in range(1, n + 1):
+        found = 0
+        for j in range(n):
+            if nums[j] == i:
+                found = 1
+        if found == 0:
+            result.append(i)
+    return result
+","def find_disappeared_numbers(nums):
+    n = len(nums)
+    for num in nums:
+        index = abs(num) - 1
+        if nums[index] > 0:
+            nums[index] = -nums[index]
+    result = [i + 1 for i in range(n) if nums[i] > 0]
+    return result",1584.39,120,0,79,199,OK,
+TYR-108,find_all_duplicates,Codestral-2501,array-transform,medium,O(N^2),O(N),"def find_all_duplicates(nums):
+    result = []
+    n = len(nums)
+    for i in range(n):
+        is_first = 1
+        for j in range(i):
+            if nums[j] == nums[i]:
+                is_first = 0
+        if is_first == 0:
+            continue
+        count = 0
+        for j in range(n):
+            if nums[j] == nums[i]:
+                count += 1
+        if count == 2:
+            result.append(nums[i])
+    return result
+","def find_all_duplicates(nums):
+    result = []
+    n = len(nums)
+    seen = set()
+    for num in nums:
+        if num in seen:
+            result.append(num)
+        else:
+            seen.add(num)
+    return result",1250.23,157,0,57,214,OK,
+TYR-109,array_sign,Codestral-2501,array-transform,easy,O(N),O(N),"def array_sign(nums):
+    neg_count = 0
+    for i in range(len(nums)):
+        if nums[i] == 0:
+            return 0
+        if nums[i] < 0:
+            neg_count += 1
+    if neg_count % 2 == 0:
+        return 1
+    return -1
+","def array_sign(nums):
+    neg_count = 0
+    for num in nums:
+        if num == 0:
+            return 0
+        if num < 0:
+            neg_count += 1
+    return 1 if neg_count % 2 == 0 else -1",1292.27,117,0,66,183,OK,
+TYR-110,max_consecutive_ones,Codestral-2501,array-transform,easy,O(N),O(N),"def max_consecutive_ones(nums):
+    best = 0
+    cur = 0
+    for i in range(len(nums)):
+        if nums[i] == 1:
+            cur += 1
+            if cur > best:
+                best = cur
+        else:
+            cur = 0
+    return best
+","def max_consecutive_ones(nums):
+    best = 0
+    cur = 0
+    for num in nums:
+        if num == 1:
+            cur += 1
+        else:
+            best = max(best, cur)
+            cur = 0
+    return max(best, cur)",1183.05,114,0,71,185,OK,
+TYR-111,check_monotonic,Codestral-2501,array-transform,easy,O(N),O(N),"def check_monotonic(nums):
+    if len(nums) <= 1:
+        return 1
+    inc = 1
+    dec = 1
+    for i in range(1, len(nums)):
+        if nums[i] > nums[i - 1]:
+            dec = 0
+        if nums[i] < nums[i - 1]:
+            inc = 0
+    if inc == 1 or dec == 1:
+        return 1
+    return 0
+","def check_monotonic(nums):
+    if len(nums) <= 1:
+        return 1
+    inc = dec = True
+    for i in range(1, len(nums)):
+        if nums[i] > nums[i - 1]:
+            dec = False
+        if nums[i] < nums[i - 1]:
+            inc = False
+    return int(inc or dec)",2199.34,149,0,87,236,OK,
+TYR-112,third_distinct_max,Codestral-2501,array-transform,medium,O(N^2),O(N),"def third_distinct_max(nums):
+    distinct = []
+    for i in range(len(nums)):
+        found = 0
+        for j in range(len(distinct)):
+            if distinct[j] == nums[i]:
+                found = 1
+        if found == 0:
+            distinct.append(nums[i])
+    if len(distinct) < 3:
+        best = distinct[0]
+        for v in distinct:
+            if v > best:
+                best = v
+        return best
+    for rank in range(3):
+        mx = distinct[0]
+        mx_idx = 0
+        for i in range(1, len(distinct)):
+            if distinct[i] > mx:
+                mx = distinct[i]
+                mx_idx = i
+        if rank == 2:
+            return mx
+        distinct[mx_idx] = distinct[0] - 1
+    return -1
+","def third_distinct_max(nums):
+    distinct = set()
+    for num in nums:
+        distinct.add(num)
+    if len(distinct) < 3:
+        return max(distinct)
+    return sorted(distinct, reverse=True)[2]",1160.97,231,0,55,286,OK,
+TYR-113,degree_shortest_subarray,Codestral-2501,array-transform,medium,O(N^2),O(N),"def degree_shortest_subarray(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    max_freq = 0
+    for i in range(n):
+        count = 0
+        for j in range(n):
+            if nums[j] == nums[i]:
+                count += 1
+        if count > max_freq:
+            max_freq = count
+    best = n
+    for i in range(n):
+        count = 0
+        for j in range(n):
+            if nums[j] == nums[i]:
+                count += 1
+        if count == max_freq:
+            first = -1
+            last = -1
+            for j in range(n):
+                if nums[j] == nums[i]:
+                    if first == -1:
+                        first = j
+                    last = j
+            length = last - first + 1
+            if length < best:
+                best = length
+    return best
+","def degree_shortest_subarray(nums):
+    from collections import defaultdict
+
+    n = len(nums)
+    if n == 0:
+        return 0
+
+    freq = defaultdict(int)
+    first_seen = {}
+    last_seen = {}
+
+    for i, num in enumerate(nums):
+        if num not in first_seen:
+            first_seen[num] = i
+        last_seen[num] = i
+        freq[num] += 1
+
+    max_freq = max(freq.values())
+    best = n
+
+    for num, count in freq.items():
+        if count == max_freq:
+            length = last_seen[num] - first_seen[num] + 1
+            if length < best:
+                best = length
+
+    return best",2341.13,244,0,164,408,OK,
+TYR-114,shortest_unsorted_subarray,Codestral-2501,array-transform,medium,O(N^2),O(N log N),"def shortest_unsorted_subarray(nums):
+    n = len(nums)
+    sorted_nums = []
+    for v in nums:
+        sorted_nums.append(v)
+    for i in range(n):
+        for j in range(i + 1, n):
+            if sorted_nums[i] > sorted_nums[j]:
+                tmp = sorted_nums[i]
+                sorted_nums[i] = sorted_nums[j]
+                sorted_nums[j] = tmp
+    start = -1
+    end = -1
+    for i in range(n):
+        if nums[i] != sorted_nums[i]:
+            if start == -1:
+                start = i
+            end = i
+    if start == -1:
+        return 0
+    return end - start + 1
+","def shortest_unsorted_subarray(nums):
+    n = len(nums)
+    sorted_nums = sorted(nums)
+    start = -1
+    end = -1
+    for i in range(n):
+        if nums[i] != sorted_nums[i]:
+            if start == -1:
+                start = i
+            end = i
+    if start == -1:
+        return 0
+    return end - start + 1",2536.13,211,0,96,307,OK,
+TYR-115,dutch_flag_sort,Codestral-2501,array-transform,easy,O(N),O(N),"def dutch_flag_sort(nums):
+    result = []
+    for v in range(3):
+        for i in range(len(nums)):
+            if nums[i] == v:
+                result.append(v)
+    return result
+","def dutch_flag_sort(nums):
+    count = [0, 0, 0]
+    for num in nums:
+        count[num] += 1
+    result = []
+    for v in range(3):
+        result.extend([v] * count[v])
+    return result",1447.60,90,0,64,154,OK,
+TYR-116,container_with_most_water,Codestral-2501,competition,medium,O(N^2),O(N),"def container_with_most_water(nums):
+    best = 0
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            h = nums[i]
+            if nums[j] < h:
+                h = nums[j]
+            area = h * (j - i)
+            if area > best:
+                best = area
+    return best
+","def container_with_most_water(nums):
+    best = 0
+    left, right = 0, len(nums) - 1
+    while left < right:
+        h = min(nums[left], nums[right])
+        area = h * (right - left)
+        best = max(best, area)
+        if nums[left] < nums[right]:
+            left += 1
+        else:
+            right -= 1
+    return best",2215.42,131,0,102,233,OK,
+TYR-117,best_time_buy_sell,Codestral-2501,competition,easy,O(N^2),O(N),"def best_time_buy_sell(nums):
+    best = 0
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            profit = nums[j] - nums[i]
+            if profit > best:
+                best = profit
+    return best
+","def best_time_buy_sell(nums):
+    if not nums:
+        return 0
+    min_price = nums[0]
+    max_profit = 0
+    for price in nums:
+        min_price = min(min_price, price)
+        profit = price - min_price
+        max_profit = max(max_profit, profit)
+    return max_profit",2056.78,111,0,82,193,OK,
+TYR-118,trap_rainwater,Codestral-2501,competition,medium,O(N^2),O(N),"def trap_rainwater(nums):
+    total = 0
+    n = len(nums)
+    for i in range(1, n - 1):
+        left_max = 0
+        for j in range(i):
+            if nums[j] > left_max:
+                left_max = nums[j]
+        right_max = 0
+        for j in range(i + 1, n):
+            if nums[j] > right_max:
+                right_max = nums[j]
+        water_level = left_max
+        if right_max < water_level:
+            water_level = right_max
+        if water_level > nums[i]:
+            total += water_level - nums[i]
+    return total
+","def trap_rainwater(nums):
+    total = 0
+    n = len(nums)
+    left_max = [0] * n
+    right_max = [0] * n
+
+    left_max[0] = nums[0]
+    for i in range(1, n):
+        left_max[i] = max(left_max[i - 1], nums[i])
+
+    right_max[n - 1] = nums[n - 1]
+    for i in range(n - 2, -1, -1):
+        right_max[i] = max(right_max[i + 1], nums[i])
+
+    for i in range(1, n - 1):
+        water_level = min(left_max[i], right_max[i])
+        if water_level > nums[i]:
+            total += water_level - nums[i]
+
+    return total",2749.36,186,0,177,363,OK,
+TYR-119,good_pairs_count,Codestral-2501,competition,easy,O(N^2),O(N),"def good_pairs_count(nums):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] == nums[j]:
+                count += 1
+    return count
+","def good_pairs_count(nums):
+    from collections import defaultdict
+    count = 0
+    num_count = defaultdict(int)
+    for num in nums:
+        count += num_count[num]
+        num_count[num] += 1
+    return count",1216.34,99,0,59,158,OK,
+TYR-120,max_chunks_to_sort,Codestral-2501,competition,medium,O(N^2),O(N),"def max_chunks_to_sort(nums):
+    n = len(nums)
+    chunks = 0
+    for i in range(n):
+        mx = 0
+        for j in range(i + 1):
+            if nums[j] > mx:
+                mx = nums[j]
+        if mx == i:
+            chunks += 1
+    return chunks
+","def max_chunks_to_sort(nums):
+    n = len(nums)
+    chunks = 0
+    max_seen = 0
+    for i in range(n):
+        max_seen = max(max_seen, nums[i])
+        if max_seen == i:
+            chunks += 1
+    return chunks",1196.04,119,0,71,190,OK,
+TYR-121,find_peak_element_index,Codestral-2501,competition,easy,O(N),O(log N),"def find_peak_element_index(nums):
+    n = len(nums)
+    if n == 1:
+        return 0
+    if nums[0] > nums[1]:
+        return 0
+    for i in range(1, n - 1):
+        if nums[i] > nums[i - 1] and nums[i] > nums[i + 1]:
+            return i
+    if nums[n - 1] > nums[n - 2]:
+        return n - 1
+    return 0
+","def find_peak_element_index(nums):
+    left, right = 0, len(nums) - 1
+    while left < right:
+        mid = (left + right) // 2
+        if nums[mid] < nums[mid + 1]:
+            left = mid + 1
+        else:
+            right = mid
+    return left",1293.94,156,0,78,234,OK,
+TYR-122,best_sightseeing_pair,Codestral-2501,competition,medium,O(N^2),O(N),"def best_sightseeing_pair(nums):
+    best = 0
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            score = nums[i] + nums[j] + i - j
+            if score > best:
+                best = score
+    return best
+","def best_sightseeing_pair(nums):
+    best = 0
+    max_score = nums[0] + 0
+    for j in range(1, len(nums)):
+        best = max(best, max_score + nums[j] - j)
+        max_score = max(max_score, nums[j] + j)
+    return best",1751.48,116,0,77,193,OK,
+TYR-123,max_turbulence_length,Codestral-2501,competition,medium,O(N^2),O(N),"def max_turbulence_length(nums):
+    n = len(nums)
+    if n < 2:
+        return n
+    best = 1
+    for i in range(n):
+        length = 1
+        for j in range(i + 1, n):
+            if length == 1:
+                if nums[j] != nums[j - 1]:
+                    length += 1
+                else:
+                    break
+            else:
+                prev_up = nums[j - 1] > nums[j - 2]
+                cur_up = nums[j] > nums[j - 1]
+                if nums[j] == nums[j - 1]:
+                    break
+                if prev_up != cur_up:
+                    length += 1
+                else:
+                    break
+        if length > best:
+            best = length
+    return best
+","def max_turbulence_length(nums):
+    n = len(nums)
+    if n < 2:
+        return n
+
+    best = 1
+    length = 1
+
+    for i in range(1, n):
+        if nums[i] > nums[i - 1]:
+            if i % 2 == 1:
+                length += 1
+            else:
+                length = 2
+        elif nums[i] < nums[i - 1]:
+            if i % 2 == 0:
+                length += 1
+            else:
+                length = 2
+        else:
+            length = 1
+
+        best = max(best, length)
+
+    return best",3386.39,218,0,149,367,OK,
+TYR-124,count_arithmetic_subarrays,Codestral-2501,competition,medium,O(N^2),O(N),"def count_arithmetic_subarrays(nums):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 2, n):
+            is_ap = 1
+            d = nums[i + 1] - nums[i]
+            for k in range(i + 1, j + 1):
+                if nums[k] - nums[k - 1] != d:
+                    is_ap = 0
+                    break
+            count += is_ap
+    return count
+","def count_arithmetic_subarrays(nums):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 2, n):
+            d = nums[i + 1] - nums[i]
+            if all(nums[k] - nums[k - 1] == d for k in range(i + 1, j + 1)):
+                count += 1
+    return count",2007.88,156,0,97,253,OK,
+TYR-125,max_width_ramp,Codestral-2501,competition,medium,O(N^2),O(N),"def max_width_ramp(nums):
+    best = 0
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            if nums[i] <= nums[j]:
+                d = j - i
+                if d > best:
+                    best = d
+    return best
+","def max_width_ramp(nums):
+    n = len(nums)
+    stack = []
+    for i in range(n):
+        if not stack or nums[i] < nums[stack[-1]]:
+            stack.append(i)
+    best = 0
+    for j in range(n - 1, -1, -1):
+        while stack and nums[j] >= nums[stack[-1]]:
+            best = max(best, j - stack.pop())
+    return best",2316.44,115,0,103,218,OK,
+TYR-126,nums_smaller_than_current_sum,Codestral-2501,competition,easy,O(N^2),O(N),"def nums_smaller_than_current_sum(nums):
+    total = 0
+    n = len(nums)
+    for i in range(n):
+        count = 0
+        for j in range(n):
+            if nums[j] < nums[i]:
+                count += 1
+        total += count
+    return total
+","def nums_smaller_than_current_sum(nums):
+    sorted_nums = sorted(nums)
+    total = 0
+    n = len(nums)
+    for i in range(n):
+        index = sorted_nums.index(nums[i])
+        total += index
+    return total",1879.01,112,0,61,173,OK,
+TYR-127,longest_harmonious_subsequence,Codestral-2501,competition,medium,O(N^2),O(N),"def longest_harmonious_subsequence(nums):
+    best = 0
+    n = len(nums)
+    for i in range(n):
+        count_same = 0
+        count_plus = 0
+        for j in range(n):
+            if nums[j] == nums[i]:
+                count_same += 1
+            elif nums[j] == nums[i] + 1:
+                count_plus += 1
+        if count_plus > 0:
+            total = count_same + count_plus
+            if total > best:
+                best = total
+    return best
+","def longest_harmonious_subsequence(nums):
+    from collections import Counter
+    count = Counter(nums)
+    best = 0
+    for key in count:
+        if key + 1 in count:
+            best = max(best, count[key] + count[key + 1])
+    return best",1205.82,167,0,69,236,OK,
+TYR-128,three_sum_closest,Codestral-2501,competition,medium,O(N^3),O(N^2),"def three_sum_closest(nums, target):
+    n = len(nums)
+    if n < 3:
+        return 0
+    best = nums[0] + nums[1] + nums[2]
+    for i in range(n):
+        for j in range(i + 1, n):
+            for k in range(j + 1, n):
+                s = nums[i] + nums[j] + nums[k]
+                if abs(s - target) < abs(best - target):
+                    best = s
+    return best
+","def three_sum_closest(nums, target):
+    nums.sort()
+    n = len(nums)
+    best = float('inf')
+
+    for i in range(n - 2):
+        left, right = i + 1, n - 1
+        while left < right:
+            s = nums[i] + nums[left] + nums[right]
+            if abs(s - target) < abs(best - target):
+                best = s
+            if s < target:
+                left += 1
+            else:
+                right -= 1
+
+    return best",2065.52,160,0,122,282,OK,
+TYR-129,max_sum_circular_subarray,Codestral-2501,competition,medium,O(N^2),O(N),"def max_sum_circular_subarray(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    best = nums[0]
+    for i in range(n):
+        cur = 0
+        for j in range(n):
+            cur += nums[(i + j) % n]
+            if cur > best:
+                best = cur
+    return best
+","def max_sum_circular_subarray(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    total_sum = sum(nums)
+    max_sum = float('-inf')
+    min_sum = float('inf')
+    cur_max = 0
+    cur_min = 0
+    for num in nums:
+        cur_max = max(cur_max + num, num)
+        max_sum = max(max_sum, cur_max)
+        cur_min = min(cur_min + num, num)
+        min_sum = min(min_sum, cur_min)
+    return max(max_sum, total_sum - min_sum) if max_sum > 0 else max_sum",2165.82,127,0,143,270,OK,
+TYR-130,minimum_increment_for_unique,Codestral-2501,competition,medium,O(N^2),O(N log N),"def minimum_increment_for_unique(nums):
+    n = len(nums)
+    arr = []
+    for v in nums:
+        arr.append(v)
+    for i in range(n):
+        for j in range(i + 1, n):
+            if arr[i] > arr[j]:
+                tmp = arr[i]
+                arr[i] = arr[j]
+                arr[j] = tmp
+    moves = 0
+    for i in range(1, n):
+        if arr[i] <= arr[i - 1]:
+            diff = arr[i - 1] - arr[i] + 1
+            arr[i] += diff
+            moves += diff
+    return moves
+","def minimum_increment_for_unique(nums):
+    nums.sort()
+    moves = 0
+    for i in range(1, len(nums)):
+        if nums[i] <= nums[i - 1]:
+            diff = nums[i - 1] - nums[i] + 1
+            nums[i] += diff
+            moves += diff
+    return moves",1433.43,187,0,79,266,OK,
+TYR-131,largest_perimeter_triangle,Codestral-2501,competition,easy,O(N^3),O(N log N),"def largest_perimeter_triangle(nums):
+    n = len(nums)
+    best = 0
+    for i in range(n):
+        for j in range(i + 1, n):
+            for k in range(j + 1, n):
+                a = nums[i]
+                b = nums[j]
+                c = nums[k]
+                if a + b > c and a + c > b and b + c > a:
+                    p = a + b + c
+                    if p > best:
+                        best = p
+    return best
+","def largest_perimeter_triangle(nums):
+    nums.sort()
+    for i in range(len(nums) - 1, 1, -1):
+        if nums[i] < nums[i - 1] + nums[i - 2]:
+            return nums[i] + nums[i - 1] + nums[i - 2]
+    return 0",2058.34,161,0,78,239,OK,
+TYR-132,count_teams,Codestral-2501,competition,medium,O(N^3),O(N^2),"def count_teams(nums):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            for k in range(j + 1, n):
+                if nums[i] < nums[j] < nums[k]:
+                    count += 1
+                if nums[i] > nums[j] > nums[k]:
+                    count += 1
+    return count
+","def count_teams(nums):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            if nums[i] < nums[j]:
+                for k in range(j + 1, n):
+                    if nums[j] < nums[k]:
+                        count += 1
+            elif nums[i] > nums[j]:
+                for k in range(j + 1, n):
+                    if nums[j] > nums[k]:
+                        count += 1
+    return count",1906.96,139,0,118,257,OK,
+TYR-133,max_score_after_split,Codestral-2501,competition,easy,O(N^2),O(N),"def max_score_after_split(nums):
+    best = 0
+    n = len(nums)
+    for i in range(1, n):
+        zeros = 0
+        for j in range(i):
+            if nums[j] == 0:
+                zeros += 1
+        ones = 0
+        for j in range(i, n):
+            if nums[j] == 1:
+                ones += 1
+        score = zeros + ones
+        if score > best:
+            best = score
+    return best
+","def max_score_after_split(nums):
+    n = len(nums)
+    total_ones = sum(nums)
+    zeros = 0
+    best = 0
+    for i in range(n - 1):
+        if nums[i] == 0:
+            zeros += 1
+        ones = total_ones - (sum(nums[i+1:]))
+        score = zeros + ones
+        if score > best:
+            best = score
+    return best",2252.46,155,0,100,255,OK,
+TYR-134,count_special_positions,Codestral-2501,competition,medium,O(N^2),O(N),"def count_special_positions(nums):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        rest_sum = 0
+        for j in range(n):
+            if j != i:
+                rest_sum += nums[j]
+        if nums[i] == rest_sum:
+            count += 1
+    return count
+","def count_special_positions(nums):
+    total_sum = sum(nums)
+    count = 0
+    for num in nums:
+        if num == total_sum - num:
+            count += 1
+    return count",1838.15,119,0,51,170,OK,
+TYR-135,jump_game,Codestral-2501,competition,medium,O(N^2),O(N),"def jump_game(nums):
+    n = len(nums)
+    if n <= 1:
+        return 1
+    reachable = [0] * n
+    reachable[0] = 1
+    for i in range(n):
+        if reachable[i] == 0:
+            continue
+        for j in range(1, nums[i] + 1):
+            if i + j < n:
+                reachable[i + j] = 1
+    return reachable[n - 1]
+","def jump_game(nums):
+    n = len(nums)
+    if n <= 1:
+        return 1
+    farthest = 0
+    for i in range(n):
+        if i > farthest:
+            return 0
+        farthest = max(farthest, i + nums[i])
+        if farthest >= n - 1:
+            return 1
+    return 0",1573.35,153,0,88,241,OK,
+TYR-136,count_pairs_xor_k,Codestral-2501,advanced,medium,O(N^2),O(N),"def count_pairs_xor_k(nums, k):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if (nums[i] ^ nums[j]) == k:
+                count += 1
+    return count
+","def count_pairs_xor_k(nums, k):
+    count = 0
+    seen = {}
+    for num in nums:
+        target = num ^ k
+        if target in seen:
+            count += seen[target]
+        if num in seen:
+            seen[num] += 1
+        else:
+            seen[num] = 1
+    return count",1279.25,107,0,81,188,OK,
+TYR-137,count_subarrays_exact_k_distinct,Codestral-2501,advanced,medium,O(N^3),O(N),"def count_subarrays_exact_k_distinct(nums, k):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        for j in range(i, n):
+            dist = 0
+            for m in range(i, j + 1):
+                is_f = 1
+                for p in range(i, m):
+                    if nums[p] == nums[m]:
+                        is_f = 0
+                dist += is_f
+            if dist == k:
+                count += 1
+    return count
+","def count_subarrays_exact_k_distinct(nums, k):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        distinct_count = 0
+        freq = {}
+        for j in range(i, n):
+            if nums[j] not in freq:
+                distinct_count += 1
+                freq[nums[j]] = 1
+            else:
+                freq[nums[j]] += 1
+            if distinct_count == k:
+                count += 1
+            elif distinct_count > k:
+                break
+    return count",2371.78,159,0,123,282,OK,
+TYR-138,longest_equal_subarray,Codestral-2501,advanced,easy,O(N^2),O(N),"def longest_equal_subarray(nums):
+    if len(nums) == 0:
+        return 0
+    best = 1
+    n = len(nums)
+    for i in range(n):
+        length = 1
+        for j in range(i + 1, n):
+            if nums[j] == nums[i]:
+                length += 1
+            else:
+                break
+        if length > best:
+            best = length
+    return best
+","def longest_equal_subarray(nums):
+    if not nums:
+        return 0
+    best = 1
+    n = len(nums)
+    i = 0
+    while i < n:
+        length = 1
+        while i + 1 < n and nums[i] == nums[i + 1]:
+            length += 1
+            i += 1
+        best = max(best, length)
+        i += 1
+    return best",5669.64,140,0,102,242,OK,
+TYR-139,count_local_inversions,Codestral-2501,advanced,easy,O(N),O(N),"def count_local_inversions(nums):
+    count = 0
+    for i in range(len(nums) - 1):
+        if nums[i] > nums[i + 1]:
+            count += 1
+    return count
+","def count_local_inversions(nums):
+    count = 0
+    for i in range(len(nums) - 1):
+        if nums[i] > nums[i + 1]:
+            count += 1
+    return count",1114.45,93,0,52,145,OK,
+TYR-140,largest_rectangle_histogram,Codestral-2501,advanced,medium,O(N^2),O(N),"def largest_rectangle_histogram(nums):
+    best = 0
+    n = len(nums)
+    for i in range(n):
+        h = nums[i]
+        for j in range(i, n):
+            if nums[j] < h:
+                h = nums[j]
+            area = h * (j - i + 1)
+            if area > best:
+                best = area
+    return best
+","def largest_rectangle_histogram(nums):
+    stack = []
+    max_area = 0
+    index = 0
+
+    while index < len(nums):
+        if not stack or nums[stack[-1]] <= nums[index]:
+            stack.append(index)
+            index += 1
+        else:
+            top_of_stack = stack.pop()
+            height = nums[top_of_stack]
+            width = index if not stack else index - stack[-1] - 1
+            max_area = max(max_area, height * width)
+
+    while stack:
+        top_of_stack = stack.pop()
+        height = nums[top_of_stack]
+        width = index if not stack else index - stack[-1] - 1
+        max_area = max(max_area, height * width)
+
+    return max_area",2035.22,130,0,169,299,OK,
+TYR-141,count_range_pairs,Codestral-2501,advanced,medium,O(N^2),O(N),"def count_range_pairs(nums, target, k):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            s = nums[i] + nums[j]
+            if s >= target and s <= target + k:
+                count += 1
+    return count
+","def count_range_pairs(nums, target, k):
+    count = 0
+    seen = {}
+    for num in nums:
+        if num in seen:
+            count += seen[num]
+        for t in range(target, target + k + 1):
+            if t - num in seen:
+                seen[t - num] += 1
+            else:
+                seen[t - num] = 1
+    return count",1397.99,116,0,93,209,OK,
+TYR-142,max_sum_after_removing_one,Codestral-2501,advanced,medium,O(N^2),O(N),"def max_sum_after_removing_one(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    best = nums[0]
+    for i in range(n):
+        cur = 0
+        for j in range(n):
+            if j == i:
+                continue
+            cur += nums[j]
+            if cur > best:
+                best = cur
+        cur = 0
+    for i in range(n):
+        cur = 0
+        for j in range(i, n):
+            cur += nums[j]
+            if cur > best:
+                best = cur
+    return best
+","def max_sum_after_removing_one(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+
+    total_sum = sum(nums)
+    max_sum = float('-inf')
+
+    left_sum = 0
+    right_sum = total_sum
+
+    for i in range(n):
+        right_sum -= nums[i]
+        if i > 0:
+            left_sum += nums[i - 1]
+        max_sum = max(max_sum, left_sum + right_sum)
+
+    return max_sum",1663.76,176,0,112,288,OK,
+TYR-143,can_form_arithmetic_from_sequence,Codestral-2501,advanced,medium,O(N^2),O(N),"def can_form_arithmetic_from_sequence(nums):
+    n = len(nums)
+    if n <= 2:
+        return 1
+    mn = nums[0]
+    mx = nums[0]
+    for i in range(n):
+        if nums[i] < mn:
+            mn = nums[i]
+        if nums[i] > mx:
+            mx = nums[i]
+    if (mx - mn) % (n - 1) != 0:
+        return 0
+    d = (mx - mn) // (n - 1)
+    for step in range(n):
+        target = mn + step * d
+        found = 0
+        for j in range(n):
+            if nums[j] == target:
+                found = 1
+                break
+        if found == 0:
+            return 0
+    return 1
+","def can_form_arithmetic_from_sequence(nums):
+    n = len(nums)
+    if n <= 2:
+        return 1
+    mn = min(nums)
+    mx = max(nums)
+    if (mx - mn) % (n - 1) != 0:
+        return 0
+    d = (mx - mn) // (n - 1)
+    seen = set(nums)
+    for step in range(n):
+        target = mn + step * d
+        if target not in seen:
+            return 0
+    return 1",1635.20,224,0,122,346,OK,
+TYR-144,max_profit_two_transactions,Codestral-2501,advanced,medium,O(N^4),O(N),"def max_profit_two_transactions(nums):
+    n = len(nums)
+    if n < 2:
+        return 0
+    best = 0
+    for i in range(n):
+        for j in range(i + 1, n):
+            profit1 = nums[j] - nums[i]
+            if profit1 < 0:
+                profit1 = 0
+            profit2 = 0
+            for k in range(j + 1, n):
+                for l in range(k + 1, n):
+                    p = nums[l] - nums[k]
+                    if p > profit2:
+                        profit2 = p
+            total = profit1 + profit2
+            if total > best:
+                best = total
+    return best
+","def max_profit_two_transactions(nums):
+    n = len(nums)
+    if n < 2:
+        return 0
+
+    left_min = nums[0]
+    right_max = nums[-1]
+    left_profits = [0] * n
+    right_profits = [0] * n
+
+    for i in range(1, n):
+        left_profits[i] = max(left_profits[i - 1], nums[i] - left_min)
+        left_min = min(left_min, nums[i])
+
+    for i in range(n - 2, -1, -1):
+        right_profits[i] = max(right_profits[i + 1], right_max - nums[i])
+        right_max = max(right_max, nums[i])
+
+    max_profit = 0
+    for i in range(n):
+        max_profit = max(max_profit, left_profits[i] + right_profits[i])
+
+    return max_profit",4238.86,202,0,205,407,OK,
+TYR-145,count_valleys,Codestral-2501,advanced,easy,O(N),O(N),"def count_valleys(nums):
+    count = 0
+    for i in range(1, len(nums) - 1):
+        if nums[i] < nums[i - 1] and nums[i] < nums[i + 1]:
+            count += 1
+    return count
+","def count_valleys(nums):
+    count = 0
+    n = len(nums)
+    if n < 3:
+        return 0
+    for i in range(1, n - 1):
+        if nums[i] < nums[i - 1] and nums[i] < nums[i + 1]:
+            count += 1
+    return count",2219.28,107,0,82,189,OK,
+TYR-146,smallest_difference_pair_abs,Codestral-2501,advanced,medium,O(N^2),O(N log N),"def smallest_difference_pair_abs(nums):
+    if len(nums) < 2:
+        return 0
+    best = abs(nums[0] - nums[1])
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            d = abs(nums[i] - nums[j])
+            if d < best:
+                best = d
+    return best
+","def smallest_difference_pair_abs(nums):
+    if len(nums) < 2:
+        return 0
+    nums.sort()
+    best = abs(nums[0] - nums[1])
+    n = len(nums)
+    for i in range(n - 1):
+        d = abs(nums[i] - nums[i + 1])
+        if d < best:
+            best = d
+    return best",1607.33,135,0,90,225,OK,
+TYR-147,count_nice_pairs,Codestral-2501,advanced,medium,O(N^2),O(N),"def count_nice_pairs(nums):
+    n = len(nums)
+    count = 0
+    diffs = []
+    for i in range(n):
+        x = nums[i]
+        rev = 0
+        tmp = x
+        while tmp > 0:
+            rev = rev * 10 + tmp % 10
+            tmp = tmp // 10
+        diffs.append(x - rev)
+    for i in range(n):
+        for j in range(i + 1, n):
+            if diffs[i] == diffs[j]:
+                count += 1
+    return count
+","def count_nice_pairs(nums):
+    from collections import defaultdict
+    n = len(nums)
+    diffs = defaultdict(int)
+    count = 0
+    for x in nums:
+        rev = 0
+        tmp = x
+        while tmp > 0:
+            rev = rev * 10 + tmp % 10
+            tmp = tmp // 10
+        diff = x - rev
+        count += diffs[diff]
+        diffs[diff] += 1
+    return count",1593.53,174,0,117,291,OK,
+TYR-148,partition_into_min_groups,Codestral-2501,advanced,medium,O(N^2),O(N log N),"def partition_into_min_groups(nums):
+    n = len(nums)
+    arr = []
+    for v in nums:
+        arr.append(v)
+    for i in range(n):
+        for j in range(i + 1, n):
+            if arr[i] > arr[j]:
+                tmp = arr[i]
+                arr[i] = arr[j]
+                arr[j] = tmp
+    if n == 0:
+        return 0
+    max_freq = 0
+    for i in range(n):
+        count = 0
+        for j in range(n):
+            if arr[j] == arr[i]:
+                count += 1
+        if count > max_freq:
+            max_freq = count
+    return max_freq
+","def partition_into_min_groups(nums):
+    if not nums:
+        return 0
+    nums.sort()
+    max_freq = 1
+    current_freq = 1
+    for i in range(1, len(nums)):
+        if nums[i] == nums[i - 1]:
+            current_freq += 1
+        else:
+            max_freq = max(max_freq, current_freq)
+            current_freq = 1
+    max_freq = max(max_freq, current_freq)
+    return max_freq",1696.86,198,0,108,306,OK,
+TYR-149,count_subarrays_with_score_less_k,Codestral-2501,advanced,medium,O(N^2),O(N),"def count_subarrays_with_score_less_k(nums, k):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        cur = 0
+        for j in range(i, n):
+            cur += nums[j]
+            length = j - i + 1
+            if cur * length < k:
+                count += 1
+            else:
+                break
+    return count
+","def count_subarrays_with_score_less_k(nums, k):
+    count = 0
+    n = len(nums)
+    prefix_sum = [0] * (n + 1)
+    for i in range(n):
+        prefix_sum[i + 1] = prefix_sum[i] + nums[i]
+
+    for i in range(n):
+        for j in range(i, n):
+            length = j - i + 1
+            cur_sum = prefix_sum[j + 1] - prefix_sum[i]
+            if cur_sum * length < k:
+                count += 1
+            else:
+                break
+    return count",1898.19,133,0,135,268,OK,
+TYR-150,fair_candy_swap_diff,Codestral-2501,advanced,medium,O(N^2),O(N),"def fair_candy_swap_diff(nums):
+    mid = len(nums) // 2
+    sum_a = 0
+    for i in range(mid):
+        sum_a += nums[i]
+    sum_b = 0
+    for i in range(mid, len(nums)):
+        sum_b += nums[i]
+    for i in range(mid):
+        for j in range(mid, len(nums)):
+            new_a = sum_a - nums[i] + nums[j]
+            new_b = sum_b - nums[j] + nums[i]
+            if new_a == new_b:
+                return nums[j] - nums[i]
+    return 0
+","def fair_candy_swap_diff(nums):
+    mid = len(nums) // 2
+    sum_a = sum(nums[:mid])
+    sum_b = sum(nums[mid:])
+    diff = (sum_b - sum_a) // 2
+    set_b = set(nums[mid:])
+    for num in nums[:mid]:
+        if num + diff in set_b:
+            return diff
+    return 0",1482.65,181,0,91,272,OK,
+TYR-151,count_equal_pairs,Codestral-2501,pair-finding,easy,O(N^2),O(N),"def count_equal_pairs(nums):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] == nums[j]:
+                count += 1
+    return count
+","def count_equal_pairs(nums):
+    count = 0
+    num_count = {}
+    for num in nums:
+        if num in num_count:
+            count += num_count[num]
+            num_count[num] += 1
+        else:
+            num_count[num] = 1
+    return count",3322.67,99,0,68,167,OK,
+TYR-152,find_single_element,Codestral-2501,frequency,easy,O(N^2),O(N),"def find_single_element(nums):
+    for i in range(len(nums)):
+        count = 0
+        for j in range(len(nums)):
+            if nums[j] == nums[i]:
+                count += 1
+        if count == 1:
+            return nums[i]
+    return 0
+","def find_single_element(nums):
+    result = 0
+    for num in nums:
+        result ^= num
+    return result",2074.11,106,0,33,139,OK,
+TYR-153,max_sorted_gap,Codestral-2501,sorting,easy,O(N^2),O(N log N),"def max_sorted_gap(nums):
+    n = len(nums)
+    if n < 2:
+        return 0
+    for i in range(n):
+        for j in range(i + 1, n):
+            if nums[i] > nums[j]:
+                nums[i], nums[j] = nums[j], nums[i]
+    best = 0
+    for i in range(n - 1):
+        diff = nums[i + 1] - nums[i]
+        if diff > best:
+            best = diff
+    return best
+","def max_sorted_gap(nums):
+    n = len(nums)
+    if n < 2:
+        return 0
+    nums.sort()
+    best = 0
+    for i in range(n - 1):
+        diff = nums[i + 1] - nums[i]
+        if diff > best:
+            best = diff
+    return best",1292.63,160,0,79,239,OK,
+TYR-154,arrays_are_permutation,Codestral-2501,set-operations,easy,O(N^2),O(N),"def arrays_are_permutation(nums, target):
+    if len(nums) != len(target):
+        return 0
+    used = [0] * len(target)
+    for i in range(len(nums)):
+        found = 0
+        for j in range(len(target)):
+            if used[j] == 0 and target[j] == nums[i]:
+                used[j] = 1
+                found = 1
+                break
+        if found == 0:
+            return 0
+    return 1
+","def arrays_are_permutation(nums, target):
+    if len(nums) != len(target):
+        return 0
+    count = {}
+    for num in nums:
+        if num in count:
+            count[num] += 1
+        else:
+            count[num] = 1
+    for num in target:
+        if num in count:
+            count[num] -= 1
+            if count[num] < 0:
+                return 0
+        else:
+            return 0
+    return 1",2458.26,152,0,111,263,OK,
+TYR-155,count_unique_elements,Codestral-2501,frequency,easy,O(N^2),O(N),"def count_unique_elements(nums):
+    count = 0
+    for i in range(len(nums)):
+        is_dup = 0
+        for j in range(i):
+            if nums[j] == nums[i]:
+                is_dup = 1
+                break
+        if is_dup == 0:
+            count += 1
+    return count
+","def count_unique_elements(nums):
+    seen = set()
+    count = 0
+    for num in nums:
+        if num not in seen:
+            seen.add(num)
+            count += 1
+    return count",1014.69,120,0,50,170,OK,
+TYR-156,first_non_repeat_index,Codestral-2501,frequency,easy,O(N^2),O(N),"def first_non_repeat_index(nums):
+    for i in range(len(nums)):
+        count = 0
+        for j in range(len(nums)):
+            if nums[j] == nums[i]:
+                count += 1
+        if count == 1:
+            return i
+    return -1
+","def first_non_repeat_index(nums):
+    from collections import Counter
+    count = Counter(nums)
+    for i, num in enumerate(nums):
+        if count[num] == 1:
+            return i
+    return -1",998.66,108,0,53,161,OK,
+TYR-157,majority_vote,Codestral-2501,frequency,easy,O(N^2),O(N),"def majority_vote(nums):
+    n = len(nums)
+    for i in range(n):
+        count = 0
+        for j in range(n):
+            if nums[j] == nums[i]:
+                count += 1
+        if count > n // 2:
+            return nums[i]
+    return -21
+","def majority_vote(nums):
+    candidate = None
+    count = 0
+    for num in nums:
+        if count == 0:
+            candidate = num
+        count += (1 if num == candidate else -1)
+    count = 0
+    for num in nums:
+        if num == candidate:
+            count += 1
+    return candidate if count > len(nums) // 2 else -21",2146.73,113,0,94,207,OK,
+TYR-158,max_prefix_sum,Codestral-2501,prefix-sum,easy,O(N^2),O(N),"def max_prefix_sum(nums):
+    if len(nums) == 0:
+        return 0
+    best = nums[0]
+    for i in range(len(nums)):
+        s = 0
+        for j in range(i + 1):
+            s += nums[j]
+        if s > best:
+            best = s
+    return best
+","def max_prefix_sum(nums):
+    if len(nums) == 0:
+        return 0
+    best = nums[0]
+    current_sum = 0
+    for num in nums:
+        current_sum = max(num, current_sum + num)
+        best = max(best, current_sum)
+    return best",1163.84,118,0,71,189,OK,
+TYR-159,longest_constant_run,Codestral-2501,subarray,easy,O(N^2),O(N),"def longest_constant_run(nums):
+    if len(nums) == 0:
+        return 0
+    best = 1
+    for i in range(len(nums)):
+        length = 1
+        for j in range(i + 1, len(nums)):
+            if nums[j] == nums[i]:
+                length += 1
+            else:
+                break
+        if length > best:
+            best = length
+    return best
+","def longest_constant_run(nums):
+    if len(nums) == 0:
+        return 0
+    best = 1
+    current_length = 1
+    for i in range(1, len(nums)):
+        if nums[i] == nums[i - 1]:
+            current_length += 1
+        else:
+            if current_length > best:
+                best = current_length
+            current_length = 1
+    if current_length > best:
+        best = current_length
+    return best",2302.84,136,0,109,245,OK,
+TYR-160,second_minimum,Codestral-2501,order-statistics,easy,O(N^2),O(N),"def second_minimum(nums):
+    if len(nums) < 2:
+        return -21
+    min1 = nums[0]
+    for i in range(1, len(nums)):
+        if nums[i] < min1:
+            min1 = nums[i]
+    min2 = 21
+    found = 0
+    for i in range(len(nums)):
+        if nums[i] != min1:
+            if found == 0 or nums[i] < min2:
+                min2 = nums[i]
+                found = 1
+    if found == 0:
+        return -21
+    return min2
+","def second_minimum(nums):
+    if len(nums) < 2:
+        return -21
+    min1 = float('inf')
+    min2 = float('inf')
+    for num in nums:
+        if num < min1:
+            min2 = min1
+            min1 = num
+        elif min1 < num < min2:
+            min2 = num
+    return min2 if min2 != float('inf') else -21",1520.58,178,0,101,279,OK,
+TYR-161,count_above_average,Codestral-2501,array-transform,easy,O(N^2),O(N),"def count_above_average(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    total = 0
+    for i in range(n):
+        total += nums[i]
+    avg = total // n
+    count = 0
+    for i in range(n):
+        if nums[i] > avg:
+            count += 1
+    return count
+","def count_above_average(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    total = sum(nums)
+    avg = total // n
+    return sum(1 for num in nums if num > avg)",1114.29,129,0,58,187,OK,
+TYR-162,parity_sort_check,Codestral-2501,sorting,easy,O(N^2),O(N),"def parity_sort_check(nums):
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] % 2 != 0 and nums[j] % 2 == 0:
+                return 0
+    return 1
+","def parity_sort_check(nums):
+    odd_found = False
+    for num in nums:
+        if num % 2 != 0:
+            odd_found = True
+        elif odd_found:
+            return 0
+    return 1",1484.78,105,0,54,159,OK,
+TYR-163,equilibrium_first,Codestral-2501,prefix-sum,easy,O(N^2),O(N),"def equilibrium_first(nums):
+    n = len(nums)
+    for i in range(n):
+        left = 0
+        for j in range(i):
+            left += nums[j]
+        right = 0
+        for j in range(i + 1, n):
+            right += nums[j]
+        if left == right:
+            return i
+    return -1
+","def equilibrium_first(nums):
+    n = len(nums)
+    total_sum = sum(nums)
+    left_sum = 0
+    for i in range(n):
+        total_sum -= nums[i]
+        if left_sum == total_sum:
+            return i
+        left_sum += nums[i]
+    return -1",1247.44,122,0,68,190,OK,
+TYR-164,sum_of_leaders,Codestral-2501,array-transform,easy,O(N^2),O(N),"def sum_of_leaders(nums):
+    total = 0
+    n = len(nums)
+    for i in range(n):
+        is_leader = 1
+        for j in range(i + 1, n):
+            if nums[j] >= nums[i]:
+                is_leader = 0
+                break
+        if is_leader == 1:
+            total += nums[i]
+    return total
+","def sum_of_leaders(nums):
+    if not nums:
+        return 0
+    total = 0
+    max_so_far = nums[-1]
+    total += max_so_far
+    for i in range(len(nums) - 2, -1, -1):
+        if nums[i] > max_so_far:
+            max_so_far = nums[i]
+            total += max_so_far
+    return total",1784.44,131,0,101,232,OK,
+TYR-165,min_pair_abs_diff,Codestral-2501,pair-finding,easy,O(N^2),O(N log N),"def min_pair_abs_diff(nums):
+    if len(nums) < 2:
+        return 0
+    best = abs(nums[0] - nums[1])
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            d = abs(nums[i] - nums[j])
+            if d < best:
+                best = d
+    return best
+","def min_pair_abs_diff(nums):
+    if len(nums) < 2:
+        return 0
+    nums.sort()
+    best = abs(nums[0] - nums[1])
+    for i in range(1, len(nums)):
+        d = abs(nums[i] - nums[i - 1])
+        if d < best:
+            best = d
+    return best",1689.98,130,0,84,214,OK,
+TYR-166,max_right_minus_left,Codestral-2501,subarray,easy,O(N^2),O(N),"def max_right_minus_left(nums):
+    if len(nums) < 2:
+        return 0
+    best = nums[1] - nums[0]
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            d = nums[j] - nums[i]
+            if d > best:
+                best = d
+    return best
+","def max_right_minus_left(nums):
+    if len(nums) < 2:
+        return 0
+    min_left = nums[0]
+    best = nums[1] - nums[0]
+    for i in range(1, len(nums)):
+        best = max(best, nums[i] - min_left)
+        min_left = min(min_left, nums[i])
+    return best",2106.71,126,0,87,213,OK,
+TYR-167,count_interior_peaks,Codestral-2501,array-transform,easy,O(N^2),O(N),"def count_interior_peaks(nums):
+    count = 0
+    for i in range(1, len(nums) - 1):
+        left_ok = 1
+        right_ok = 1
+        for j in range(i):
+            if j == i - 1 and nums[j] >= nums[i]:
+                left_ok = 0
+        for j in range(i + 1, len(nums)):
+            if j == i + 1 and nums[j] >= nums[i]:
+                right_ok = 0
+        if left_ok == 1 and right_ok == 1:
+            count += 1
+    return count
+","def count_interior_peaks(nums):
+    if len(nums) < 3:
+        return 0
+
+    count = 0
+    for i in range(1, len(nums) - 1):
+        if nums[i] > nums[i - 1] and nums[i] > nums[i + 1]:
+            count += 1
+    return count",1376.30,180,0,82,262,OK,
+TYR-168,nearby_duplicate,Codestral-2501,hash-map,easy,O(N^2),O(N),"def nearby_duplicate(nums, k):
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] == nums[j] and j - i <= k:
+                return 1
+    return 0
+","def nearby_duplicate(nums, k):
+    num_indices = {}
+    for i, num in enumerate(nums):
+        if num in num_indices and i - num_indices[num] <= k:
+            return 1
+        num_indices[num] = i
+    return 0",1094.01,101,0,61,162,OK,
+TYR-169,longest_consecutive_len,Codestral-2501,set-operations,easy,O(N^2),O(N),"def longest_consecutive_len(nums):
+    if len(nums) == 0:
+        return 0
+    best = 1
+    for i in range(len(nums)):
+        length = 1
+        cur = nums[i]
+        while True:
+            found = 0
+            for j in range(len(nums)):
+                if nums[j] == cur + 1:
+                    found = 1
+                    break
+            if found == 1:
+                length += 1
+                cur += 1
+            else:
+                break
+        if length > best:
+            best = length
+    return best
+","def longest_consecutive_len(nums):
+    if not nums:
+        return 0
+    num_set = set(nums)
+    best = 0
+    for num in num_set:
+        if num - 1 not in num_set:
+            current_num = num
+            current_streak = 1
+            while current_num + 1 in num_set:
+                current_num += 1
+                current_streak += 1
+            best = max(best, current_streak)
+    return best",1589.24,172,0,109,281,OK,
+TYR-170,count_with_strictly_greater,Codestral-2501,order-statistics,easy,O(N^2),O(N),"def count_with_strictly_greater(nums):
+    count = 0
+    for i in range(len(nums)):
+        has_greater = 0
+        for j in range(len(nums)):
+            if nums[j] > nums[i]:
+                has_greater = 1
+                break
+        count += has_greater
+    return count
+","def count_with_strictly_greater(nums):
+    max_seen = float('-inf')
+    count = 0
+    for num in nums:
+        if num > max_seen:
+            max_seen = num
+            count += 1
+    return count",1085.90,121,0,62,183,OK,
+TYR-171,top_frequency,Codestral-2501,frequency,easy,O(N^2),O(N),"def top_frequency(nums):
+    if len(nums) == 0:
+        return 0
+    best = 0
+    for i in range(len(nums)):
+        count = 0
+        for j in range(len(nums)):
+            if nums[j] == nums[i]:
+                count += 1
+        if count > best:
+            best = count
+    return best
+","def top_frequency(nums):
+    if len(nums) == 0:
+        return 0
+    frequency = {}
+    for num in nums:
+        if num in frequency:
+            frequency[num] += 1
+        else:
+            frequency[num] = 1
+    return max(frequency.values())",1252.04,124,0,67,191,OK,
+TYR-172,even_product_pairs,Codestral-2501,pair-finding,easy,O(N^2),O(N),"def even_product_pairs(nums):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if (nums[i] * nums[j]) % 2 == 0:
+                count += 1
+    return count
+","def even_product_pairs(nums):
+    count = 0
+    even_count = sum(1 for num in nums if num % 2 == 0)
+    odd_count = len(nums) - even_count
+    count += even_count * (even_count - 1) // 2
+    count += even_count * odd_count
+    return count",1744.14,107,0,79,186,OK,
+TYR-173,total_prefix_sums,Codestral-2501,prefix-sum,easy,O(N^2),O(N),"def total_prefix_sums(nums):
+    total = 0
+    for i in range(len(nums)):
+        s = 0
+        for j in range(i + 1):
+            s += nums[j]
+        total += s
+    return total
+","def total_prefix_sums(nums):
+    total = 0
+    prefix_sum = 0
+    for num in nums:
+        prefix_sum += num
+        total += prefix_sum
+    return total",1410.36,98,0,47,145,OK,
+TYR-174,dominators_count,Codestral-2501,array-transform,easy,O(N^2),O(N),"def dominators_count(nums):
+    count = 0
+    for i in range(len(nums)):
+        is_dom = 1
+        for j in range(i):
+            if nums[j] >= nums[i]:
+                is_dom = 0
+                break
+        if is_dom == 1:
+            count += 1
+    return count
+","def dominators_count(nums):
+    if not nums:
+        return 0
+    max_seen = float('-inf')
+    count = 0
+    for num in nums:
+        if num > max_seen:
+            max_seen = num
+            count += 1
+    return count",1296.77,120,0,67,187,OK,
+TYR-175,max_container_water,Codestral-2501,two-pointer,easy,O(N^2),O(N),"def max_container_water(nums):
+    best = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            h = nums[i] if nums[i] < nums[j] else nums[j]
+            area = h * (j - i)
+            if area > best:
+                best = area
+    return best
+","def max_container_water(nums):
+    best = 0
+    left, right = 0, len(nums) - 1
+    while left < right:
+        h = min(nums[left], nums[right])
+        area = h * (right - left)
+        best = max(best, area)
+        if nums[left] < nums[right]:
+            left += 1
+        else:
+            right -= 1
+    return best",2219.75,123,0,100,223,OK,
+TYR-176,smallest_absent_positive,Codestral-2501,hash-map,easy,O(N^2),O(N),"def smallest_absent_positive(nums):
+    for v in range(1, len(nums) + 2):
+        found = 0
+        for j in range(len(nums)):
+            if nums[j] == v:
+                found = 1
+                break
+        if found == 0:
+            return v
+    return len(nums) + 1
+","def smallest_absent_positive(nums):
+    n = len(nums)
+    for i in range(n):
+        while 1 <= nums[i] <= n and nums[nums[i] - 1] != nums[i]:
+            nums[nums[i] - 1], nums[i] = nums[i], nums[nums[i] - 1]
+    for i in range(n):
+        if nums[i] != i + 1:
+            return i + 1
+    return n + 1",2196.73,121,0,109,230,OK,
+TYR-177,all_pairs_xor_sum,Codestral-2501,pair-finding,easy,O(N^2),O(N),"def all_pairs_xor_sum(nums):
+    total = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            total += nums[i] ^ nums[j]
+    return total
+","def all_pairs_xor_sum(nums):
+    total = 0
+    n = len(nums)
+    for num in nums:
+        total += num * (n - 1)
+    return total",7652.19,96,0,47,143,OK,
+TYR-178,count_equal_triplets,Codestral-2501,frequency,easy,O(N^3),O(N),"def count_equal_triplets(nums):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            for k in range(j + 1, len(nums)):
+                if nums[i] == nums[j] == nums[k]:
+                    count += 1
+    return count
+","def count_equal_triplets(nums):
+    from collections import defaultdict
+
+    count = 0
+    freq = defaultdict(int)
+
+    for num in nums:
+        freq[num] += 1
+
+    for val in freq.values():
+        if val >= 3:
+            count += (val * (val - 1) * (val - 2)) // 6
+
+    return count",1967.90,117,0,88,205,OK,
+TYR-179,max_product_two,Codestral-2501,pair-finding,easy,O(N^2),O(N),"def max_product_two(nums):
+    if len(nums) < 2:
+        return 0
+    best = nums[0] * nums[1]
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            p = nums[i] * nums[j]
+            if p > best:
+                best = p
+    return best
+","def max_product_two(nums):
+    if len(nums) < 2:
+        return 0
+    max1 = max(nums[0], nums[1])
+    max2 = min(nums[0], nums[1])
+    for i in range(2, len(nums)):
+        if nums[i] > max1:
+            max2 = max1
+            max1 = nums[i]
+        elif nums[i] > max2:
+            max2 = nums[i]
+    return max1 * max2",1584.02,124,0,109,233,OK,
+TYR-180,sum_of_pair_maxes,Codestral-2501,pair-finding,easy,O(N^2),O(N log N),"def sum_of_pair_maxes(nums):
+    total = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            total += nums[i] if nums[i] > nums[j] else nums[j]
+    return total
+","def sum_of_pair_maxes(nums):
+    nums.sort()
+    total = 0
+    n = len(nums)
+    for i in range(n):
+        total += nums[i] * (n - i - 1)
+    return total",1090.40,105,0,55,160,OK,
+TYR-181,count_surpassers_total,Codestral-2501,pair-finding,easy,O(N^2),O(N log N),"def count_surpassers_total(nums):
+    total = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[j] > nums[i]:
+                total += 1
+    return total
+","def count_surpassers_total(nums):
+    from bisect import bisect_right
+    sorted_nums = sorted(nums)
+    total = 0
+    for num in nums:
+        total += len(sorted_nums) - bisect_right(sorted_nums, num)
+    return total",1146.65,103,0,67,170,OK,
+TYR-182,is_sorted_rotation,Codestral-2501,sorting,easy,O(N^2),O(N),"def is_sorted_rotation(nums):
+    n = len(nums)
+    if n <= 1:
+        return 1
+    for r in range(n):
+        ok = 1
+        for i in range(n - 1):
+            if nums[(r + i) % n] > nums[(r + i + 1) % n]:
+                ok = 0
+                break
+        if ok == 1:
+            return 1
+    return 0
+","def is_sorted_rotation(nums):
+    n = len(nums)
+    if n <= 1:
+        return 1
+    min_index = 0
+    for i in range(1, n):
+        if nums[i] < nums[min_index]:
+            min_index = i
+    for i in range(n - 1):
+        if nums[(min_index + i) % n] > nums[(min_index + i + 1) % n]:
+            return 0
+    return 1",1694.65,145,0,111,256,OK,
+TYR-183,zero_sum_pair_count,Codestral-2501,pair-finding,easy,O(N^2),O(N),"def zero_sum_pair_count(nums):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] + nums[j] == 0:
+                count += 1
+    return count
+","def zero_sum_pair_count(nums):
+    count = 0
+    seen = set()
+    for num in nums:
+        if -num in seen:
+            count += 1
+        seen.add(num)
+    return count",1097.60,103,0,51,154,OK,
+TYR-184,lis_length,Codestral-2501,dynamic-programming,medium,O(2^N * N),O(N^2),"def lis_length(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    best = 1
+    for mask in range(1, 1 << n):
+        subseq = []
+        for i in range(n):
+            if mask & (1 << i):
+                subseq.append(nums[i])
+        ok = 1
+        for i in range(len(subseq) - 1):
+            if subseq[i] >= subseq[i + 1]:
+                ok = 0
+                break
+        if ok == 1 and len(subseq) > best:
+            best = len(subseq)
+    return best
+","def lis_length(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    dp = [1] * n
+    for i in range(1, n):
+        for j in range(i):
+            if nums[i] > nums[j]:
+                dp[i] = max(dp[i], dp[j] + 1)
+    return max(dp)",1309.47,185,0,84,269,OK,
+TYR-185,max_subarray_kadane,Codestral-2501,subarray,medium,O(N^3),O(N),"def max_subarray_kadane(nums):
+    if len(nums) == 0:
+        return 0
+    best = nums[0]
+    for i in range(len(nums)):
+        for j in range(i, len(nums)):
+            s = 0
+            for k in range(i, j + 1):
+                s += nums[k]
+            if s > best:
+                best = s
+    return best
+","def max_subarray_kadane(nums):
+    if len(nums) == 0:
+        return 0
+    best = float('-inf')
+    current = 0
+    for num in nums:
+        current = max(num, current + num)
+        best = max(best, current)
+    return best",2000.44,133,0,70,203,OK,
+TYR-186,subarrays_with_sum,Codestral-2501,prefix-sum,medium,O(N^3),O(N),"def subarrays_with_sum(nums, target):
+    count = 0
+    for i in range(len(nums)):
+        for j in range(i, len(nums)):
+            s = 0
+            for k in range(i, j + 1):
+                s += nums[k]
+            if s == target:
+                count += 1
+    return count
+","def subarrays_with_sum(nums, target):
+    count = 0
+    prefix_sum = 0
+    sum_count = {0: 1}
+
+    for num in nums:
+        prefix_sum += num
+        if prefix_sum - target in sum_count:
+            count += sum_count[prefix_sum - target]
+        if prefix_sum in sum_count:
+            sum_count[prefix_sum] += 1
+        else:
+            sum_count[prefix_sum] = 1
+
+    return count",2355.18,119,0,107,226,OK,
+TYR-187,lcs_of_arrays,Codestral-2501,dynamic-programming,medium,O(2^(N+M) * N),O(N*M),"def lcs_of_arrays(a, b):
+    na = len(a)
+    nb = len(b)
+    best = 0
+    for mask in range(1 << na):
+        sub_a = []
+        for i in range(na):
+            if mask & (1 << i):
+                sub_a.append(a[i])
+        for mask2 in range(1 << nb):
+            sub_b = []
+            for j in range(nb):
+                if mask2 & (1 << j):
+                    sub_b.append(b[j])
+            if len(sub_a) == len(sub_b) and len(sub_a) > best:
+                match = 1
+                for k in range(len(sub_a)):
+                    if sub_a[k] != sub_b[k]:
+                        match = 0
+                        break
+                if match == 1:
+                    best = len(sub_a)
+    return best
+","def lcs_of_arrays(a, b):
+    na = len(a)
+    nb = len(b)
+    dp = [[0] * (nb + 1) for _ in range(na + 1)]
+
+    for i in range(1, na + 1):
+        for j in range(1, nb + 1):
+            if a[i - 1] == b[j - 1]:
+                dp[i][j] = dp[i - 1][j - 1] + 1
+            else:
+                dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
+
+    return dp[na][nb]",1919.64,228,0,148,376,OK,
+TYR-188,max_product_subarray,Codestral-2501,subarray,medium,O(N^3),O(N),"def max_product_subarray(nums):
+    if len(nums) == 0:
+        return 0
+    best = nums[0]
+    for i in range(len(nums)):
+        for j in range(i, len(nums)):
+            prod = 1
+            for k in range(i, j + 1):
+                prod *= nums[k]
+            if prod > best:
+                best = prod
+    return best
+","def max_product_subarray(nums):
+    if len(nums) == 0:
+        return 0
+    max_ending_here = min_ending_here = best = nums[0]
+    for num in nums[1:]:
+        if num < 0:
+            max_ending_here, min_ending_here = min_ending_here, max_ending_here
+        max_ending_here = max(num, max_ending_here * num)
+        min_ending_here = min(num, min_ending_here * num)
+        best = max(best, max_ending_here)
+    return best",1897.17,131,0,139,270,OK,
+TYR-189,count_zero_triplets,Codestral-2501,pair-finding,medium,O(N^3),O(N^2),"def count_zero_triplets(nums):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            for k in range(j + 1, n):
+                if nums[i] + nums[j] + nums[k] == 0:
+                    count += 1
+    return count
+","def count_zero_triplets(nums):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            for k in range(j + 1, n):
+                if nums[i] + nums[j] + nums[k] == 0:
+                    count += 1
+    return count",1301.26,126,0,83,209,OK,
+TYR-190,can_partition_equal,Codestral-2501,dynamic-programming,medium,O(2^N * N),O(N*S),"def can_partition_equal(nums):
+    n = len(nums)
+    total = 0
+    for x in nums:
+        total += x
+    if total % 2 != 0:
+        return 0
+    half = total // 2
+    for mask in range(1 << n):
+        s = 0
+        for i in range(n):
+            if mask & (1 << i):
+                s += nums[i]
+        if s == half:
+            return 1
+    return 0
+","def can_partition_equal(nums):
+    n = len(nums)
+    total = sum(nums)
+    if total % 2 != 0:
+        return 0
+    half = total // 2
+    dp = [False] * (half + 1)
+    dp[0] = True
+    for num in nums:
+        for j in range(half, num - 1, -1):
+            dp[j] = dp[j] or dp[j - num]
+    return int(dp[half])",1702.71,154,0,111,265,OK,
+TYR-191,rob_houses_max,Codestral-2501,dynamic-programming,medium,O(2^N * N),O(N),"def rob_houses_max(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    best = 0
+    for mask in range(1 << n):
+        ok = 1
+        for i in range(n - 1):
+            if (mask & (1 << i)) and (mask & (1 << (i + 1))):
+                ok = 0
+                break
+        if ok == 1:
+            s = 0
+            for i in range(n):
+                if mask & (1 << i):
+                    s += nums[i]
+            if s > best:
+                best = s
+    return best
+","def rob_houses_max(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    if n == 1:
+        return nums[0]
+
+    prev2 = 0
+    prev1 = nums[0]
+
+    for i in range(1, n):
+        current = max(prev1, prev2 + nums[i])
+        prev2 = prev1
+        prev1 = current
+
+    return prev1",14283.39,186,0,99,285,OK,
+TYR-192,subset_count_target,Codestral-2501,dynamic-programming,medium,O(2^N * N),O(N*T),"def subset_count_target(nums, target):
+    n = len(nums)
+    count = 0
+    for mask in range(1 << n):
+        s = 0
+        for i in range(n):
+            if mask & (1 << i):
+                s += nums[i]
+        if s == target:
+            count += 1
+    return count
+","def subset_count_target(nums, target):
+    n = len(nums)
+    dp = [0] * (target + 1)
+    dp[0] = 1
+    for num in nums:
+        for t in range(target, num - 1, -1):
+            dp[t] += dp[t - num]
+    return dp[target]",4137.83,122,0,78,200,OK,
+TYR-193,climb_stairs_min_cost,Codestral-2501,dynamic-programming,medium,O(2^N * N),O(N),"def climb_stairs_min_cost(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    if n == 1:
+        return nums[0]
+    best = 10000
+    for mask in range(1 << n):
+        steps = []
+        for i in range(n):
+            if mask & (1 << i):
+                steps.append(i)
+        if len(steps) == 0:
+            continue
+        if steps[0] > 1:
+            continue
+        ok = 1
+        for i in range(len(steps) - 1):
+            if steps[i + 1] - steps[i] > 2:
+                ok = 0
+                break
+        if ok == 1 and steps[-1] >= n - 2:
+            cost = 0
+            for s in steps:
+                cost += nums[s]
+            if cost < best:
+                best = cost
+    return best
+","def climb_stairs_min_cost(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    if n == 1:
+        return nums[0]
+
+    dp = [float('inf')] * n
+    dp[0] = nums[0]
+    if n > 1:
+        dp[1] = nums[1]
+
+    for i in range(2, n):
+        dp[i] = nums[i] + min(dp[i-1], dp[i-2])
+
+    return min(dp[n-1], dp[n-2])",13892.09,250,0,126,376,OK,
+TYR-194,longest_palindrome_subseq_len,Codestral-2501,dynamic-programming,medium,O(2^N * N),O(N^2),"def longest_palindrome_subseq_len(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    best = 1
+    for mask in range(1, 1 << n):
+        subseq = []
+        for i in range(n):
+            if mask & (1 << i):
+                subseq.append(nums[i])
+        is_pal = 1
+        for i in range(len(subseq) // 2):
+            if subseq[i] != subseq[len(subseq) - 1 - i]:
+                is_pal = 0
+                break
+        if is_pal == 1 and len(subseq) > best:
+            best = len(subseq)
+    return best
+","def longest_palindrome_subseq_len(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    best = 1
+    for i in range(n):
+        for j in range(i, n):
+            subseq = nums[i:j+1]
+            if subseq == subseq[::-1] and len(subseq) > best:
+                best = len(subseq)
+    return best",2091.25,201,0,97,298,OK,
+TYR-195,max_sum_inc_subseq,Codestral-2501,dynamic-programming,medium,O(2^N * N),O(N^2),"def max_sum_inc_subseq(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    best = nums[0]
+    for mask in range(1, 1 << n):
+        subseq = []
+        s = 0
+        for i in range(n):
+            if mask & (1 << i):
+                subseq.append(nums[i])
+                s += nums[i]
+        ok = 1
+        for i in range(len(subseq) - 1):
+            if subseq[i] >= subseq[i + 1]:
+                ok = 0
+                break
+        if ok == 1 and s > best:
+            best = s
+    return best
+","def max_sum_inc_subseq(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    dp = [0] * n
+    dp[0] = nums[0]
+    for i in range(1, n):
+        dp[i] = nums[i]
+        for j in range(i):
+            if nums[j] < nums[i]:
+                dp[i] = max(dp[i], dp[j] + nums[i])
+    return max(dp)",1592.44,196,0,105,301,OK,
+TYR-196,longest_wiggle_length,Codestral-2501,dynamic-programming,medium,O(2^N * N),O(N),"def longest_wiggle_length(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    best = 1
+    for mask in range(1, 1 << n):
+        subseq = []
+        for i in range(n):
+            if mask & (1 << i):
+                subseq.append(nums[i])
+        if len(subseq) <= 1:
+            if len(subseq) > best:
+                best = len(subseq)
+            continue
+        ok = 1
+        for i in range(1, len(subseq) - 1):
+            d1 = subseq[i] - subseq[i - 1]
+            d2 = subseq[i + 1] - subseq[i]
+            if d1 == 0 or d2 == 0 or (d1 > 0 and d2 > 0) or (d1 < 0 and d2 < 0):
+                ok = 0
+                break
+        d_first = subseq[1] - subseq[0]
+        if d_first == 0:
+            ok = 0
+        if ok == 1 and len(subseq) > best:
+            best = len(subseq)
+    return best
+","def longest_wiggle_length(nums):
+    if not nums:
+        return 0
+    up = down = 1
+    for i in range(1, len(nums)):
+        if nums[i] > nums[i - 1]:
+            up = down + 1
+        elif nums[i] < nums[i - 1]:
+            down = up + 1
+    return max(up, down)",1400.60,306,0,90,396,OK,
+TYR-197,min_jumps_to_end,Codestral-2501,dynamic-programming,medium,O(2^N * N),O(N),"def min_jumps_to_end(nums):
+    n = len(nums)
+    if n <= 1:
+        return 0
+    best = n + 1
+    for mask in range(1 << n):
+        if not (mask & 1):
+            continue
+        if not (mask & (1 << (n - 1))):
+            continue
+        steps = []
+        for i in range(n):
+            if mask & (1 << i):
+                steps.append(i)
+        ok = 1
+        for i in range(len(steps) - 1):
+            gap = steps[i + 1] - steps[i]
+            if gap > nums[steps[i]]:
+                ok = 0
+                break
+        if ok == 1 and len(steps) - 1 < best:
+            best = len(steps) - 1
+    if best > n:
+        return -1
+    return best
+","def min_jumps_to_end(nums):
+    n = len(nums)
+    if n <= 1:
+        return 0
+    jumps = [float('inf')] * n
+    jumps[0] = 0
+    for i in range(n):
+        for j in range(1, nums[i] + 1):
+            if i + j < n:
+                jumps[i + j] = min(jumps[i + j], jumps[i] + 1)
+    return jumps[-1] if jumps[-1] != float('inf') else -1",2053.22,240,0,123,363,OK,
+TYR-198,target_sum_ways,Codestral-2501,dynamic-programming,medium,O(2^N),O(N*S),"def target_sum_ways(nums, target):
+    n = len(nums)
+    count = 0
+    for mask in range(1 << n):
+        s = 0
+        for i in range(n):
+            if mask & (1 << i):
+                s += nums[i]
+            else:
+                s -= nums[i]
+        if s == target:
+            count += 1
+    return count
+","def target_sum_ways(nums, target):
+    n = len(nums)
+    dp = {0: 1}
+    for num in nums:
+        new_dp = {}
+        for s, count in dp.items():
+            new_dp[s + num] = new_dp.get(s + num, 0) + count
+            new_dp[s - num] = new_dp.get(s - num, 0) + count
+        dp = new_dp
+    return dp.get(target, 0)",3523.66,131,0,112,243,OK,
+TYR-199,decode_digit_ways,Codestral-2501,dynamic-programming,medium,O(2^N),O(N),"def decode_digit_ways(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    count = 0
+    for mask in range(1, 1 << (n - 1) + 1):
+        groups = []
+        start = 0
+        for i in range(n - 1):
+            if mask & (1 << i):
+                groups.append(nums[start:i + 1])
+                start = i + 1
+        groups.append(nums[start:n])
+        ok = 1
+        for g in groups:
+            if len(g) == 1:
+                if g[0] == 0:
+                    ok = 0
+                    break
+            elif len(g) == 2:
+                val = g[0] * 10 + g[1]
+                if val < 10 or val > 26:
+                    ok = 0
+                    break
+            else:
+                ok = 0
+                break
+        if ok == 1:
+            count += 1
+    return count
+","def decode_digit_ways(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    dp = [0] * (n + 1)
+    dp[0] = 1
+    dp[1] = 1 if nums[0] != '0' else 0
+
+    for i in range(2, n + 1):
+        one_digit = int(nums[i - 1])
+        two_digits = int(nums[i - 2:i])
+        if one_digit != 0:
+            dp[i] += dp[i - 1]
+        if 10 <= two_digits <= 26:
+            dp[i] += dp[i - 2]
+
+    return dp[n]",2351.68,270,0,162,432,OK,
+TYR-200,max_chain_pairs,Codestral-2501,greedy,medium,O(2^N * N^2),O(N log N),"def max_chain_pairs(nums):
+    n = len(nums) // 2
+    if n == 0:
+        return 0
+    pairs = []
+    for i in range(n):
+        pairs.append((nums[2 * i], nums[2 * i + 1]))
+    best = 1
+    for mask in range(1, 1 << n):
+        sel = []
+        for i in range(n):
+            if mask & (1 << i):
+                sel.append(pairs[i])
+        for i in range(len(sel)):
+            for j in range(i + 1, len(sel)):
+                if sel[i][1] > sel[j][1]:
+                    sel[i], sel[j] = sel[j], sel[i]
+        ok = 1
+        for i in range(len(sel) - 1):
+            if sel[i][1] >= sel[i + 1][0]:
+                ok = 0
+                break
+        if ok == 1 and len(sel) > best:
+            best = len(sel)
+    return best
+","def max_chain_pairs(nums):
+    n = len(nums) // 2
+    if n == 0:
+        return 0
+    pairs = [(nums[2 * i], nums[2 * i + 1]) for i in range(n)]
+    pairs.sort(key=lambda x: x[1])
+    dp = [1] * n
+    for i in range(1, n):
+        for j in range(i):
+            if pairs[j][1] < pairs[i][0]:
+                dp[i] = max(dp[i], dp[j] + 1)
+    return max(dp)",3183.73,273,0,131,404,OK,
+TYR-201,min_partition_diff,Codestral-2501,dynamic-programming,hard,O(2^N * N),O(N*S),"def min_partition_diff(nums):
+    n = len(nums)
+    total = 0
+    for x in nums:
+        total += x
+    best = abs(total)
+    for mask in range(1 << n):
+        s = 0
+        for i in range(n):
+            if mask & (1 << i):
+                s += nums[i]
+        diff = abs(total - 2 * s)
+        if diff < best:
+            best = diff
+    return best
+","def min_partition_diff(nums):
+    n = len(nums)
+    total = sum(nums)
+    best = total
+    dp = [False] * (total + 1)
+    dp[0] = True
+
+    for num in nums:
+        for j in range(total, num - 1, -1):
+            dp[j] = dp[j] or dp[j - num]
+
+    for j in range(total // 2, -1, -1):
+        if dp[j]:
+            best = min(best, abs(total - 2 * j))
+
+    return best",1609.25,147,0,125,272,OK,
+TYR-202,palindrome_min_cuts,Codestral-2501,dynamic-programming,hard,O(2^N * N),O(N^2),"def palindrome_min_cuts(nums):
+    n = len(nums)
+    if n <= 1:
+        return 0
+    best = n - 1
+    for mask in range(1 << (n - 1)):
+        cuts = []
+        for i in range(n - 1):
+            if mask & (1 << i):
+                cuts.append(i + 1)
+        parts = []
+        prev = 0
+        for c in cuts:
+            parts.append(nums[prev:c])
+            prev = c
+        parts.append(nums[prev:n])
+        ok = 1
+        for p in parts:
+            for i in range(len(p) // 2):
+                if p[i] != p[len(p) - 1 - i]:
+                    ok = 0
+                    break
+            if ok == 0:
+                break
+        if ok == 1 and len(parts) - 1 < best:
+            best = len(parts) - 1
+    return best
+","def palindrome_min_cuts(nums):
+    n = len(nums)
+    if n <= 1:
+        return 0
+
+    dp = [float('inf')] * n
+    dp[0] = 0
+
+    for i in range(n):
+        for j in range(i + 1):
+            if nums[j:i + 1] == nums[j:i + 1][::-1]:
+                if j == 0:
+                    dp[i] = 0
+                else:
+                    dp[i] = min(dp[i], dp[j - 1] + 1)
+
+    return dp[n - 1]",2449.82,256,0,135,391,OK,
+TYR-203,knapsack_max_value,Codestral-2501,dynamic-programming,hard,O(2^N * N),O(N*W),"def knapsack_max_value(nums, capacity):
+    n = len(nums) // 2
+    best = 0
+    for mask in range(1 << n):
+        w = 0
+        v = 0
+        for i in range(n):
+            if mask & (1 << i):
+                w += nums[2 * i]
+                v += nums[2 * i + 1]
+        if w <= capacity and v > best:
+            best = v
+    return best
+","def knapsack_max_value(nums, capacity):
+    n = len(nums) // 2
+    dp = [0] * (capacity + 1)
+    for i in range(n):
+        weight = nums[2 * i]
+        value = nums[2 * i + 1]
+        for w in range(capacity, weight - 1, -1):
+            dp[w] = max(dp[w], dp[w - weight] + value)
+    return dp[capacity]",1527.31,152,0,111,263,OK,
+TYR-204,shortest_superseq_len,Codestral-2501,dynamic-programming,hard,O(2^(N+M) * (N+M)),O(N*M),"def shortest_superseq_len(a, b):
+    na = len(a)
+    nb = len(b)
+    best = na + nb
+    for mask_a in range(1 << na):
+        for mask_b in range(1 << nb):
+            merged = []
+            ia = 0
+            ib = 0
+            ok = 1
+            while ia < na or ib < nb:
+                use_a = ia < na and (mask_a & (1 << ia))
+                use_b = ib < nb and (mask_b & (1 << ib))
+                if use_a and use_b and a[ia] == b[ib]:
+                    merged.append(a[ia])
+                    ia += 1
+                    ib += 1
+                elif use_a:
+                    merged.append(a[ia])
+                    ia += 1
+                elif use_b:
+                    merged.append(b[ib])
+                    ib += 1
+                else:
+                    ia += 1 if ia < na else 0
+                    ib += 1 if ib < nb else 0
+            check_a = []
+            check_b = []
+            for x in merged:
+                if len(check_a) < na and x == a[len(check_a)]:
+                    check_a.append(x)
+                if len(check_b) < nb and x == b[len(check_b)]:
+                    check_b.append(x)
+            if len(check_a) == na and len(check_b) == nb and len(merged) < best:
+                best = len(merged)
+    return best
+","def shortest_superseq_len(a, b):
+    na = len(a)
+    nb = len(b)
+    best = na + nb
+
+    def merge_strings(a, b, mask_a, mask_b):
+        merged = []
+        ia = 0
+        ib = 0
+        while ia < na or ib < nb:
+            use_a = ia < na and (mask_a & (1 << ia))
+            use_b = ib < nb and (mask_b & (1 << ib))
+            if use_a and use_b and a[ia] == b[ib]:
+                merged.append(a[ia])
+                ia += 1
+                ib += 1
+            elif use_a:
+                merged.append(a[ia])
+                ia += 1
+            elif use_b:
+                merged.append(b[ib])
+                ib += 1
+            else:
+                ia += 1 if ia < na else 0
+                ib += 1 if ib < nb else 0
+        return merged
+
+    for mask_a in range(1 << na):
+        for mask_b in range(1 << nb):
+            merged = merge_strings(a, b, mask_a, mask_b)
+            if len(merged) < best:
+                check_a = []
+                check_b = []
+                for x in merged:
+                    if len(check_a) < na and x == a[len(check_a)]:
+                        check_a.append(x)
+                    if len(check_b) < nb and x == b[len(check_b)]:
+                        check_b.append(x)
+                if len(check_a) == na and len(check_b) == nb:
+                    best = len(merged)
+    return best",5846.81,362,0,348,710,OK,
+TYR-205,max_sum_no_three_adjacent,Codestral-2501,dynamic-programming,hard,O(2^N * N),O(N),"def max_sum_no_three_adjacent(nums):
+    n = len(nums)
+    best = 0
+    for mask in range(1 << n):
+        ok = 1
+        for i in range(n - 2):
+            if (mask >> i) & 7 == 7:
+                ok = 0
+                break
+        if ok == 1:
+            s = 0
+            for i in range(n):
+                if mask & (1 << i):
+                    s += nums[i]
+            if s > best:
+                best = s
+    return best
+","def max_sum_no_three_adjacent(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    if n == 1:
+        return nums[0]
+    if n == 2:
+        return max(nums[0], nums[1])
+    if n == 3:
+        return max(nums[0], nums[1], nums[2], nums[0] + nums[2])
+
+    dp = [0] * n
+    dp[0] = nums[0]
+    dp[1] = max(nums[0], nums[1])
+    dp[2] = max(nums[0] + nums[2], nums[1])
+
+    for i in range(3, n):
+        dp[i] = max(dp[i-1], dp[i-2] + nums[i], dp[i-3] + nums[i])
+
+    return dp[-1]",2570.82,168,0,195,363,OK,
+TYR-206,count_inc_subsequences,Codestral-2501,dynamic-programming,hard,O(2^N * N),O(N^2),"def count_inc_subsequences(nums):
+    n = len(nums)
+    count = 0
+    for mask in range(1, 1 << n):
+        subseq = []
+        for i in range(n):
+            if mask & (1 << i):
+                subseq.append(nums[i])
+        ok = 1
+        for i in range(len(subseq) - 1):
+            if subseq[i] >= subseq[i + 1]:
+                ok = 0
+                break
+        if ok == 1:
+            count += 1
+    return count
+","def count_inc_subsequences(nums):
+    n = len(nums)
+    count = 0
+    for i in range(1, 1 << n):
+        subseq = []
+        for j in range(n):
+            if i & (1 << j):
+                subseq.append(nums[j])
+        if all(subseq[k] < subseq[k + 1] for k in range(len(subseq) - 1)):
+            count += 1
+    return count",1471.63,167,0,102,269,OK,
+TYR-207,longest_bitonic_subseq,Codestral-2501,dynamic-programming,hard,O(2^N * N^2),O(N^2),"def longest_bitonic_subseq(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    best = 1
+    for mask in range(1, 1 << n):
+        subseq = []
+        for i in range(n):
+            if mask & (1 << i):
+                subseq.append(nums[i])
+        if len(subseq) <= best:
+            continue
+        peak = -1
+        for p in range(len(subseq)):
+            inc = 1
+            for i in range(p):
+                if subseq[i] >= subseq[i + 1]:
+                    inc = 0
+                    break
+            dec = 1
+            for i in range(p, len(subseq) - 1):
+                if subseq[i] <= subseq[i + 1]:
+                    dec = 0
+                    break
+            if inc == 1 and dec == 1:
+                peak = p
+                break
+        if peak >= 0 and len(subseq) > best:
+            best = len(subseq)
+    return best
+","def longest_bitonic_subseq(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+
+    inc = [1] * n
+    dec = [1] * n
+
+    for i in range(n):
+        for j in range(i):
+            if nums[i] > nums[j]:
+                inc[i] = max(inc[i], inc[j] + 1)
+
+    for i in range(n - 1, -1, -1):
+        for j in range(n - 1, i, -1):
+            if nums[i] > nums[j]:
+                dec[i] = max(dec[i], dec[j] + 1)
+
+    best = 0
+    for i in range(n):
+        best = max(best, inc[i] + dec[i] - 1)
+
+    return best",2735.42,273,0,180,453,OK,
+TYR-208,min_adjacent_swaps_sort,Codestral-2501,sorting,hard,O(N^2),O(N log N),"def min_adjacent_swaps_sort(nums):
+    arr = nums[:]
+    swaps = 0
+    n = len(arr)
+    for i in range(n):
+        for j in range(n - 1):
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+                swaps += 1
+    return swaps
+","def min_adjacent_swaps_sort(nums):
+    arr = nums[:]
+    swaps = 0
+    n = len(arr)
+    for i in range(n):
+        for j in range(n - 1 - i):
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+                swaps += 1
+    return swaps",2092.01,139,0,98,237,OK,
+TYR-209,count_subseq_target_sum,Codestral-2501,dynamic-programming,hard,O(2^N * N),O(N*T),"def count_subseq_target_sum(nums, target):
+    n = len(nums)
+    count = 0
+    for mask in range(1 << n):
+        s = 0
+        for i in range(n):
+            if mask & (1 << i):
+                s += nums[i]
+        if s == target:
+            count += 1
+    return count
+","def count_subseq_target_sum(nums, target):
+    n = len(nums)
+    count = 0
+    for mask in range(1 << n):
+        s = 0
+        for i in range(n):
+            if mask & (1 << i):
+                s += nums[i]
+        if s == target:
+            count += 1
+    return count",2487.85,124,0,81,205,OK,
+TYR-210,burst_balloon_coins,Codestral-2501,dynamic-programming,hard,O(N!),O(N^3),"def burst_balloon_coins(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    arr = [1] + nums[:] + [1]
+
+    def solve(balloons):
+        if len(balloons) == 2:
+            return 0
+        best = 0
+        for i in range(1, len(balloons) - 1):
+            coins = balloons[i - 1] * balloons[i] * balloons[i + 1]
+            remaining = balloons[:i] + balloons[i + 1:]
+            coins += solve(remaining)
+            if coins > best:
+                best = coins
+        return best
+
+    return solve(arr)
+","def burst_balloon_coins(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    nums = [1] + nums + [1]
+    dp = [[0] * (n + 2) for _ in range(n + 2)]
+
+    for length in range(1, n + 1):
+        for left in range(1, n - length + 2):
+            right = left + length - 1
+            for i in range(left, right + 1):
+                dp[left][right] = max(dp[left][right], nums[left - 1] * nums[i] * nums[right + 1] + dp[left][i - 1] + dp[i + 1][right])
+
+    return dp[1][n]",9006.25,202,0,177,379,OK,
+TYR-211,edit_distance_arrays,Codestral-2501,dynamic-programming,hard,O(3^(N+M)),O(N*M),"def edit_distance_arrays(a, b):
+    na = len(a)
+    nb = len(b)
+
+    def helper(i, j):
+        if i == 0:
+            return j
+        if j == 0:
+            return i
+        if a[i - 1] == b[j - 1]:
+            return helper(i - 1, j - 1)
+        ins = helper(i, j - 1) + 1
+        delete = helper(i - 1, j) + 1
+        replace = helper(i - 1, j - 1) + 1
+        best = ins
+        if delete < best:
+            best = delete
+        if replace < best:
+            best = replace
+        return best
+
+    return helper(na, nb)
+","def edit_distance_arrays(a, b):
+    na = len(a)
+    nb = len(b)
+    dp = [[0] * (nb + 1) for _ in range(na + 1)]
+
+    for i in range(na + 1):
+        for j in range(nb + 1):
+            if i == 0:
+                dp[i][j] = j
+            elif j == 0:
+                dp[i][j] = i
+            elif a[i - 1] == b[j - 1]:
+                dp[i][j] = dp[i - 1][j - 1]
+            else:
+                dp[i][j] = min(dp[i][j - 1] + 1, dp[i - 1][j] + 1, dp[i - 1][j - 1] + 1)
+
+    return dp[na][nb]",2315.53,214,0,194,408,OK,
+TYR-212,interleave_possible,Codestral-2501,dynamic-programming,hard,O(2^(N+M)),O(N*M),"def interleave_possible(a, b, c):
+    na = len(a)
+    nb = len(b)
+    if na + nb != len(c):
+        return 0
+
+    def helper(i, j, k):
+        if k == len(c):
+            return 1 if i == na and j == nb else 0
+        if i < na and c[k] == a[i]:
+            if helper(i + 1, j, k + 1) == 1:
+                return 1
+        if j < nb and c[k] == b[j]:
+            if helper(i, j + 1, k + 1) == 1:
+                return 1
+        return 0
+
+    return helper(0, 0, 0)
+","def interleave_possible(a, b, c):
+    na, nb, nc = len(a), len(b), len(c)
+    if na + nb != nc:
+        return 0
+
+    dp = [[0] * (nb + 1) for _ in range(na + 1)]
+    dp[0][0] = 1
+
+    for i in range(na + 1):
+        for j in range(nb + 1):
+            if i > 0 and a[i - 1] == c[i + j - 1]:
+                dp[i][j] = dp[i - 1][j]
+            if j > 0 and b[j - 1] == c[i + j - 1]:
+                dp[i][j] |= dp[i][j - 1]
+
+    return dp[na][nb]",2520.37,209,0,183,392,OK,
+TYR-213,max_rob_circular,Codestral-2501,dynamic-programming,hard,O(2^N * N),O(N),"def max_rob_circular(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    if n == 1:
+        return nums[0]
+    best = 0
+    for mask in range(1 << n):
+        ok = 1
+        for i in range(n):
+            nxt = (i + 1) % n
+            if (mask & (1 << i)) and (mask & (1 << nxt)):
+                ok = 0
+                break
+        if ok == 1:
+            s = 0
+            for i in range(n):
+                if mask & (1 << i):
+                    s += nums[i]
+            if s > best:
+                best = s
+    return best
+","def max_rob_circular(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    if n == 1:
+        return nums[0]
+
+    def max_rob_linear(nums):
+        prev2, prev1 = 0, 0
+        for num in nums:
+            prev2, prev1 = prev1, max(prev1, prev2 + num)
+        return prev1
+
+    max1 = max_rob_linear(nums)
+    max2 = max_rob_linear(nums[1:]) + nums[0]
+    max3 = max_rob_linear(nums[:-1]) + nums[-1]
+
+    return max(max1, max2, max3)",2342.96,206,0,156,362,OK,
+TYR-214,count_distinct_subseq,Codestral-2501,dynamic-programming,hard,O(2^N * N),O(N*M),"def count_distinct_subseq(a, b):
+    na = len(a)
+    nb = len(b)
+    count = 0
+    for mask in range(1 << na):
+        subseq = []
+        for i in range(na):
+            if mask & (1 << i):
+                subseq.append(a[i])
+        if len(subseq) == nb:
+            match = 1
+            for i in range(nb):
+                if subseq[i] != b[i]:
+                    match = 0
+                    break
+            if match == 1:
+                count += 1
+    return count
+","def count_distinct_subseq(a, b):
+    na = len(a)
+    nb = len(b)
+    count = 0
+    for i in range(na - nb + 1):
+        if a[i:i+nb] == b:
+            count += 1
+    return count",2377.46,174,0,67,241,OK,
+TYR-215,optimal_game_score,Codestral-2501,dynamic-programming,hard,O(2^N),O(N^2),"def optimal_game_score(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+
+    def solve(l, r, is_first):
+        if l > r:
+            return 0
+        if is_first:
+            pick_l = nums[l] + solve(l + 1, r, 0)
+            pick_r = nums[r] + solve(l, r - 1, 0)
+            return pick_l if pick_l > pick_r else pick_r
+        else:
+            pick_l = -nums[l] + solve(l + 1, r, 1)
+            pick_r = -nums[r] + solve(l, r - 1, 1)
+            return pick_l if pick_l < pick_r else pick_r
+
+    return solve(0, n - 1, 1)
+","def optimal_game_score(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+
+    dp = [[0] * n for _ in range(n)]
+
+    for length in range(1, n + 1):
+        for i in range(n - length + 1):
+            j = i + length - 1
+            if length % 2 == 1:
+                dp[i][j] = max(nums[i] + dp[i + 1][j], nums[j] + dp[i][j - 1])
+            else:
+                dp[i][j] = min(-nums[i] + dp[i + 1][j], -nums[j] + dp[i][j - 1])
+
+    return dp[0][n - 1]",3342.63,222,0,168,390,OK,
+TYR-216,min_insertions_palindrome,Codestral-2501,dynamic-programming,hard,O(2^N),O(N^2),"def min_insertions_palindrome(nums):
+    n = len(nums)
+
+    def helper(l, r):
+        if l >= r:
+            return 0
+        if nums[l] == nums[r]:
+            return helper(l + 1, r - 1)
+        opt1 = helper(l + 1, r) + 1
+        opt2 = helper(l, r - 1) + 1
+        return opt1 if opt1 < opt2 else opt2
+
+    return helper(0, n - 1)
+","def min_insertions_palindrome(nums):
+    n = len(nums)
+    dp = [[0] * n for _ in range(n)]
+
+    for length in range(2, n + 1):
+        for i in range(n - length + 1):
+            j = i + length - 1
+            if nums[i] == nums[j]:
+                dp[i][j] = dp[i + 1][j - 1]
+            else:
+                dp[i][j] = min(dp[i + 1][j], dp[i][j - 1]) + 1
+
+    return dp[0][n - 1]",9773.66,161,0,138,299,OK,
+TYR-217,count_subsets_xor,Codestral-2501,dynamic-programming,hard,O(2^N * N),O(N*MAX),"def count_subsets_xor(nums, target):
+    n = len(nums)
+    count = 0
+    for mask in range(1, 1 << n):
+        xor_val = 0
+        for i in range(n):
+            if mask & (1 << i):
+                xor_val ^= nums[i]
+        if xor_val == target:
+            count += 1
+    return count
+","def count_subsets_xor(nums, target):
+    n = len(nums)
+    count = 0
+    for mask in range(1, 1 << n):
+        xor_val = 0
+        for i in range(n):
+            if mask & (1 << i):
+                xor_val ^= nums[i]
+        if xor_val == target:
+            count += 1
+    return count",1505.94,131,0,88,219,OK,
+TYR-218,max_profit_cooldown,Codestral-2501,dynamic-programming,hard,O(2^N * N),O(N),"def max_profit_cooldown(nums):
+    n = len(nums)
+    if n < 2:
+        return 0
+    best = 0
+    for mask in range(1 << n):
+        buys = []
+        sells = []
+        for i in range(n):
+            if mask & (1 << i):
+                if len(buys) == len(sells):
+                    buys.append(i)
+                else:
+                    sells.append(i)
+        if len(buys) != len(sells):
+            continue
+        ok = 1
+        for i in range(len(buys)):
+            if buys[i] >= sells[i]:
+                ok = 0
+                break
+        for i in range(len(sells) - 1):
+            if buys[i + 1] <= sells[i] + 1:
+                ok = 0
+                break
+        if ok == 1:
+            profit = 0
+            for i in range(len(buys)):
+                profit += nums[sells[i]] - nums[buys[i]]
+            if profit > best:
+                best = profit
+    return best
+","def max_profit_cooldown(nums):
+    n = len(nums)
+    if n < 2:
+        return 0
+
+    buy = [0] * n
+    sell = [0] * n
+
+    buy[0] = -nums[0]
+    sell[0] = 0
+
+    for i in range(1, n):
+        buy[i] = max(buy[i - 1], (sell[i - 2] if i > 1 else 0) - nums[i])
+        sell[i] = max(sell[i - 1], buy[i - 1] + nums[i])
+
+    return sell[-1]",2108.25,281,0,142,423,OK,
+TYR-219,rod_cutting_max,Codestral-2501,dynamic-programming,hard,O(2^N * N),O(N^2),"def rod_cutting_max(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    best = 0
+    for mask in range(1, 1 << n):
+        total_len = 0
+        revenue = 0
+        for i in range(n):
+            if mask & (1 << i):
+                total_len += i + 1
+                revenue += nums[i]
+        if total_len <= n and revenue > best:
+            best = revenue
+    return best
+","def rod_cutting_max(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    dp = [0] * (n + 1)
+    for i in range(1, n + 1):
+        for j in range(i):
+            dp[i] = max(dp[i], dp[j] + nums[i - j - 1])
+    return dp[n]",1596.06,157,0,90,247,OK,
+TYR-220,count_unique_bst,Codestral-2501,dynamic-programming,hard,O(4^N / N^(3/2)),O(N^2),"def count_unique_bst(nums):
+    n = nums[0] if len(nums) > 0 else 0
+    if n <= 0:
+        return 0
+
+    def count(lo, hi):
+        if lo >= hi:
+            return 1
+        total = 0
+        for root in range(lo, hi + 1):
+            left = count(lo, root - 1)
+            right = count(root + 1, hi)
+            total += left * right
+        return total
+
+    return count(1, n)
+","def count_unique_bst(nums):
+    n = nums[0] if len(nums) > 0 else 0
+    if n <= 0:
+        return 0
+
+    dp = [[0] * (n + 1) for _ in range(n + 1)]
+
+    for i in range(1, n + 1):
+        dp[i][i] = 1
+
+    for length in range(2, n + 1):
+        for lo in range(1, n - length + 2):
+            hi = lo + length - 1
+            total = 0
+            for root in range(lo, hi + 1):
+                left = dp[lo][root - 1]
+                right = dp[root + 1][hi]
+                total += left * right
+            dp[lo][hi] = total
+
+    return dp[1][n]",2173.77,166,0,193,359,OK,
+TYR-221,longest_arith_subseq_len,Codestral-2501,dynamic-programming,hard,O(2^N * N),O(N^2),"def longest_arith_subseq_len(nums):
+    n = len(nums)
+    if n <= 2:
+        return n
+    best = 2
+    for mask in range(1, 1 << n):
+        subseq = []
+        for i in range(n):
+            if mask & (1 << i):
+                subseq.append(nums[i])
+        if len(subseq) <= best:
+            continue
+        if len(subseq) < 2:
+            continue
+        diff = subseq[1] - subseq[0]
+        ok = 1
+        for i in range(1, len(subseq) - 1):
+            if subseq[i + 1] - subseq[i] != diff:
+                ok = 0
+                break
+        if ok == 1 and len(subseq) > best:
+            best = len(subseq)
+    return best
+","def longest_arith_subseq_len(nums):
+    n = len(nums)
+    if n <= 2:
+        return n
+
+    dp = [[1] * n for _ in range(n)]
+    best = 2
+
+    for i in range(n):
+        for j in range(i + 1, n):
+            diff = nums[j] - nums[i]
+            k = i
+            while k >= 0 and nums[k] - diff >= nums[0]:
+                if nums[k] - diff == nums[i]:
+                    dp[i][j] = max(dp[i][j], dp[k][i] + 1)
+                k -= 1
+            best = max(best, dp[i][j])
+
+    return best",17527.06,234,0,158,392,OK,
+TYR-222,coin_change_min,Codestral-2501,dynamic-programming,hard,O(S^N),O(N*S),"def coin_change_min(nums, target):
+    if target == 0:
+        return 0
+    if len(nums) == 0:
+        return -1
+    best = target + 1
+
+    def solve(remaining, count):
+        nonlocal best
+        if remaining == 0:
+            if count < best:
+                best = count
+            return
+        if remaining < 0 or count >= best:
+            return
+        for c in nums:
+            solve(remaining - c, count + 1)
+
+    solve(target, 0)
+    return best if best <= target else -1
+","def coin_change_min(nums, target):
+    if target == 0:
+        return 0
+    if len(nums) == 0:
+        return -1
+
+    dp = [float('inf')] * (target + 1)
+    dp[0] = 0
+
+    for i in range(1, target + 1):
+        for coin in nums:
+            if i - coin >= 0:
+                dp[i] = min(dp[i], dp[i - coin] + 1)
+
+    return dp[target] if dp[target] != float('inf') else -1",2769.62,173,0,130,303,OK,
+TYR-223,coin_change_ways,Codestral-2501,dynamic-programming,hard,O(S^N),O(N*S),"def coin_change_ways(nums, target):
+    if target == 0:
+        return 1
+
+    def solve(idx, remaining):
+        if remaining == 0:
+            return 1
+        if remaining < 0 or idx >= len(nums):
+            return 0
+        return solve(idx, remaining - nums[idx]) + solve(idx + 1, remaining)
+
+    return solve(0, target)
+","def coin_change_ways(nums, target):
+    dp = [[0] * (target + 1) for _ in range(len(nums) + 1)]
+
+    for i in range(len(nums) + 1):
+        dp[i][0] = 1
+
+    for i in range(1, len(nums) + 1):
+        for j in range(1, target + 1):
+            if j >= nums[i - 1]:
+                dp[i][j] = dp[i - 1][j] + dp[i][j - nums[i - 1]]
+            else:
+                dp[i][j] = dp[i - 1][j]
+
+    return dp[len(nums)][target]",2269.25,132,0,152,284,OK,
+TYR-224,longest_common_subarray_len,Codestral-2501,dynamic-programming,hard,"O(N^2 * min(N,M))",O(N*M),"def longest_common_subarray_len(a, b):
+    best = 0
+    for i in range(len(a)):
+        for j in range(len(b)):
+            length = 0
+            while i + length < len(a) and j + length < len(b):
+                if a[i + length] == b[j + length]:
+                    length += 1
+                else:
+                    break
+            if length > best:
+                best = length
+    return best
+","def longest_common_subarray_len(a, b):
+    m, n = len(a), len(b)
+    dp = [[0] * (n + 1) for _ in range(m + 1)]
+    best = 0
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            if a[i - 1] == b[j - 1]:
+                dp[i][j] = dp[i - 1][j - 1] + 1
+                best = max(best, dp[i][j])
+    return best",2101.12,143,0,133,276,OK,
+TYR-225,min_cost_grid_path,Codestral-2501,dynamic-programming,hard,O(2^(R+C)),O(R*C),"def min_cost_grid_path(nums, cols):
+    rows = len(nums) // cols if cols > 0 else 0
+    if rows == 0 or cols == 0:
+        return 0
+
+    def solve(r, c):
+        if r == rows - 1 and c == cols - 1:
+            return nums[r * cols + c]
+        if r >= rows or c >= cols:
+            return 10000
+        return nums[r * cols + c] + min(solve(r + 1, c), solve(r, c + 1))
+
+    return solve(0, 0)
+","def min_cost_grid_path(nums, cols):
+    rows = len(nums) // cols if cols > 0 else 0
+    if rows == 0 or cols == 0:
+        return 0
+
+    dp = [[0] * cols for _ in range(rows)]
+    dp[rows - 1][cols - 1] = nums[(rows - 1) * cols + cols - 1]
+
+    for r in range(rows - 1, -1, -1):
+        for c in range(cols - 1, -1, -1):
+            if r == rows - 1 and c == cols - 1:
+                continue
+            down = dp[r + 1][c] if r + 1 < rows else 10000
+            right = dp[r][c + 1] if c + 1 < cols else 10000
+            dp[r][c] = nums[r * cols + c] + min(down, right)
+
+    return dp[0][0]",15985.67,180,0,224,404,OK,
+TYR-226,count_grid_paths_obstacles,Codestral-2501,dynamic-programming,hard,O(2^(R+C)),O(R*C),"def count_grid_paths_obstacles(nums, cols):
+    rows = len(nums) // cols if cols > 0 else 0
+    if rows == 0 or cols == 0:
+        return 0
+    if nums[0] == 1 or nums[-1] == 1:
+        return 0
+
+    def solve(r, c):
+        if r == rows - 1 and c == cols - 1:
+            return 1
+        if r >= rows or c >= cols:
+            return 0
+        if nums[r * cols + c] == 1:
+            return 0
+        return solve(r + 1, c) + solve(r, c + 1)
+
+    return solve(0, 0)
+","def count_grid_paths_obstacles(nums, cols):
+    rows = len(nums) // cols if cols > 0 else 0
+    if rows == 0 or cols == 0:
+        return 0
+    if nums[0] == 1 or nums[-1] == 1:
+        return 0
+
+    dp = [[0] * cols for _ in range(rows)]
+    dp[0][0] = 1
+
+    for r in range(rows):
+        for c in range(cols):
+            if nums[r * cols + c] == 1:
+                dp[r][c] = 0
+            else:
+                if r > 0:
+                    dp[r][c] += dp[r - 1][c]
+                if c > 0:
+                    dp[r][c] += dp[r][c - 1]
+
+    return dp[rows - 1][cols - 1]",2455.79,207,0,198,405,OK,
+TYR-227,max_earn_delete,Codestral-2501,dynamic-programming,hard,O(2^N * N^2),O(N),"def max_earn_delete(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    best = 0
+    for mask in range(1 << n):
+        selected = []
+        for i in range(n):
+            if mask & (1 << i):
+                selected.append(nums[i])
+        ok = 1
+        for i in range(len(selected)):
+            for j in range(n):
+                if not (mask & (1 << j)):
+                    diff = abs(nums[j] - selected[i])
+                    if diff == 1:
+                        ok = 0
+                        break
+            if ok == 0:
+                break
+        if ok == 0:
+            continue
+        vals_ok = 1
+        for i in range(len(selected)):
+            for j in range(i + 1, len(selected)):
+                if abs(selected[i] - selected[j]) == 1:
+                    vals_ok = 0
+                    break
+            if vals_ok == 0:
+                break
+        if vals_ok == 1:
+            s = 0
+            for v in selected:
+                s += v
+            if s > best:
+                best = s
+    return best
+","def max_earn_delete(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+
+    nums.sort()
+    dp = [0] * n
+    dp[0] = nums[0]
+
+    for i in range(1, n):
+        dp[i] = max(dp[i-1], dp[i-2] + nums[i])
+
+    return dp[-1]",1578.04,296,0,90,386,OK,
+TYR-228,falling_path_min,Codestral-2501,dynamic-programming,hard,O(3^R * C),O(R*C),"def falling_path_min(nums, cols):
+    rows = len(nums) // cols if cols > 0 else 0
+    if rows == 0:
+        return 0
+
+    def solve(r, c):
+        if r == rows:
+            return 0
+        if c < 0 or c >= cols:
+            return 10000
+        val = nums[r * cols + c]
+        best = solve(r + 1, c)
+        left = solve(r + 1, c - 1)
+        right = solve(r + 1, c + 1)
+        if left < best:
+            best = left
+        if right < best:
+            best = right
+        return val + best
+
+    result = 10000
+    for c in range(cols):
+        v = solve(0, c)
+        if v < result:
+            result = v
+    return result
+","def falling_path_min(nums, cols):
+    rows = len(nums) // cols if cols > 0 else 0
+    if rows == 0:
+        return 0
+
+    dp = [[0] * cols for _ in range(rows)]
+    for c in range(cols):
+        dp[0][c] = nums[c]
+
+    for r in range(1, rows):
+        for c in range(cols):
+            val = nums[r * cols + c]
+            best = dp[r - 1][c]
+            if c > 0:
+                best = min(best, dp[r - 1][c - 1])
+            if c < cols - 1:
+                best = min(best, dp[r - 1][c + 1])
+            dp[r][c] = val + best
+
+    return min(dp[-1])",16786.39,242,0,184,426,OK,
+TYR-229,max_square_side,Codestral-2501,dynamic-programming,hard,"O(R*C*min(R,C)^2)",O(R*C),"def max_square_side(nums, cols):
+    rows = len(nums) // cols if cols > 0 else 0
+    best = 0
+    for r in range(rows):
+        for c in range(cols):
+            for s in range(1, min(rows - r, cols - c) + 1):
+                ok = 1
+                for dr in range(s):
+                    for dc in range(s):
+                        if nums[(r + dr) * cols + (c + dc)] != 1:
+                            ok = 0
+                            break
+                    if ok == 0:
+                        break
+                if ok == 1 and s > best:
+                    best = s
+                else:
+                    break
+    return best
+","def max_square_side(nums, cols):
+    rows = len(nums) // cols if cols > 0 else 0
+    if rows == 0:
+        return 0
+
+    dp = [[0] * cols for _ in range(rows)]
+    best = 0
+
+    for r in range(rows):
+        for c in range(cols):
+            if nums[r * cols + c] == 1:
+                if r == 0 or c == 0:
+                    dp[r][c] = 1
+                else:
+                    dp[r][c] = min(dp[r-1][c], dp[r][c-1], dp[r-1][c-1]) + 1
+                best = max(best, dp[r][c])
+
+    return best",2713.13,201,0,167,368,OK,
+TYR-230,count_square_submatrices,Codestral-2501,dynamic-programming,hard,"O(R*C*min(R,C)^2)",O(R*C),"def count_square_submatrices(nums, cols):
+    rows = len(nums) // cols if cols > 0 else 0
+    total = 0
+    for r in range(rows):
+        for c in range(cols):
+            for s in range(1, min(rows - r, cols - c) + 1):
+                ok = 1
+                for dr in range(s):
+                    for dc in range(s):
+                        if nums[(r + dr) * cols + (c + dc)] != 1:
+                            ok = 0
+                            break
+                    if ok == 0:
+                        break
+                if ok == 1:
+                    total += 1
+                else:
+                    break
+    return total
+","def count_square_submatrices(nums, cols):
+    rows = len(nums) // cols if cols > 0 else 0
+    dp = [[0] * cols for _ in range(rows)]
+    total = 0
+
+    for r in range(rows):
+        for c in range(cols):
+            if nums[r * cols + c] == 1:
+                if r == 0 or c == 0:
+                    dp[r][c] = 1
+                else:
+                    dp[r][c] = min(dp[r-1][c], dp[r][c-1], dp[r-1][c-1]) + 1
+                total += dp[r][c]
+
+    return total",1902.63,200,0,153,353,OK,
+TYR-231,can_jump_end,Codestral-2501,dynamic-programming,hard,O(2^N * N),O(N),"def can_jump_end(nums):
+    n = len(nums)
+    if n <= 1:
+        return 1
+    for mask in range(1 << n):
+        if not (mask & 1):
+            continue
+        if not (mask & (1 << (n - 1))):
+            continue
+        steps = []
+        for i in range(n):
+            if mask & (1 << i):
+                steps.append(i)
+        ok = 1
+        for i in range(len(steps) - 1):
+            if steps[i + 1] - steps[i] > nums[steps[i]]:
+                ok = 0
+                break
+        if ok == 1:
+            return 1
+    return 0
+","def can_jump_end(nums):
+    n = len(nums)
+    if n <= 1:
+        return 1
+    max_reach = 0
+    for i in range(n):
+        if i > max_reach:
+            return 0
+        max_reach = max(max_reach, i + nums[i])
+        if max_reach >= n - 1:
+            return 1
+    return 0",1514.08,201,0,94,295,OK,
+TYR-232,max_product_cut,Codestral-2501,dynamic-programming,hard,O(N^N),O(N^2),"def max_product_cut(nums):
+    n = nums[0] if len(nums) > 0 else 0
+    if n <= 1:
+        return 0
+
+    def solve(remaining):
+        if remaining <= 0:
+            return 1
+        best = 0
+        for cut in range(1, remaining + 1):
+            val = cut * solve(remaining - cut)
+            if val > best:
+                best = val
+        return best
+
+    best = 0
+    for first_cut in range(1, n):
+        val = first_cut * solve(n - first_cut)
+        if val > best:
+            best = val
+    return best
+","def max_product_cut(nums):
+    n = nums[0] if len(nums) > 0 else 0
+    if n <= 1:
+        return 0
+
+    dp = [0] * (n + 1)
+    dp[1] = 1
+
+    for i in range(2, n + 1):
+        for j in range(1, i):
+            dp[i] = max(dp[i], j * (i - j), j * dp[i - j])
+
+    return dp[n]",1568.80,195,0,115,310,OK,
+TYR-233,paint_fence_ways,Codestral-2501,dynamic-programming,hard,O(K^N),O(N*K),"def paint_fence_ways(nums):
+    n = nums[0] if len(nums) > 0 else 0
+    k = nums[1] if len(nums) > 1 else 0
+    if n == 0 or k == 0:
+        return 0
+
+    def solve(pos, prev1, prev2):
+        if pos == n:
+            return 1
+        total = 0
+        for color in range(k):
+            if pos >= 2 and color == prev1 and color == prev2:
+                continue
+            total += solve(pos + 1, color, prev1)
+        return total
+
+    return solve(0, -1, -1)
+","def paint_fence_ways(nums):
+    n = nums[0] if len(nums) > 0 else 0
+    k = nums[1] if len(nums) > 1 else 0
+    if n == 0 or k == 0:
+        return 0
+
+    dp = [[0] * k for _ in range(n + 1)]
+    for i in range(k):
+        dp[1][i] = 1
+
+    for i in range(2, n + 1):
+        for j in range(k):
+            dp[i][j] = sum(dp[i - 1]) - dp[i - 1][j]
+            if i > 2:
+                dp[i][j] -= dp[i - 2][j]
+
+    return sum(dp[n])",2034.23,195,0,172,367,OK,
+TYR-234,count_derangements,Codestral-2501,combinatorics,hard,O(N! * N),O(N),"def count_derangements(nums):
+    n = nums[0] if len(nums) > 0 else 0
+    if n <= 0:
+        return 0
+    if n == 1:
+        return 0
+    arr = list(range(n))
+
+    def permutations(lst):
+        if len(lst) <= 1:
+            return [lst[:]]
+        result = []
+        for i in range(len(lst)):
+            rest = lst[:i] + lst[i + 1:]
+            for p in permutations(rest):
+                result.append([lst[i]] + p)
+        return result
+
+    count = 0
+    for perm in permutations(arr):
+        ok = 1
+        for i in range(n):
+            if perm[i] == i:
+                ok = 0
+                break
+        if ok == 1:
+            count += 1
+    return count
+","def count_derangements(nums):
+    n = nums[0] if len(nums) > 0 else 0
+    if n <= 0:
+        return 0
+    if n == 1:
+        return 0
+
+    def derangements(n):
+        if n == 2:
+            return 1
+        if n == 3:
+            return 2
+        a, b = 1, 2
+        for i in range(4, n + 1):
+            a, b = b, (i - 1) * (a + b)
+        return b
+
+    return derangements(n)",2723.13,233,0,137,370,OK,
+TYR-235,mcm_min_cost,Codestral-2501,dynamic-programming,hard,O(2^N),O(N^3),"def mcm_min_cost(nums):
+    n = len(nums) - 1
+    if n <= 1:
+        return 0
+
+    def solve(i, j):
+        if i == j:
+            return 0
+        best = 999999
+        for k in range(i, j):
+            cost = solve(i, k) + solve(k + 1, j) + nums[i] * nums[k + 1] * nums[j + 1]
+            if cost < best:
+                best = cost
+        return best
+
+    return solve(0, n - 1)
+","def mcm_min_cost(nums):
+    n = len(nums) - 1
+    if n <= 1:
+        return 0
+
+    dp = [[0] * n for _ in range(n)]
+
+    for length in range(2, n + 1):
+        for i in range(n - length + 1):
+            j = i + length - 1
+            dp[i][j] = 999999
+            for k in range(i, j):
+                cost = dp[i][k] + dp[k + 1][j] + nums[i] * nums[k + 1] * nums[j + 1]
+                if cost < dp[i][j]:
+                    dp[i][j] = cost
+
+    return dp[0][n - 1]",2259.17,177,0,171,348,OK,
+TYR-236,longest_repeating_subarray,Codestral-2501,dynamic-programming,hard,O(N^3),O(N^2),"def longest_repeating_subarray(nums):
+    n = len(nums)
+    best = 0
+    for i in range(n):
+        for j in range(i + 1, n):
+            length = 0
+            while j + length < n and nums[i + length] == nums[j + length]:
+                length += 1
+            if length > best:
+                best = length
+    return best
+","def longest_repeating_subarray(nums):
+    n = len(nums)
+    best = 0
+    for i in range(n):
+        for j in range(i + 1, n):
+            length = 0
+            while j + length < n and nums[i + length] == nums[j + length]:
+                length += 1
+            best = max(best, length)
+    return best",1518.15,134,0,89,223,OK,
+TYR-237,max_profit_two_tx,Codestral-2501,dynamic-programming,hard,O(N^4),O(N),"def max_profit_two_tx(nums):
+    n = len(nums)
+    best = 0
+    for b1 in range(n):
+        for s1 in range(b1 + 1, n):
+            for b2 in range(s1 + 1, n):
+                for s2 in range(b2 + 1, n):
+                    profit = (nums[s1] - nums[b1]) + (nums[s2] - nums[b2])
+                    if profit > best:
+                        best = profit
+            profit1 = nums[s1] - nums[b1]
+            if profit1 > best:
+                best = profit1
+    return best
+","def max_profit_two_tx(nums):
+    n = len(nums)
+    if n < 2:
+        return 0
+
+    left_min = [0] * n
+    right_max = [0] * n
+
+    left_min[0] = nums[0]
+    for i in range(1, n):
+        left_min[i] = min(left_min[i - 1], nums[i])
+
+    right_max[n - 1] = nums[n - 1]
+    for i in range(n - 2, -1, -1):
+        right_max[i] = max(right_max[i + 1], nums[i])
+
+    max_profit = 0
+    for i in range(n):
+        max_profit = max(max_profit, right_max[i] - left_min[i])
+
+    return max_profit",2394.66,181,0,177,358,OK,
+TYR-238,egg_drop_two,Codestral-2501,dynamic-programming,hard,O(N^2),O(N log N),"def egg_drop_two(nums):
+    n = nums[0] if len(nums) > 0 else 0
+    if n <= 0:
+        return 0
+
+    def solve(eggs, floors):
+        if floors <= 1 or eggs == 1:
+            return floors
+        best = floors
+        for x in range(1, floors + 1):
+            breaks = solve(eggs - 1, x - 1)
+            survives = solve(eggs, floors - x)
+            worst = 1 + (breaks if breaks > survives else survives)
+            if worst < best:
+                best = worst
+        return best
+
+    return solve(2, n)
+","def egg_drop_two(nums):
+    n = nums[0] if len(nums) > 0 else 0
+    if n <= 0:
+        return 0
+
+    memo = {}
+
+    def solve(eggs, floors):
+        if (eggs, floors) in memo:
+            return memo[(eggs, floors)]
+        if floors <= 1 or eggs == 1:
+            return floors
+        best = floors
+        low, high = 1, floors
+        while low <= high:
+            mid = (low + high) // 2
+            breaks = solve(eggs - 1, mid - 1)
+            survives = solve(eggs, floors - mid)
+            worst = 1 + max(breaks, survives)
+            if worst < best:
+                best = worst
+            if breaks < survives:
+                low = mid + 1
+            else:
+                high = mid - 1
+        memo[(eggs, floors)] = best
+        return best
+
+    return solve(2, n)",3663.13,194,0,222,416,OK,
+TYR-239,all_subsets_range_sum,Codestral-2501,combinatorics,hard,O(2^N * N),O(N * 2^N),"def all_subsets_range_sum(nums):
+    n = len(nums)
+    total = 0
+    for mask in range(1, 1 << n):
+        subset = []
+        for i in range(n):
+            if mask & (1 << i):
+                subset.append(nums[i])
+        mx = subset[0]
+        mn = subset[0]
+        for v in subset:
+            if v > mx:
+                mx = v
+            if v < mn:
+                mn = v
+        total += mx - mn
+    return total
+","def all_subsets_range_sum(nums):
+    n = len(nums)
+    total = 0
+    for mask in range(1, 1 << n):
+        mx = float('-inf')
+        mn = float('inf')
+        for i in range(n):
+            if mask & (1 << i):
+                mx = max(mx, nums[i])
+                mn = min(mn, nums[i])
+        total += mx - mn
+    return total",1780.73,163,0,99,262,OK,
+TYR-240,max_and_pair,Codestral-2501,bitmasking,hard,O(N^2),O(N*B),"def max_and_pair(nums):
+    n = len(nums)
+    if n < 2:
+        return 0
+    best = 0
+    for i in range(n):
+        for j in range(i + 1, n):
+            val = nums[i] & nums[j]
+            if val > best:
+                best = val
+    return best
+","def max_and_pair(nums):
+    n = len(nums)
+    if n < 2:
+        return 0
+    best = 0
+    for i in range(n):
+        for j in range(i + 1, n):
+            val = nums[i] & nums[j]
+            if val > best:
+                best = val
+    return best",1763.07,122,0,79,201,OK,
+TYR-241,count_valid_triangles,Codestral-2501,combinatorics,hard,O(N^3),O(N^2 log N),"def count_valid_triangles(nums):
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            for k in range(j + 1, n):
+                a = nums[i]
+                b = nums[j]
+                c = nums[k]
+                if a + b > c and a + c > b and b + c > a:
+                    count += 1
+    return count
+","def count_valid_triangles(nums):
+    nums.sort()
+    count = 0
+    n = len(nums)
+    for i in range(n):
+        k = i + 2
+        for j in range(i + 1, n):
+            while k < n and nums[i] + nums[j] > nums[k]:
+                k += 1
+            count += k - j - 1
+    return count",5523.36,149,0,93,242,OK,
+TYR-242,min_moves_equalize,Codestral-2501,math,hard,O(N * MAX),O(N),"def min_moves_equalize(nums):
+    n = len(nums)
+    if n <= 1:
+        return 0
+    best = 999999
+    mx = nums[0]
+    for v in nums:
+        if v > mx:
+            mx = v
+    for target in range(mx, mx + n * 20 + 1):
+        moves = 0
+        ok = 1
+        for v in nums:
+            diff = target - v
+            if diff < 0:
+                ok = 0
+                break
+            moves += diff
+        if ok == 1 and moves % (n - 1) == 0:
+            total_moves = moves // (n - 1)
+            if total_moves < best:
+                best = total_moves
+    return best
+","def min_moves_equalize(nums):
+    n = len(nums)
+    if n <= 1:
+        return 0
+    nums.sort()
+    total_moves = 0
+    for i in range(1, n):
+        total_moves += nums[i] - nums[0]
+    return total_moves",1225.71,223,0,72,295,OK,
+TYR-243,longest_zigzag_subseq,Codestral-2501,dynamic-programming,hard,O(2^N * N),O(N),"def longest_zigzag_subseq(nums):
+    n = len(nums)
+    if n <= 1:
+        return n
+    best = 1
+    for mask in range(1, 1 << n):
+        subseq = []
+        for i in range(n):
+            if mask & (1 << i):
+                subseq.append(nums[i])
+        if len(subseq) <= best:
+            continue
+        if len(subseq) < 2:
+            continue
+        ok = 1
+        for i in range(len(subseq) - 1):
+            if subseq[i] == subseq[i + 1]:
+                ok = 0
+                break
+        if ok == 0:
+            continue
+        for i in range(len(subseq) - 2):
+            d1 = subseq[i + 1] - subseq[i]
+            d2 = subseq[i + 2] - subseq[i + 1]
+            if (d1 > 0 and d2 > 0) or (d1 < 0 and d2 < 0):
+                ok = 0
+                break
+        if ok == 1 and len(subseq) > best:
+            best = len(subseq)
+    return best
+","def longest_zigzag_subseq(nums):
+    n = len(nums)
+    if n <= 1:
+        return n
+
+    inc = [1] * n
+    dec = [1] * n
+
+    for i in range(1, n):
+        if nums[i] > nums[i - 1]:
+            inc[i] = dec[i - 1] + 1
+        elif nums[i] < nums[i - 1]:
+            dec[i] = inc[i - 1] + 1
+
+    return max(max(inc), max(dec))",2385.98,307,0,123,430,OK,
+TYR-244,max_alternating_sum,Codestral-2501,dynamic-programming,hard,O(2^N * N),O(N),"def max_alternating_sum(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    best = 0
+    for mask in range(1, 1 << n):
+        subseq = []
+        for i in range(n):
+            if mask & (1 << i):
+                subseq.append(nums[i])
+        s = 0
+        for i in range(len(subseq)):
+            if i % 2 == 0:
+                s += subseq[i]
+            else:
+                s -= subseq[i]
+        if s > best:
+            best = s
+    return best
+","def max_alternating_sum(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    even_sum = 0
+    odd_sum = 0
+    for i in range(n):
+        if i % 2 == 0:
+            even_sum += nums[i]
+        else:
+            odd_sum += nums[i]
+    return even_sum - odd_sum",3655.55,176,0,87,263,OK,
+TYR-245,count_bitonic_subseqs,Codestral-2501,dynamic-programming,hard,O(2^N * N^2),O(N^2),"def count_bitonic_subseqs(nums):
+    n = len(nums)
+    count = 0
+    for mask in range(1, 1 << n):
+        subseq = []
+        for i in range(n):
+            if mask & (1 << i):
+                subseq.append(nums[i])
+        if len(subseq) < 3:
+            continue
+        for p in range(1, len(subseq) - 1):
+            inc = 1
+            for i in range(p):
+                if subseq[i] >= subseq[i + 1]:
+                    inc = 0
+                    break
+            dec = 1
+            for i in range(p, len(subseq) - 1):
+                if subseq[i] <= subseq[i + 1]:
+                    dec = 0
+                    break
+            if inc == 1 and dec == 1:
+                count += 1
+                break
+    return count
+","def count_bitonic_subseqs(nums):
+    n = len(nums)
+    count = 0
+    for i in range(n):
+        for j in range(i + 1, n):
+            for k in range(j + 1, n):
+                if nums[i] < nums[j] > nums[k]:
+                    count += 1
+    return count",1460.94,244,0,80,324,OK,
+TYR-246,kth_smallest_subset_sum,Codestral-2501,combinatorics,hard,O(2^N * N + 4^N),O(2^N log 2^N),"def kth_smallest_subset_sum(nums, k):
+    n = len(nums)
+    sums = []
+    for mask in range(1 << n):
+        s = 0
+        for i in range(n):
+            if mask & (1 << i):
+                s += nums[i]
+        sums.append(s)
+    for i in range(len(sums)):
+        for j in range(i + 1, len(sums)):
+            if sums[i] > sums[j]:
+                sums[i], sums[j] = sums[j], sums[i]
+    if k <= len(sums):
+        return sums[k - 1]
+    return -1
+","def kth_smallest_subset_sum(nums, k):
+    n = len(nums)
+    sums = []
+    for mask in range(1 << n):
+        s = 0
+        for i in range(n):
+            if mask & (1 << i):
+                s += nums[i]
+        sums.append(s)
+    sums.sort()
+    if k <= len(sums):
+        return sums[k - 1]
+    return -1",1520.68,185,0,94,279,OK,
+TYR-247,min_deletions_sorted,Codestral-2501,dynamic-programming,hard,O(2^N * N),O(N^2),"def min_deletions_sorted(nums):
+    n = len(nums)
+    if n <= 1:
+        return 0
+    best_lis = 1
+    for mask in range(1, 1 << n):
+        subseq = []
+        for i in range(n):
+            if mask & (1 << i):
+                subseq.append(nums[i])
+        ok = 1
+        for i in range(len(subseq) - 1):
+            if subseq[i] >= subseq[i + 1]:
+                ok = 0
+                break
+        if ok == 1 and len(subseq) > best_lis:
+            best_lis = len(subseq)
+    return n - best_lis
+","def min_deletions_sorted(nums):
+    n = len(nums)
+    if n <= 1:
+        return 0
+    lis = [1] * n
+    for i in range(1, n):
+        for j in range(i):
+            if nums[i] > nums[j]:
+                lis[i] = max(lis[i], lis[j] + 1)
+    best_lis = max(lis)
+    return n - best_lis",2003.16,199,0,101,300,OK,
+TYR-248,count_palindrome_subarrays,Codestral-2501,subarray,hard,O(N^3),O(N^2),"def count_palindrome_subarrays(nums):
+    n = len(nums)
+    count = 0
+    for i in range(n):
+        for j in range(i, n):
+            is_pal = 1
+            l = i
+            r = j
+            while l < r:
+                if nums[l] != nums[r]:
+                    is_pal = 0
+                    break
+                l += 1
+                r -= 1
+            if is_pal == 1:
+                count += 1
+    return count
+","def count_palindrome_subarrays(nums):
+    n = len(nums)
+    count = 0
+    for i in range(n):
+        for j in range(i, n):
+            if nums[i:j+1] == nums[i:j+1][::-1]:
+                count += 1
+    return count",1506.84,160,0,73,233,OK,
+TYR-249,max_nonoverlap_pair_sum,Codestral-2501,subarray,hard,O(N^4),O(N),"def max_nonoverlap_pair_sum(nums):
+    n = len(nums)
+    if n < 2:
+        return 0
+    best = nums[0] + nums[1]
+    for i in range(n):
+        for j in range(i, n):
+            s1 = 0
+            for k in range(i, j + 1):
+                s1 += nums[k]
+            for p in range(j + 1, n):
+                for q in range(p, n):
+                    s2 = 0
+                    for k in range(p, q + 1):
+                        s2 += nums[k]
+                    if s1 + s2 > best:
+                        best = s1 + s2
+    return best
+","def max_nonoverlap_pair_sum(nums):
+    n = len(nums)
+    if n < 2:
+        return 0
+
+    prefix_sum = [0] * (n + 1)
+    for i in range(n):
+        prefix_sum[i + 1] = prefix_sum[i] + nums[i]
+
+    max_sum = float('-inf')
+    for i in range(1, n):
+        max_sum = max(max_sum, prefix_sum[i] + max(prefix_sum[j] - prefix_sum[i] for j in range(i + 1, n + 1)))
+
+    return max_sum",1689.74,198,0,131,329,OK,
+TYR-250,subset_max_gcd,Codestral-2501,math,hard,O(2^N * N),O(N * MAX),"def subset_max_gcd(nums):
+    n = len(nums)
+    if n < 2:
+        return 0
+
+    def gcd(a, b):
+        a = abs(a)
+        b = abs(b)
+        while b:
+            a, b = b, a % b
+        return a
+
+    best = 0
+    for mask in range(1, 1 << n):
+        subset = []
+        for i in range(n):
+            if mask & (1 << i):
+                subset.append(nums[i])
+        if len(subset) < 2:
+            continue
+        g = subset[0]
+        for v in subset[1:]:
+            g = gcd(g, v)
+        if g > best:
+            best = g
+    return best
+","from math import gcd
+from itertools import combinations
+
+def subset_max_gcd(nums):
+    n = len(nums)
+    if n < 2:
+        return 0
+
+    best = 0
+    for r in range(2, n + 1):
+        for subset in combinations(nums, r):
+            g = subset[0]
+            for v in subset[1:]:
+                g = gcd(g, v)
+            if g > best:
+                best = g
+    return best",1629.88,210,0,109,319,OK,
